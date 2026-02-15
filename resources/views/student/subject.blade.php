@@ -73,25 +73,28 @@
     }
 
 
-// STUDENT SIDE
 async function startScreenShare() {
     try {
-        // 1. Get the screen
+        // 1. Get the screen with WIFI OPTIMIZATION (Lower resolution and frame rate)
         window.localStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: { displaySurface: "monitor" } 
+            video: { 
+                displaySurface: "monitor",
+                width: { ideal: 1280, max: 1280 }, // Capped at 720p for stability
+                frameRate: { ideal: 10, max: 15 }   // Lower FPS to prevent lag
+            } 
         });
 
         const track = window.localStream.getVideoTracks()[0];
         const settings = track.getSettings();
         
-        // 2. ENTIRE SCREEN CHECK (Only once)
+        // 2. ENTIRE SCREEN CHECK
         if (settings.displaySurface !== 'monitor') {
             alert("❌ Access Denied: You must share your ENTIRE SCREEN to continue.");
             window.localStream.getTracks().forEach(t => t.stop());
             return; 
         }
 
-        // 3. STOP SHARING DETECTION (Only once, includes Fetch)
+        // 3. STOP SHARING DETECTION (Notifies Admin via Laravel)
         track.onended = () => {
             console.log("⚠️ Student stopped sharing screen. Notifying Admin...");
             
@@ -113,7 +116,7 @@ async function startScreenShare() {
             });
         };
 
-        console.log("✅ Entire Screen capture successful");
+        console.log("✅ Entire Screen capture successful (Optimized for Wi-Fi)");
 
         // 4. Initialize Peer
         const studentPeer = new Peer('STUDENT_{{ auth()->id() }}');
@@ -125,8 +128,20 @@ async function startScreenShare() {
             console.log('📞 Calling Admin at: ' + adminId);
         });
 
+        // --- WIFI RESILIENCE LOGIC ---
+        // If Wi-Fi blips and disconnects from Peer server, try to reconnect automatically
+        studentPeer.on('disconnected', () => {
+            console.warn("📡 Wi-Fi connection lost. Attempting to reconnect...");
+            studentPeer.reconnect();
+        });
+
         studentPeer.on('error', (err) => {
-            console.error('PeerJS Student Error:', err);
+            console.error('PeerJS Student Error:', err.type);
+            // If the ID is already taken (common after a quick refresh), reload to clear it
+            if (err.type === 'unavailable-id') {
+                console.log("ID taken, refreshing session...");
+                location.reload();
+            }
         });
 
     } catch (err) {
