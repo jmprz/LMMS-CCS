@@ -20,8 +20,18 @@ Route::middleware(['auth'])->group(function () {
 
     // Specific Subject Page (With the Attendance/Monitor button)
     Route::get('/student/subject/{id}', [StudentClassController::class, 'show'])->name('student.subject');
-});
 
+    // Put this inside your student middleware group
+Route::post('/student/mark-present/{labSession}', [App\Http\Controllers\StudentClassController::class, 'markPresent'])
+    ->name('student.mark-present');
+    Route::post('/student/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('student.heartbeat');
+    });
+
+
+Route::post('/student/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])
+    ->name('student.mark-present');
+
+    Route::post('/student/stop-presenting', [StudentClassController::class, 'stopPresenting'])->name('student.stop-presenting');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
@@ -30,7 +40,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/students/store', [AdminController::class, 'storeStudent'])->name('admin.students.store');
 
     Route::post('/admin/generate-code', [AdminController::class, 'generateCode'])->name('admin.generate-code');
-});
+    // The route for the "End Session" button
+    Route::post('/admin/sessions/{session}/end', [AdminController::class, 'endSession'])
+        ->name('admin.sessions.end');
+
+    // The route for the real-time status polling
+    Route::get('/admin/status-check', [AdminController::class, 'getActiveStatus'])
+        ->name('admin.status-check');
+    });
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
