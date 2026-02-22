@@ -13,8 +13,11 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     // Student Dashboard (List of joined subjects)
-    Route::get('/student/dashboard', [StudentClassController::class, 'index'])->name('student.dashboard');
+Route::get('/student/dashboard', [StudentClassController::class, 'index'])
+    ->name('student.dashboard'); 
 
+// Add this line right below it to handle the "dashboard" 404 issue
+Route::get('/dashboard', fn() => redirect()->route('student.dashboard'))->name('dashboard');
     // Join Class Logic
     Route::post('/student/join', [StudentClassController::class, 'join'])->name('student.join');
 

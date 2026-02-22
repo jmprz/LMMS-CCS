@@ -75,6 +75,26 @@
 
 async function startScreenShare() {
     try {
+
+    const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+
+    let stream;
+        if (isElectron) {
+            // In Electron, we use the source we picked in main.js
+            // We request 'chromeMediaSource' which Electron provides
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    mandatory: {
+                        chromeMediaSource: 'desktop',
+                    }
+                }
+            });
+        } else {
+            // Normal browser behavior
+            stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        }
+        
         // 1. Get the screen with WIFI OPTIMIZATION (Lower resolution and frame rate)
         window.localStream = await navigator.mediaDevices.getDisplayMedia({ 
             video: { 
