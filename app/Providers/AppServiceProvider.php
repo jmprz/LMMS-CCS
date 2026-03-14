@@ -18,10 +18,12 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
-        // For your thesis demo, it's safer to just force it.
-        // You can add the 'if' back once everything is on a real server.
+   public function boot(): void
+{
+    // Only force HTTPS if you are in production OR if you are using a tunnel 
+    // that you know is serving HTTPS.
+    if ($this->app->environment('production')) {
         URL::forceScheme('https');
     }
+}
 }

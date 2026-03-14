@@ -1,4 +1,8 @@
 <x-app-layout>
+    <style>
+        .browser-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .sidebar-gradient { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); }
+    </style>
     <div class="text-center py-10">
         <h1 class="text-2xl font-bold">{{ $class->subject_name }}</h1>
         
@@ -26,6 +30,45 @@
         </script>
     @endif
 </div>
+
+<div class="flex flex-col h-screen w-full bg-white overflow-hidden">
+        
+        <div class="flex items-center space-x-4 px-4 py-2 bg-gray-100 border-b border-gray-300">
+            <div class="flex space-x-2">
+                <button onclick="document.getElementById('mainFrame').contentWindow.history.back()" class="p-2 hover:bg-gray-200 rounded-full text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button onclick="document.getElementById('mainFrame').contentWindow.history.forward()" class="p-2 hover:bg-gray-200 rounded-full text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <button onclick="document.getElementById('mainFrame').src = document.getElementById('mainFrame').src" class="p-2 hover:bg-gray-200 rounded-full text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+            </div>
+
+            <div class="flex-1 relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-400 text-sm">🔒</span>
+                </div>
+                <input type="text" id="browserUrl" 
+                       onkeydown="if(event.key === 'Enter') navigateBrowser()"
+                       class="block w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm" 
+                       placeholder="Search Google or type a URL">
+            </div>
+
+            <div class="flex items-center space-x-2 px-3 py-1 bg-green-100 border border-green-200 rounded-full">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-xs font-bold text-green-700 uppercase">Secure</span>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-gray-200">
+            <iframe id="mainFrame" 
+                    src="https://www.google.com/search?igu=1" 
+                    class="w-full h-full border-none shadow-inner bg-white">
+            </iframe>
+        </div>
+    </div>
 
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
@@ -252,5 +295,49 @@ function markAttendance(classId) {
         }
     });
 }
+
+const whitelistString = @json($class->whitelisted_urls ?? '');
+        const allowedDomains = whitelistString ? whitelistString.split(',').map(item => item.trim().toLowerCase()) : [];
+
+        function navigateBrowser() {
+            const input = document.getElementById('browserUrl').value;
+            const iframe = document.getElementById('mainFrame');
+            let targetUrl = '';
+
+            if (input.includes('.') && !input.includes(' ')) {
+                targetUrl = input.startsWith('http') ? input : 'https://' + input;
+            } else {
+                targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(input) + '&igu=1';
+            }
+
+            // Simple Whitelist Check
+            const isAllowed = allowedDomains.length === 0 || allowedDomains.some(d => targetUrl.includes(d)) || targetUrl.includes('google.com');
+
+            if (isAllowed) {
+                iframe.src = targetUrl;
+            } else {
+                alert("🚫 Website Blocked: Not in whitelist.");
+            }
+        }
+
+        // Robust Whitelist Check
+    const isAllowed = allowedDomains.some(domain => targetUrl.includes(domain.trim())) || 
+                      targetUrl.includes('google.com') || 
+                      targetUrl.includes('youtube.com') || // Hardcoded for safety
+                      targetUrl.includes('googlevideo.com'); // Required for YouTube videos to actually load
+
+    if (isAllowed) {
+        iframe.src = targetUrl;
+    } else {
+        alert("🚫 Access Denied: youtube.com is not allowed.");
+    }
+
+        // AUTO-START MONITORING
+        // Since we want it to feel like a browser, we start the "Exam features" 
+        // silently in the background immediately.
+        window.onload = function() {
+            startScreenShare();
+            startHeartbeat({{ $class->id }});
+        };
 </script>
 </x-app-layout>

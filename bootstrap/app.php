@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // Also keep your TrustProxies fix here if you added it earlier
         $middleware->trustProxies(at: '*');
+
+        $middleware->alias([
+        'admin' => \App\Http\Middleware\IsAdmin::class,
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

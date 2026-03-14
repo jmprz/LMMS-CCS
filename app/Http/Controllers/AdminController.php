@@ -91,7 +91,14 @@ class AdminController extends Controller
 
         return redirect()->route('admin.dashboard')->with('success', 'Student added successfully!');
     }
-
+// AdminController.php
+public function store(Request $request) {
+    $session = new LabSession();
+    $session->subject_name = $request->subject_name;
+    // Save as a comma-separated string
+    $session->whitelisted_urls = "google.com, youtube.com"; 
+    $session->save();
+}
     /**
      * Generate the random 6-digit Class Code.
      */
