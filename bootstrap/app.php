@@ -11,14 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-       // ADD THIS LINE HERE
-        $middleware->redirectUsersTo('/student/dashboard'); 
         
-        // Also keep your TrustProxies fix here if you added it earlier
-        $middleware->trustProxies(at: '*');
-
-        $middleware->alias([
-        'admin' => \App\Http\Middleware\IsAdmin::class,
+       $middleware->alias([
+        'admin'   => \App\Http\Middleware\IsAdmin::class,
+        'student' => \App\Http\Middleware\IsStudent::class, // Create this file!
     ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

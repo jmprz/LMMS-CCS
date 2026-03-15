@@ -10,13 +10,30 @@ class StudentClassController extends Controller
 // 1. For the Dashboard (The list)
 public function index() {
     $joinedClasses = auth()->user()->joinedClasses;
-    return view('student.dashboard', compact('joinedClasses'));
+    // Query your active sessions
+    $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
+    
+    // Combine everything into one view return
+    return view('student.dashboard', compact('joinedClasses', 'activeSessions'));
 }
 
-// 2. For the Subject Page (The button)
-public function show($id) {
+public function show($id)
+{
+    // 1. Fetch the specific session
     $class = \App\Models\LabSession::findOrFail($id);
-    return view('student.subject', compact('class')); // This sends the $class variable!
+
+    // 2. Fetch active sessions (if you need this for your navigation/list)
+    $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
+    
+    // 3. Define $sessionStatus BEFORE using it
+    $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
+    
+    // 4. Safely calculate $isPresent
+    $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
+
+
+    // 6. Pass ALL required variables to the view
+    return view('student.subject', compact('class', 'activeSessions', 'isPresent'));
 }
 
 public function markPresent(\App\Models\LabSession $labSession)
@@ -59,14 +76,30 @@ public function join(Request $request)
     return redirect()->route('student.dashboard')->with('success', 'Successfully joined ' . $session->subject_name);
 }
 
-public function stopPresenting(Request $request)
+public function stopPresenting(Request $request, $labSessionId)
 {
-    $student = auth()->user(); // Or however you identify your student
-    
-    // Assuming you have a 'is_presenting' column or a presence table
-    $student->update(['is_presenting' => false]); 
+    // Update the pivot table for this specific session
+    auth()->user()->joinedClasses()->updateExistingPivot($labSessionId, [
+        'is_present' => false,
+    ]);
 
     return response()->json(['status' => 'success']);
+}
+public function checkStatus($id)
+{
+    $class = LabSession::findOrFail($id);
+
+    // Calculate if the student is present
+    $isPresent = auth()->user()->joinedClasses()
+                    ->where('lab_session_id', $id)
+                    ->where('is_present', true)
+                    ->exists();
+
+    // Return the full JSON object in one go
+    return response()->json([
+        'is_active' => (bool) $class->is_active,
+        'is_present' => $isPresent
+    ]);
 }
 
 }

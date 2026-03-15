@@ -12,8 +12,11 @@ class LabSession extends Model
    protected $fillable = [
     'class_code', 
     'subject_name', 
-    'schedule_day',   // Add this
-    'schedule_time',  // Add this
+    'schedule_day',  
+    'schedule_time',  
+    'program',
+    'year_level',
+    'section',
     'faculty_id', 
     'is_active'
 ];

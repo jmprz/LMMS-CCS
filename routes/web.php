@@ -2,43 +2,48 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\StudentClassController;
 use Illuminate\Support\Facades\Route;
 
-// 1. GUEST ROUTES: Login page (accessible to non-authenticated users)
 Route::get('/', function () {
     return view('auth.login');
 });
 
-// 2. AUTHENTICATED ROUTES: Everything else must be here
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
 
-    // Global Dashboard Router: Determines where the user should go based on role
+    // 1. Dashboard Switcher
     Route::get('/dashboard', function () {
-        return auth()->user()->role === 'admin' 
-            ? redirect()->route('admin.dashboard') 
-            : redirect()->route('student.dashboard');
+        if (auth()->user()->role === 'admin') return redirect()->route('admin.dashboard');
+        if (auth()->user()->role === 'student') return redirect()->route('student.dashboard');
+        return redirect('/');
     })->name('dashboard');
 
-    // --- STUDENT ROUTES ---
-    Route::get('/student/dashboard', [StudentClassController::class, 'index'])->name('student.dashboard');
-    Route::post('/student/join', [StudentClassController::class, 'join'])->name('student.join');
-    Route::get('/student/subject/{id}', [StudentClassController::class, 'show'])->name('student.subject');
-    
-    // Marked routes as POST as they were causing 405 errors
-    Route::post('/student/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])->name('student.mark-present');
-    Route::post('/student/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('student.heartbeat');
-    Route::post('/student/stop-presenting', [StudentClassController::class, 'stopPresenting'])->name('student.stop-presenting');
+    // 2. STUDENT ROUTES (Must be named student.x)
+    Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->group(function () {
+        Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
+        Route::get('/classroom/{id}', [StudentClassController::class, 'show'])->name('subject');
+        Route::post('/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])->name('mark-present');
+        Route::post('/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('heartbeat');
+        Route::post('/stop-presenting/{labSession}', [StudentClassController::class, 'stopPresenting'])->name('stop-presenting');
+        Route::post('/join', [StudentClassController::class, 'join'])->name('join');
+        Route::get('/student/check-session-status/{id}', [StudentClassController::class, 'checkStatus'])->name('student.check-status');
+        });
 
-    // --- ADMIN ROUTES ---
-    Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
-    Route::get('/admin/students/create', [AdminController::class, 'createStudent'])->name('admin.students.create');
-    Route::post('/admin/students/store', [AdminController::class, 'storeStudent'])->name('admin.students.store');
-    Route::post('/admin/generate-code', [AdminController::class, 'generateCode'])->name('admin.generate-code');
-    Route::post('/admin/sessions/{session}/end', [AdminController::class, 'endSession'])->name('admin.sessions.end');
-    Route::get('/admin/status-check', [AdminController::class, 'getActiveStatus'])->name('admin.status-check');
+    // 3. ADMIN ROUTES (Must be named admin.x)
+    Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+        Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
+        Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
+        Route::get('/students/create', [AdminController::class, 'createStudent'])->name('students.create');
+        Route::post('/students/store', [AdminController::class, 'storeStudent'])->name('students.store');
+        Route::post('/generate-code', [AdminController::class, 'generateCode'])->name('generate-code');
+        Route::post('/sessions/{session}/end', [AdminController::class, 'endSession'])->name('sessions.end');
+        Route::post('/sessions/{session}/toggle', [AdminController::class, 'toggle'])->name('sessions.toggle'); 
+        Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
+    });
 
-    // --- PROFILE ROUTES ---
+    // 4. PROFILE ROUTES
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

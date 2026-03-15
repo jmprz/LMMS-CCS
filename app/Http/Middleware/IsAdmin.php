@@ -13,12 +13,15 @@ class IsAdmin
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-   public function handle(Request $request, Closure $next)
+  public function handle(Request $request, Closure $next)
 {
+    // Check if user is logged in and IS an admin
     if (auth()->check() && auth()->user()->role === 'admin') {
         return $next($request);
     }
-    // If not admin, force them to student or home
-    return redirect()->route('student.dashboard');
+
+    // If they aren't an admin, do NOT automatically force them to student.dashboard.
+    // Instead, return a 403 Forbidden or redirect to a public page.
+    abort(403, 'Unauthorized access.'); 
 }
 }
