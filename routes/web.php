@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\StudentClassController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -41,7 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/sessions/{session}/end', [AdminController::class, 'endSession'])->name('sessions.end');
         Route::post('/sessions/{session}/toggle', [AdminController::class, 'toggle'])->name('sessions.toggle'); 
         Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
-    });
+        Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+        });
 
     // 4. PROFILE ROUTES
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

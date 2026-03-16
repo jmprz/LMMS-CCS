@@ -14,7 +14,10 @@ class AdminController extends Controller
 {
     public function index()
     {
-        $activeStudents = User::where('role', 'student')->get();
+        $activeStudents = User::where('role', 'student')
+                            ->orderBy('name', 'asc')
+                            ->paginate(6);
+                            
         $activeSessions = LabSession::where('is_active', true)
             ->where('faculty_id', auth()->id())
             ->latest()
@@ -86,5 +89,19 @@ public function getActiveStatus()
         return back()->with('success', 'Session started!');
     }
 
-    
+public function statusCheck(Request $request)
+{
+    // 1. Get the session ID from the URL query string (e.g., ?session_id=1)
+    $sessionId = $request->query('session_id');
+
+    // 2. Query with both the Session ID and the heartbeat filter
+    $presentIds = DB::table('class_student')
+        ->where('lab_session_id', $sessionId)
+        ->where('is_present', true)
+        ->where('updated_at', '>=', now()->subMinutes(1)) 
+        ->pluck('student_id'); // Ensure this matches your database column name
+
+    return response()->json(['present_ids' => $presentIds]);
+}
+
 }

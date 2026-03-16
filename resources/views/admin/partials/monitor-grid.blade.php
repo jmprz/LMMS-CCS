@@ -29,97 +29,109 @@
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
     let adminPeer;
+    const connectedStudents = new Set();
 
     // 1. Initialize Peer Connection
     function initAdminPeer() {
         adminPeer = new Peer('ADMIN_{{ auth()->id() }}');
 
-        adminPeer.on('open', (id) => console.log('✅ Admin Peer ready: ' + id));
+        adminPeer.on('open', (id) => {
+            console.log('✅ Admin Peer ready: ' + id);
+            // Restore sessions from localStorage after Peer ID is ready
+            const saved = JSON.parse(localStorage.getItem('watching') || '[]');
+            saved.forEach(sId => startSpectating(sId));
+        });
 
         adminPeer.on('call', (call) => {
             const studentId = call.peer.replace('STUDENT_', '');
-            call.answer(); // Automatically answer student calls
-
-            call.on('stream', (remoteStream) => {
-                const video = document.getElementById('video-' + studentId);
-                const overlay = document.getElementById('video-overlay-' + studentId);
-                
-                if (video && overlay) {
-                    video.srcObject = remoteStream;
-                    video.classList.remove('hidden'); // Show video element
-                    overlay.classList.add('hidden');  // Hide "Offline" text
-                    video.play();
-                }
-            });
-
+            call.answer();
+            call.on('stream', (remoteStream) => updateVideoUI(studentId, remoteStream));
             call.on('close', () => resetStudentUI(studentId));
         });
     }
 
-    // 2. Start Spectating Function
+    // 2. Start Spectating
     function startSpectating(studentId) {
-        const targetId = 'STUDENT_' + studentId;
-        const dummyStream = new MediaStream(); // Required for WebRTC initiation
-        const call = adminPeer.call(targetId, dummyStream);
+        if (connectedStudents.has(String(studentId))) return; // Avoid duplicate calls
 
+        const targetId = 'STUDENT_' + studentId;
+        const call = adminPeer.call(targetId, new MediaStream());
+        
         const btn = document.querySelector(`#btn-container-${studentId} button`);
         if (btn) btn.innerText = "Connecting...";
 
-        call.on('stream', (remoteStream) => {
-            const video = document.getElementById('video-' + studentId);
-            const overlay = document.getElementById('video-overlay-' + studentId);
-            
-            if (video) {
-                video.srcObject = remoteStream;
-                video.classList.remove('hidden');
-                overlay.classList.add('hidden');
-                video.play();
-                if (btn) btn.innerText = "● LIVE";
-            }
-        });
+        call.on('stream', (remoteStream) => updateVideoUI(studentId, remoteStream));
+        call.on('error', () => resetStudentUI(studentId));
+        call.on('close', () => resetStudentUI(studentId));
+
+        connectedStudents.add(String(studentId));
+        saveToLocalStorage(studentId);
     }
 
-    // 3. UI Reset Logic
+    // 3. UI Helpers
+    function updateVideoUI(studentId, remoteStream) {
+        const video = document.getElementById('video-' + studentId);
+        const overlay = document.getElementById('video-overlay-' + studentId);
+        const btn = document.querySelector(`#btn-container-${studentId} button`);
+        
+        if (video) {
+            video.srcObject = remoteStream;
+            video.classList.remove('hidden');
+            if (overlay) overlay.classList.add('hidden');
+            video.play();
+            if (btn) btn.innerText = "● LIVE";
+        }
+    }
+
     function resetStudentUI(studentId) {
         const video = document.getElementById('video-' + studentId);
         const overlay = document.getElementById('video-overlay-' + studentId);
         const btn = document.querySelector(`#btn-container-${studentId} button`);
 
-        if (video) {
-            video.srcObject = null;
-            video.classList.add('hidden');
-        }
+        if (video) { video.srcObject = null; video.classList.add('hidden'); }
         if (overlay) overlay.classList.remove('hidden');
-        if (btn) {
-            btn.innerText = "Connect Feed";
-            btn.classList.replace('bg-red-600', 'bg-indigo-600');
+        if (btn) { btn.innerText = "Connect Feed"; btn.classList.replace('bg-red-600', 'bg-indigo-600'); }
+
+        connectedStudents.delete(String(studentId));
+        removeFromLocalStorage(studentId);
+    }
+
+    // 4. Persistence Management
+    function saveToLocalStorage(id) {
+        let list = JSON.parse(localStorage.getItem('watching') || '[]');
+        if (!list.includes(String(id))) {
+            list.push(String(id));
+            localStorage.setItem('watching', JSON.stringify(list));
         }
     }
 
-    // 4. Presence Syncing (Updates UI based on DB)
+    function removeFromLocalStorage(id) {
+        let list = JSON.parse(localStorage.getItem('watching') || '[]');
+        list = list.filter(item => String(item) !== String(id));
+        localStorage.setItem('watching', JSON.stringify(list));
+    }
+
+    // 5. Presence Syncing
     function checkPresence() {
-        fetch('{{ route("admin.status-check") }}')
+        fetch('{{ route("admin.status-check") }}?session_id={{ $class->id }}')
             .then(res => res.json())
             .then(data => {
                 const presentIds = data.present_ids.map(String);
                 
-                document.querySelectorAll('[id^="student-card-"]').forEach(card => {
-                    const sId = card.getAttribute('data-student-id');
-                    const dot = document.getElementById('status-dot-' + sId);
-                    const btnContainer = document.getElementById('btn-container-' + sId);
+                // Remove students who are no longer in the DB
+                connectedStudents.forEach(sId => {
+                    if (!presentIds.includes(sId)) resetStudentUI(sId);
+                });
 
-                    if (presentIds.includes(sId)) {
-                        dot.classList.replace('bg-gray-300', 'bg-green-500');
-                        btnContainer.innerHTML = `<button onclick="startSpectating('${sId}')" class="flex-1 text-xs bg-indigo-600 text-white py-2 rounded">Connect Feed</button>`;
-                    } else {
-                        dot.classList.replace('bg-green-500', 'bg-gray-300');
-                        btnContainer.innerHTML = `<button disabled class="flex-1 text-xs bg-gray-300 text-gray-500 py-2 rounded cursor-not-allowed">Waiting...</button>`;
-                    }
+                // Auto-connect to new students
+                presentIds.forEach(sId => {
+                    if (!connectedStudents.has(sId)) startSpectating(sId);
                 });
             });
     }
 
-    // Initialize
-    initAdminPeer();
-    setInterval(checkPresence, 5000);
+    document.addEventListener('DOMContentLoaded', () => {
+        initAdminPeer();
+        setInterval(checkPresence, 5000);
+    });
 </script>

@@ -30,5 +30,14 @@
                 {{ $slot }}
             </main>
         </div>
+        <script>
+    window.addEventListener('beforeunload', function (e) {
+    // Only block if we have an active monitoring session
+    if (typeof connectedStudents !== 'undefined' && connectedStudents.size > 0) {
+        e.preventDefault();
+        e.returnValue = ''; // Triggers the native browser warning
+    }
+});
+</script>
     </body>
 </html>

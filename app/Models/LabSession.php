@@ -33,4 +33,13 @@ class LabSession extends Model
         return $this->belongsToMany(User::class, 'class_student', 'lab_session_id', 'user_id')
                     ->withPivot('is_present');
     }
+
+    // In your LabSession model or AdminController
+public function getActiveStudentsAttribute()
+{
+    return $this->students()
+        ->where('is_present', true)
+        ->where('updated_at', '>=', now()->subMinutes(1)) // Only active if updated < 1 min ago
+        ->get();
+}
 }

@@ -17,10 +17,14 @@ class ClassroomController extends Controller
     // app/Http/Controllers/ClassroomController.php
 public function show($id)
 {
+    $class = \App\Models\LabSession::with('students')->findOrFail($id);
+
     $session = \App\Models\LabSession::findOrFail($id);
 
     $activeStudents = \App\Models\User::where('role', 'student')->get();
-    // You can also fetch the students or tasks associated with this session here
-    return view('admin.classroom.show', compact('session', 'activeStudents'));
+   
+    $tasks = \App\Models\Task::where('subject_id', $id)->get();
+    
+    return view('admin.classroom.show', compact('session', 'activeStudents', 'class', 'tasks'));
 }
 }

@@ -20,20 +20,22 @@ public function index() {
 public function show($id)
 {
     // 1. Fetch the specific session
-    $class = \App\Models\LabSession::findOrFail($id);
+    $class = \App\Models\LabSession::with('students')->findOrFail($id);
 
-    // 2. Fetch active sessions (if you need this for your navigation/list)
+    // 2. Fetch the tasks for this session (This is the missing piece!)
+    $tasks = \App\Models\Task::where('subject_id', $id)->get();
+
+    // 3. Fetch active sessions
     $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
     
-    // 3. Define $sessionStatus BEFORE using it
+    // 4. Define $sessionStatus
     $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
     
-    // 4. Safely calculate $isPresent
+    // 5. Safely calculate $isPresent
     $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
 
-
-    // 6. Pass ALL required variables to the view
-    return view('student.subject', compact('class', 'activeSessions', 'isPresent'));
+    // 6. Pass $tasks to the view
+    return view('student.subject', compact('class', 'activeSessions', 'isPresent', 'tasks'));
 }
 
 public function markPresent(\App\Models\LabSession $labSession)
