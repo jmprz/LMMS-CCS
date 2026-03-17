@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\LabSession;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Submission;
 
 class StudentClassController extends Controller
 {
@@ -102,6 +104,39 @@ public function checkStatus($id)
         'is_active' => (bool) $class->is_active,
         'is_present' => $isPresent
     ]);
+}
+
+public function submitTask(Request $request, $taskId)
+{
+    $request->validate([
+        'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240', // 10MB limit
+    ]);
+
+    $task = \App\Models\Task::findOrFail($taskId);
+    $user = auth()->user();
+
+    if ($request->hasFile('submission')) {
+        $file = $request->file('submission');
+        
+        // Create a unique path: submissions/task_5/user_2_filename.zip
+        $path = $file->storeAs(
+            'submissions/task_' . $taskId,
+            $user->id . '_' . time() . '_' . $file->getClientOriginalName()
+        );
+
+        // Save to database (updates if already exists, or creates new)
+        Submission::updateOrCreate(
+            ['task_id' => $taskId, 'user_id' => $user->id],
+            [
+                'file_path' => $path,
+                'original_filename' => $file->getClientOriginalName()
+            ]
+        );
+
+        return back()->with('success', 'Task submitted successfully!');
+    }
+
+    return back()->with('error', 'File upload failed.');
 }
 
 }

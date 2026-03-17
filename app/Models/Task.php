@@ -19,4 +19,14 @@ class Task extends Model
 {
     return $this->belongsTo(LabSession::class, 'subject_id');
 }
+public function submissions()
+{
+    return $this->hasMany(Submission::class);
+}
+
+public function currentUserSubmission()
+{
+    return $this->hasOne(Submission::class)->where('user_id', auth()->id());
+}
+
 }

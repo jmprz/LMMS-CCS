@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/stop-presenting/{labSession}', [StudentClassController::class, 'stopPresenting'])->name('stop-presenting');
         Route::post('/join', [StudentClassController::class, 'join'])->name('join');
         Route::get('/student/check-session-status/{id}', [StudentClassController::class, 'checkStatus'])->name('student.check-status');
+        Route::post('/tasks/{task}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
         });
 
     // 3. ADMIN ROUTES (Must be named admin.x)
