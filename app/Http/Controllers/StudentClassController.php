@@ -37,7 +37,12 @@ public function show($id)
     $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
 
     // 6. Pass $tasks to the view
-    return view('student.subject', compact('class', 'activeSessions', 'isPresent', 'tasks'));
+   return view('student.subject', [
+    'class' => $class, 
+    'activeSessions' => $activeSessions,
+    'isPresent' => $isPresent,
+    'tasks' => $tasks
+    ]);
 }
 
 public function markPresent(\App\Models\LabSession $labSession)
@@ -109,24 +114,21 @@ public function checkStatus($id)
 public function submitTask(Request $request, $taskId)
 {
     $request->validate([
-        'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240', // 10MB limit
+        'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240',
     ]);
 
-    $task = \App\Models\Task::findOrFail($taskId);
-    $user = auth()->user();
-
-    if ($request->hasFile('submission')) {
+  if ($request->hasFile('submission')) {
         $file = $request->file('submission');
+        $filename = auth()->id() . '_' . time() . '_' . $file->getClientOriginalName();
         
-        // Create a unique path: submissions/task_5/user_2_filename.zip
-        $path = $file->storeAs(
-            'submissions/task_' . $taskId,
-            $user->id . '_' . time() . '_' . $file->getClientOriginalName()
-        );
+        // Move the file directly to the public/submissions folder
+        $file->move(public_path('submissions/task_' . $taskId), $filename);
 
-        // Save to database (updates if already exists, or creates new)
+        // Save the path in the database to match your new link structure
+        $path = 'submissions/task_' . $taskId . '/' . $filename;
+
         Submission::updateOrCreate(
-            ['task_id' => $taskId, 'user_id' => $user->id],
+            ['task_id' => $taskId, 'user_id' => auth()->id()],
             [
                 'file_path' => $path,
                 'original_filename' => $file->getClientOriginalName()
@@ -135,8 +137,6 @@ public function submitTask(Request $request, $taskId)
 
         return back()->with('success', 'Task submitted successfully!');
     }
-
-    return back()->with('error', 'File upload failed.');
 }
 
 }

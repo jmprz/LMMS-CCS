@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\LabSession;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Submission;
 
 class AdminController extends Controller
 {
@@ -104,4 +105,15 @@ public function statusCheck(Request $request)
     return response()->json(['present_ids' => $presentIds]);
 }
 
+public function gradeSubmission(Request $request, $id)
+{
+    $submission = \App\Models\Submission::findOrFail($id);
+    
+    $submission->update([
+        'grade' => $request->grade,
+        'feedback' => $request->feedback
+    ]);
+
+    return back()->with('success', 'Grade and Feedback saved!');
+}
 }

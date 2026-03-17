@@ -44,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/sessions/{session}/toggle', [AdminController::class, 'toggle'])->name('sessions.toggle'); 
         Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
         Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+        Route::post('/grade/{id}', [AdminController::class, 'gradeSubmission'])->name('grade');
         });
 
     // 4. PROFILE ROUTES

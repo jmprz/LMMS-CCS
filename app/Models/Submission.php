@@ -14,7 +14,9 @@ class Submission extends Model
         'task_id',
         'user_id',
         'file_path',
-        'original_filename'
+        'original_filename',
+        'grade',
+        'feedback'
     ];
 
     /**
