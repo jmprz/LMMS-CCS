@@ -55,7 +55,7 @@ public function getActiveStatus()
     $presentIds = DB::table('class_student')
                     ->where('lab_session_id', $activeSessionId)
                     ->where('is_present', true)
-                    ->pluck('student_id')
+                    ->pluck('user_id')
                     ->toArray();
 
     return response()->json(['present_ids' => $presentIds]);
@@ -100,7 +100,7 @@ public function statusCheck(Request $request)
         ->where('lab_session_id', $sessionId)
         ->where('is_present', true)
         ->where('updated_at', '>=', now()->subMinutes(1)) 
-        ->pluck('student_id'); // Ensure this matches your database column name
+        ->pluck('user_id'); // Ensure this matches your database column name
 
     return response()->json(['present_ids' => $presentIds]);
 }

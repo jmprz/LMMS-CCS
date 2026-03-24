@@ -107,174 +107,193 @@
                             @endif
                         </div>
 
-                        <div x-show="activeTab === 'tasks'" x-data="{ showModal: false }"
-                            class="bg-white p-6 rounded-xl shadow border border-gray-100">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h2 class="font-bold text-lg">Task Management</h2>
-                                    <p class="text-sm text-gray-500">Create and manage lab tasks for students.</p>
-                                </div>
-                                <button @click="showModal = true"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold transition">
-                                    + Create Task
-                                </button>
-                            </div>
+                    <div x-show="activeTab === 'tasks'" x-data="{ showModal: false, selectedTask: null, selectedQuiz: null, submissions: [], scores: [] }" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200" x-cloak>
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+        <div>
+            <h2 class="font-black text-2xl text-gray-900 tracking-tight text-uppercase">Academic Management</h2>
+            <p class="text-sm text-gray-500 mt-1 uppercase tracking-widest text-[10px] font-bold">Control laboratory activities and student examinations.</p>
+        </div>
+        
+        <div class="flex space-x-3 w-full md:w-auto"> 
+            <button @click="showModal = true" class="flex-1 md:flex-none bg-[#383838] hover:bg-black text-white px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-gray-200 uppercase text-xs">
+                + Create Task
+            </button>
+            <a href="{{ route('admin.quizzes.create', ['session_id' => $session->id]) }}"
+                target="_blank" class="flex-1 md:flex-none bg-white border-2 border-[#383838] text-[#383838] hover:bg-gray-50 px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 inline-flex items-center justify-center uppercase text-xs">
+                + Create Quiz
+            </a>
+        </div>
+    </div>
 
-                            <div id="task-list" class="space-y-4" x-data="{ selectedTask: null, submissions: [] }">
-                                @forelse($tasks as $task)
-                                    <div
-                                        class="p-4 border border-gray-200 rounded-xl flex justify-between items-center bg-white hover:border-blue-300 transition">
-                                        <div>
-                                            <h4 class="font-bold text-gray-800">{{ $task->title }}</h4>
-                                            <p class="text-sm text-gray-600 line-clamp-1">{{ $task->description }}</p>
-                                            <div class="flex gap-3 mt-1">
-                                                <span class="text-xs text-gray-400">Deadline:
-                                                    {{ \Carbon\Carbon::parse($task->deadline)->format('M d, Y H:i') }}</span>
-                                                <span
-                                                    class="text-xs font-bold text-green-600">{{ $task->submissions->count() }}
-                                                    Submissions</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-4">
-                                            <span class="font-bold text-blue-600">{{ $task->points }} pts</span>
-                                            <button
-                                                @click="selectedTask = {{ json_encode($task) }}; submissions = {{ json_encode($task->submissions()->with('user')->get()) }}"
-                                                class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition">
-                                                View Submissions
-                                            </button>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <p class="text-gray-500 text-sm">No tasks created yet.</p>
-                                @endforelse
-
-                                <template x-if="selectedTask">
-                                    <div
-                                        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                                        <div
-                                            class="bg-white rounded-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-                                            <div class="p-6 border-b flex justify-between items-center bg-gray-50">
-                                                <h3 class="font-black text-xl text-gray-900"
-                                                    x-text="'Submissions: ' + selectedTask.title"></h3>
-                                                <button @click="selectedTask = null"
-                                                    class="text-gray-400 hover:text-gray-900 text-2xl">&times;</button>
-                                            </div>
-
-                                            <div class="overflow-y-auto p-6">
-                                                <table class="w-full text-left">
-                                                    <thead class="text-xs font-bold text-gray-400 uppercase border-b">
-                                                        <tr>
-                                                            <th class="pb-3">Student</th>
-                                                            <th class="pb-3">File</th>
-                                                            <th class="pb-3 text-center">Grade / Max</th>
-                                                            <th class="pb-3 text-right">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="divide-y">
-                                                        <template x-for="sub in submissions" :key="sub.id">
-                                                            <tr class="border-b">
-                                                                <td class="py-4 font-bold text-gray-800"
-                                                                    x-text="sub.user.name"></td>
-                                                                <td class="py-4">
-                                                                  <a :href="'{{ ('/') }}' + sub.file_path" 
-   target="_blank" 
-   class="text-blue-600 font-bold hover:underline">
-    View Submission
-</a>
-                                                                </td>
-                                                                <td class="py-4">
-                                                                    <form :action="'/admin/grade/' + sub.id"
-                                                                        method="POST" class="flex flex-col gap-2">
-                                                                        @csrf
-                                                                        <div class="flex items-center gap-2">
-                                                                            <input type="number" name="grade"
-                                                                                :value="sub.grade"
-                                                                                class="w-20 border border-gray-300 rounded-lg p-1.5 text-center shadow-sm"
-                                                                                :max="selectedTask.points"
-                                                                                placeholder="Score">
-                                                                            <span class="text-gray-400 font-bold"
-                                                                                x-text="'/ ' + selectedTask.points"></span>
-                                                                        </div>
-                                                                        <textarea name="feedback" :value="sub.feedback"
-                                                                            placeholder="Add feedback..."
-                                                                            class="text-xs border border-gray-200 rounded-lg p-2 w-full"></textarea>
-                                                                        <button type="submit"
-                                                                            class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition">
-                                                                            Submit Grade
-                                                                        </button>
-                                                                    </form>
-                                                                </td>
-                                                            </tr>
-                                                        </template>
-                                                    </tbody>
-                                                </table>
-                                                <template x-if="submissions.length === 0">
-                                                    <p class="text-center py-10 text-gray-400 italic">No submissions yet
-                                                        for this task.</p>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <div x-show="showModal"
-                                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-                                x-cloak>
-                                <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200"
-                                    @click.away="showModal = false">
-                                    <h3 class="font-bold text-lg mb-6 text-gray-800">Create New Task</h3>
-
-                                    <form action="{{ route('admin.tasks.store') }}" method="POST" class="space-y-4">
-                                        @csrf
-                                        <div>
-                                            <input type="hidden" name="subject_id" value="{{ $session->id }}">
-                                            <label class="block text-sm font-medium text-gray-700">Task Title</label>
-                                            <input type="text" name="title"
-                                                class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                required>
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700">Instructions</label>
-                                            <textarea name="description"
-                                                class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                rows="3"></textarea>
-                                        </div>
-
-                                        <div class="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700">Total
-                                                    Points</label>
-                                                <input type="number" name="points"
-                                                    class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    required>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700">Deadline</label>
-                                                <input type="datetime-local" name="deadline"
-                                                    class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    required>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex justify-end gap-3 pt-4">
-                                            <button type="button" @click="showModal = false"
-                                                class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition">Cancel</button>
-                                            <button type="submit"
-                                                class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Save
-                                                Task</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
+    <div class="mb-12">
+        <h3 class="font-black text-gray-400 mb-5 flex items-center uppercase tracking-widest text-[10px]">
+            <i class="fas fa-flask me-2"></i> Lab Tasks
+        </h3>
+        <div class="grid grid-cols-1 gap-4">
+            @forelse($tasks as $task)
+                <div class="p-5 border border-gray-200 rounded-2xl flex justify-between items-center bg-white hover:border-gray-900 transition-all group">
+                    <div>
+                        <h4 class="font-bold text-lg text-gray-900">{{ $task->title }}</h4>
+                        <div class="flex items-center gap-4 mt-1">
+                            <span class="text-xs text-gray-400 font-medium">Deadline: {{ \Carbon\Carbon::parse($task->deadline)->format('M d, h:i A') }}</span>
+                            <span class="text-[10px] font-black text-white bg-gray-900 px-2 py-0.5 rounded-lg uppercase tracking-tighter">{{ $task->submissions->count() }} Submissions</span>
                         </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="font-black text-gray-900 text-sm">{{ $task->points }} PTS</span>
+                        <button @click="selectedTask = {{ json_encode($task) }}; submissions = {{ json_encode($task->submissions()->with('user')->get()) }}"
+                            class="bg-white text-[#383838] border-2 border-[#383838] px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest">
+                            View Submissions
+                        </button>
+                    </div>
+                </div>
+            @empty
+                <div class="py-10 border-2 border-dashed border-gray-100 rounded-2xl text-center text-gray-400 italic text-sm">No tasks assigned.</div>
+            @endforelse
+        </div>
+    </div>
+
+    <div>
+        <h3 class="font-black text-gray-400 mb-5 flex items-center uppercase tracking-widest text-[10px]">
+            <i class="fas fa-stopwatch me-2"></i> Active Quizzes
+        </h3>
+        <div class="grid grid-cols-1 gap-4">
+            @forelse($session->quizzes ?? [] as $quiz)
+                <div class="p-5 border border-gray-200 rounded-2xl flex justify-between items-center bg-white hover:border-gray-900 transition-all">
+                    <div>
+                        <h4 class="font-bold text-lg text-gray-900">{{ $quiz->title }}</h4>
+                       <div class="flex items-center gap-4 mt-1">
+                            <span class="text-xs text-gray-400 font-medium">Deadline: {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}</span>
+                            <span class="text-[10px] font-black text-white bg-gray-900 px-2 py-0.5 rounded-lg uppercase tracking-tighter">
+                                {{ $quiz->attempts->count() }} Answered
+                            </span>
+                        </div>
+                        <div class="flex gap-3 mt-1">
+                            <span class="text-[10px] text-gray-400 border-l pl-3 uppercase tracking-tighter">{{ $quiz->time_limit }} Mins</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                     <span class="font-black text-gray-900 text-sm">{{ $quiz->questions->count() }} PTS</span>
+                    <button @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
+                        class="bg-white text-[#383838] border-2 border-[#383838] px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest">
+                        View Results
+                    </button>
+                    </div>
+                </div>
+            @empty
+                <div class="py-10 border-2 border-dashed border-gray-100 rounded-2xl text-center text-gray-400 italic text-sm">No quizzes available.</div>
+            @endforelse
+        </div>
+    </div>
+
+    <template x-if="selectedTask">
+        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div class="p-6 border-b flex justify-between items-center bg-[#383838] text-white">
+                    <div>
+                        <h3 class="font-black text-xl uppercase tracking-tight" x-text="selectedTask.title"></h3>
+                        <p class="text-[10px] uppercase tracking-widest opacity-60">Task Submission Review & Grading</p>
+                    </div>
+                    <button @click="selectedTask = null" class="text-white hover:text-gray-300 text-3xl font-light">&times;</button>
+                </div>
+                <div class="overflow-y-auto p-8 bg-gray-50/50">
+                    <table class="w-full text-left border-separate border-spacing-y-3">
+                        <thead>
+                            <tr class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th class="px-6 pb-2">Student Name</th>
+                                <th class="px-6 pb-2">Attachment</th>
+                                <th class="px-6 pb-2">Grade & Feedback</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="sub in submissions" :key="sub.id">
+                                <tr class="bg-white shadow-sm rounded-2xl overflow-hidden">
+                                    <td class="px-6 py-6 font-bold text-gray-900 rounded-s-2xl border-y border-l border-gray-100" x-text="sub.user.name"></td>
+                                    <td class="px-6 py-6 border-y border-gray-100">
+                                        <a :href="'{{ url('/') }}/' + sub.file_path" target="_blank" class="inline-flex items-center text-[10px] font-black text-[#383838] bg-gray-100 px-3 py-2 rounded-lg hover:bg-black hover:text-white transition-all uppercase tracking-widest">
+                                            <i class="fas fa-file-download me-2"></i> View File
+                                        </a>
+                                    </td>
+                                    <td class="px-6 py-6 rounded-e-2xl border-y border-r border-gray-100">
+                                        <form :action="'/admin/grade/' + sub.id" method="POST" class="flex flex-col gap-2">
+                                            @csrf
+                                            <div class="flex items-center gap-2">
+                                                <input type="number" name="grade" :value="sub.grade" class="w-24 border-gray-200 rounded-xl text-sm font-black text-center focus:ring-[#383838]" placeholder="Score">
+                                                <span class="text-[10px] font-black text-gray-400" x-text="'/ ' + selectedTask.points + ' PTS'"></span>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <textarea name="feedback" :value="sub.feedback" class="flex-1 border-gray-200 rounded-xl text-xs p-3 focus:ring-[#383838]" placeholder="Enter student feedback..."></textarea>
+                                                <button type="submit" class="bg-[#383838] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition self-end">Save</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="selectedQuiz">
+        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div class="p-6 border-b flex justify-between items-center bg-[#383838] text-white">
+                    <div>
+                        <h3 class="font-black text-xl uppercase tracking-tight" x-text="selectedQuiz.title"></h3>
+                        <p class="text-[10px] uppercase tracking-widest opacity-60">Quiz Performance & Score Overview</p>
+                    </div>
+                    <button @click="selectedQuiz = null" class="text-white hover:text-gray-300 text-3xl font-light">&times;</button>
+                </div>
+                <div class="overflow-y-auto p-8 bg-gray-50/50">
+                    <table class="w-full text-left border-separate border-spacing-y-3">
+                        <thead>
+                            <tr class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th class="px-6 pb-2">Student Name</th>
+                                <th class="px-6 pb-2">Time Taken</th>
+                                <th class="px-6 pb-2">Final Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="attempt in scores" :key="attempt.id">
+                                <tr class="bg-white shadow-sm rounded-2xl overflow-hidden">
+                                    <td class="px-6 py-6 font-bold text-gray-900 rounded-s-2xl border-y border-l border-gray-100" x-text="attempt.user.name"></td>
+                                    <td class="px-6 py-6 border-y border-gray-100">
+                                        <span class="text-xs font-bold text-gray-500" x-text="Math.floor(attempt.time_spent / 60) + 'm ' + (attempt.time_spent % 60) + 's'"></span>
+                                    </td>
+                                    <td class="px-6 py-6 rounded-e-2xl border-y border-r border-gray-100">
+                                        <div class="flex items-center gap-4">
+                                            <div class="px-4 py-2 bg-gray-900 text-white rounded-xl">
+                                                <span class="text-sm font-black" x-text="attempt.score + ' / ' + attempt.total_questions"></span>
+                                            </div>
+                                            <div class="px-4 py-2 border-2 border-gray-100 rounded-xl">
+                                                <span class="text-xs font-black text-[#383838]" x-text="Math.round((attempt.score / attempt.total_questions) * 100) + '%'"></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <template x-if="scores.length === 0">
+                        <div class="text-center py-20">
+                            <p class="text-gray-400 italic text-sm">No students have completed this quiz yet.</p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+
+</div>
 
                         <div x-show="activeTab === 'students'"
                             class="bg-white p-6 rounded-xl shadow border border-gray-100">
                             <div class="flex justify-between items-center mb-6">
                                 <h2 class="font-bold text-lg text-gray-800">Enrolled Students</h2>
-                                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+                                <span class="px-3 py-1 text-white bg-gray-900 text-xs font-bold rounded-full">
                                     Total: {{ $class->students->count() }}
                                 </span>
                             </div>

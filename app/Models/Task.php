@@ -28,5 +28,16 @@ public function currentUserSubmission()
 {
     return $this->hasOne(Submission::class)->where('user_id', auth()->id());
 }
+// app/Models/LabSession.php
 
+public function quizzes()
+{
+    // Make sure 'subject_id' matches the column name in your quizzes table
+    return $this->hasMany(\App\Models\Quiz::class, 'subject_id');
+}
+
+public function tasks()
+{
+    return $this->hasMany(\App\Models\Task::class, 'subject_id');
+}
 }

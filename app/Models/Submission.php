@@ -16,7 +16,9 @@ class Submission extends Model
         'file_path',
         'original_filename',
         'grade',
-        'feedback'
+        'feedback',
+        'duration_seconds',
+        'submitted_at'
     ];
 
     /**

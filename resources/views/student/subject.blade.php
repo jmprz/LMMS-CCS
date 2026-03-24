@@ -103,57 +103,132 @@
             </button>
         </div>
 
-        <div class="px-8 py-6">
-            <div class="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                <h4 class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1">Instructions</h4>
-                <p class="text-gray-700 text-sm leading-relaxed" x-text="activeTask?.description"></p>
-            </div>
-
-            <form 
-                :action="`/student/tasks/${activeTask?.id}/submit`" 
-                method="POST" 
-                enctype="multipart/form-data"
-                x-data="{ uploading: false }"
-                @submit="uploading = true"
-            >
-                @csrf
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">File Submission</label>
-                        <input 
-                            type="file" 
-                            name="submission" 
-                            required
-                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 border border-gray-200 rounded-xl p-2 cursor-pointer transition"
-                        >
-                        <p class="mt-2 text-[10px] text-gray-400 uppercase font-semibold">Max Size: 10MB | PDF, ZIP, DOCX, PNG, JPG</p>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-3 pt-4">
-                        <button type="button" @click="activeTask = null" class="text-sm font-bold text-gray-500 px-4">Cancel</button>
-                        <button 
-                            type="submit" 
-                            class="px-8 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition flex items-center gap-2"
-                            :disabled="uploading"
-                        >
-                            <template x-if="!uploading"><span>Submit Work</span></template>
-                            <template x-if="uploading">
-                                <span class="flex items-center gap-2">
-                                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                    Uploading...
-                                </span>
-                            </template>
-                        </button>
-                    </div>
-                </div>
-            </form>
+      <div class="px-8 py-6">
+    <div class="mb-4 flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+        <div class="flex items-center gap-2">
+            <i class="ri-calendar-todo-line text-gray-400"></i>
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Deadline</span>
         </div>
+        <span :class="activeTask.deadline && new Date() > new Date(activeTask.deadline) ? 'text-red-600' : 'text-blue-600'" 
+              class="text-xs font-black"
+              x-text="activeTask.deadline ? new Date(activeTask.deadline).toLocaleString() : 'No Deadline Set'">
+        </span>
+    </div>
+
+    <div class="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+        <h4 class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1">Instructions</h4>
+        <p class="text-gray-700 text-sm leading-relaxed" x-text="activeTask?.description"></p>
+    </div>
+
+    <template x-if="activeTask?.current_user_submission">
+        <div class="mb-6 space-y-4">
+            <div class="p-4 rounded-xl border-2 border-green-100 bg-green-50/30">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-xs font-bold text-green-800 uppercase tracking-widest">Your Submission</h4>
+                    <span class="text-lg font-black text-green-700" 
+                          x-text="(activeTask.current_user_submission.grade || '0') + ' / ' + activeTask.points">
+                    </span>
+                </div>
+                
+                <div class="bg-white p-3 rounded-lg border border-green-100 mb-3">
+                    <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Professor's Feedback</p>
+                    <p class="text-sm text-gray-700 italic" 
+                       x-text="activeTask.current_user_submission.feedback || 'No feedback provided yet.'"></p>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <a :href="'/submissions/' + activeTask.current_user_submission.file_path.replace('submissions/', '')" 
+                       target="_blank" 
+                       class="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800 transition">
+                        <i class="ri-file-list-3-line"></i>
+                        <span x-text="activeTask.current_user_submission.original_filename"></span>
+                    </a>
+
+                    <template x-if="!activeTask.deadline || new Date() < new Date(activeTask.deadline)">
+                        <form :action="`/student/tasks/${activeTask.id}/delete`" method="POST" 
+                              onsubmit="return confirm('Are you sure you want to delete your submission? This cannot be undone.')">
+                            @csrf
+                            <button type="submit" class="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition">
+                                <i class="ri-delete-bin-line text-lg"></i>
+                            </button>
+                        </form>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="!activeTask.deadline || new Date() < new Date(activeTask.deadline)">
+        <form 
+            :action="`/student/tasks/${activeTask?.id}/submit`" 
+            method="POST" 
+            enctype="multipart/form-data"
+            x-data="{ startTime: Date.now(), uploading: false }"
+            x-init="$watch('activeTask', value => { if(value) startTime = Date.now() })"
+            @submit="uploading = true"
+        >
+            @csrf
+             <input type="hidden" name="opened_at" :value="startTime">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2" 
+                           x-text="activeTask?.current_user_submission ? 'Update Submission' : 'File Submission'">
+                    </label>
+                    <input 
+                        type="file" 
+                        name="submission" 
+                        required
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 border border-gray-200 rounded-xl p-2 cursor-pointer transition"
+                    >
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4">
+                    <button type="button" @click="activeTask = null" class="text-sm font-bold text-gray-500 px-4">Cancel</button>
+                    <button 
+                        type="submit" 
+                        class="px-8 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition flex items-center gap-2"
+                        :disabled="uploading"
+                    >
+                        <template x-if="!uploading">
+                            <span x-text="activeTask?.current_user_submission ? 'Resubmit Work' : 'Submit Work'"></span>
+                        </template>
+                        <template x-if="uploading">
+                            <span class="flex items-center gap-2">
+                                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Uploading...
+                            </span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </template>
+
+    <template x-if="activeTask.deadline && new Date() > new Date(activeTask.deadline)">
+        <div class="bg-red-50 border border-red-100 p-6 rounded-xl text-center">
+            <i class="ri-error-warning-fill text-red-500 text-3xl mb-2 block"></i>
+            <p class="text-red-700 font-bold">Submission Closed</p>
+            <p class="text-red-600 text-xs mt-1">The deadline for this activity has passed. You can no longer submit or delete files.</p>
+            <button @click="activeTask = null" class="mt-4 text-xs font-bold text-red-800 underline">Close Window</button>
+        </div>
+    </template>
+</div>
     </div>
 </div>
 
             <div x-show="tab === 'quizzes'" x-transition>
                 <div class="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed">
-                    <p class="text-gray-400">No quizzes available.</p>
+                    @foreach($quizzes as $quiz)
+    <div class="p-4 border rounded-lg mb-2 flex justify-between items-center">
+        <div>
+            <h4 class="font-bold">{{ $quiz->title }}</h4>
+            <p class="text-sm text-gray-500">Limit: {{ $quiz->time_limit }} mins</p>
+        </div>
+        <a href="{{ route('student.quizzes.attempt', $quiz->id) }}" class="bg-indigo-600 text-white px-4 py-2 rounded">
+            Start Quiz
+        </a>
+    </div>
+@endforeach
                 </div>
             </div>
 

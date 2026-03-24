@@ -1,52 +1,92 @@
 <x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
-        @csrf
-
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+    <div class="min-h-screen flex flex-col md:flex-row bg-white text-gray-900">
+        <div class="hidden md:flex md:w-2/5 bg-[#383838] items-center justify-center p-12 relative">
+            <div class="text-white text-center">
+                 <img src="{{ ('img/ccs_logo.png') }}" class="h-[350px] mx-auto mb-8 filter drop-shadow-lg">
+                <h1 class="text-3xl font-bold uppercase tracking-tight mb-4">Learning Management and Monitoring System</h1>
+                <div class="mt-8 w-56 h-1 bg-gray-100 mx-auto rounded-full"></div>
+                <p class="font-medium tracking-widest uppercase text-lg mt-8">College of Computing Studies</p>
+            </div>
         </div>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <div class="flex-1 flex items-center justify-center p-8 bg-gray-100 overflow-y-auto">
+            <div class="w-full max-w-2xl"> 
+                <div class="mb-8 text-left">
+                    <h2 class="text-4xl font-black text-gray-900 mb-2">Create Account</h2>
+                    <p class="text-gray-600 text-md">Enter your full details to register</p>
+                </div>
+
+                <form method="POST" action="{{ route('register') }}" 
+                      x-data="{ role: 'student', showPass: false, showConfirm: false }" 
+                      class="space-y-4">
+                    @csrf
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" name="first_name" placeholder="First Name" required class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none transition-all uppercase">
+                        <input type="text" name="middle_name" placeholder="Middle Name" class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none transition-all uppercase">
+                        <input type="text" name="last_name" placeholder="Surname" required class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none transition-all uppercase">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" name="school_id" placeholder="Student / Faculty ID" required class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none">
+                        <select name="role" x-model="role" class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl outline-none cursor-pointer">
+                            <option value="student">Student</option>
+                            <option value="admin">Faculty</option>
+                        </select>
+                    </div>
+
+                    <input type="email" name="email" placeholder="Email Address" required class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="relative">
+                            <input :type="showPass ? 'text' : 'password'" name="password" required 
+                                   class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none" 
+                                   placeholder="Password">
+                            <button type="button" @click="showPass = !showPass" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <template x-if="!showPass">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.644C3.67 8.5 7.652 5 12 5c4.348 0 8.331 3.5 9.964 6.678.14.272.14.578 0 .85C20.33 15.5 16.348 19 12 19c-4.348 0-8.331-3.5-9.964-6.678z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </template>
+                                <template x-if="showPass">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                </template>
+                            </button>
+                        </div>
+
+                        <div class="relative">
+                            <input :type="showConfirm ? 'text' : 'password'" name="password_confirmation" required 
+                                   class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none" 
+                                   placeholder="Confirm Password">
+                            <button type="button" @click="showConfirm = !showConfirm" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <template x-if="!showConfirm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.644C3.67 8.5 7.652 5 12 5c4.348 0 8.331 3.5 9.964 6.678.14.272.14.578 0 .85C20.33 15.5 16.348 19 12 19c-4.348 0-8.331-3.5-9.964-6.678z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </template>
+                                <template x-if="showConfirm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 space-y-4">
+                        <button type="submit" class="w-full bg-[#383838] text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all shadow-lg active:scale-[0.99] uppercase">
+                            Register Account
+                        </button>
+                        <p class="text-center text-gray-600 text-sm">
+                            Already registered? <a href="{{ route('login') }}" class="font-bold text-[#383838] hover:underline">Sign in instead</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
         </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
-    </form>
+    </div>
 </x-guest-layout>

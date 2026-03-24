@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\StudentClassController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\QuizController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/join', [StudentClassController::class, 'join'])->name('join');
         Route::get('/student/check-session-status/{id}', [StudentClassController::class, 'checkStatus'])->name('student.check-status');
         Route::post('/tasks/{task}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
+        Route::post('/tasks/{taskId}/delete', [StudentClassController::class, 'deleteTask'])->name('tasks.delete');
+        Route::get('/quizzes/{quiz}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');
+        Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
         });
 
     // 3. ADMIN ROUTES (Must be named admin.x)
@@ -45,6 +49,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
         Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
         Route::post('/grade/{id}', [AdminController::class, 'gradeSubmission'])->name('grade');
+        Route::get('/quizzes/create', [QuizController::class, 'create'])->name('quizzes.create');
+        Route::post('/quizzes', [QuizController::class, 'store'])->name('quizzes.store');
+        Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
         });
 
     // 4. PROFILE ROUTES

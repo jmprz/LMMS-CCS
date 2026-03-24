@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\LabSession;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Submission;
+use Carbon\Carbon;
+use App\Models\Task;
+use App\Models\Quiz;
 
 class StudentClassController extends Controller
 {
@@ -22,26 +25,37 @@ public function index() {
 public function show($id)
 {
     // 1. Fetch the specific session
-    $class = \App\Models\LabSession::with('students')->findOrFail($id);
+    $class = LabSession::with('students')->findOrFail($id);
 
-    // 2. Fetch the tasks for this session (This is the missing piece!)
-    $tasks = \App\Models\Task::where('subject_id', $id)->get();
+    // 2. Fetch the tasks for this session
+    $tasks = Task::where('subject_id', $id) // Ensure this column name matches your DB (usually lab_session_id or subject_id)
+        ->with(['currentUserSubmission']) 
+        ->get();
 
-    // 3. Fetch active sessions
-    $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
+    // 3. Fetch active sessions for the sidebar/navigation
+    $activeSessions = LabSession::where('is_active', true)->get();
     
-    // 4. Define $sessionStatus
+    // 4. Check if student is in this class and get their presence status
     $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
-    
-    // 5. Safely calculate $isPresent
     $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
 
-    // 6. Pass $tasks to the view
-   return view('student.subject', [
-    'class' => $class, 
-    'activeSessions' => $activeSessions,
-    'isPresent' => $isPresent,
-    'tasks' => $tasks
+    // 5. Fetch AVAILABLE Quizzes (Scheduled and not Expired)
+    // FIX: Changed $sessionId to $id
+    $availableQuizzes = Quiz::where('subject_id', $id)
+        ->where('published_at', '<=', now()) 
+        ->where(function($query) {
+            $query->whereNull('expires_at') 
+                  ->orWhere('expires_at', '>', now());
+        })
+        ->get();
+
+    // 6. Pass EVERYTHING to the view
+    return view('student.subject', [
+        'class' => $class, 
+        'activeSessions' => $activeSessions,
+        'isPresent' => $isPresent,
+        'tasks' => $tasks,
+        'quizzes' => $availableQuizzes // Added this!
     ]);
 }
 
@@ -113,30 +127,81 @@ public function checkStatus($id)
 
 public function submitTask(Request $request, $taskId)
 {
+    $task = Task::findOrFail($taskId);
+
+    // 1. Check if deadline has passed
+    if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
+        return back()->with('error', 'The deadline for this task has passed. You can no longer submit or update files.');
+    }
+
     $request->validate([
         'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240',
     ]);
 
-  if ($request->hasFile('submission')) {
+    if ($request->hasFile('submission')) {
         $file = $request->file('submission');
         $filename = auth()->id() . '_' . time() . '_' . $file->getClientOriginalName();
         
-        // Move the file directly to the public/submissions folder
+        // Move the file directly to the public/submissions folder (Your fix)
         $file->move(public_path('submissions/task_' . $taskId), $filename);
 
-        // Save the path in the database to match your new link structure
         $path = 'submissions/task_' . $taskId . '/' . $filename;
+
+        // If replacing an old file, we should delete the old physical file to save space
+        $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', auth()->id())->first();
+        if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
+            unlink(public_path($oldSubmission->file_path));
+        }
+
+        $openedAtMs = $request->input('opened_at');
+        $nowMs = round(microtime(true) * 1000); 
+
+        $durationSeconds = $openedAtMs ? floor(($nowMs - $openedAtMs) / 1000) : 0;
+
+    // Safety check: if duration is negative (due to clock sync issues) or over 24 hours, set to 0
+    if ($durationSeconds < 0 || $durationSeconds > 86400) {
+        $durationSeconds = 0;
+    }
 
         Submission::updateOrCreate(
             ['task_id' => $taskId, 'user_id' => auth()->id()],
             [
                 'file_path' => $path,
-                'original_filename' => $file->getClientOriginalName()
+                'original_filename' => $file->getClientOriginalName(),
+                'duration_seconds' => $durationSeconds, 
+                'submitted_at' => now(),               
             ]
         );
 
         return back()->with('success', 'Task submitted successfully!');
     }
+}
+
+public function deleteTask($taskId)
+{
+    $task = Task::findOrFail($taskId);
+
+    // 2. Check if deadline has passed before allowing delete
+    if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
+        return back()->with('error', 'The deadline has passed. You can no longer delete your submission.');
+    }
+
+    $submission = Submission::where('task_id', $taskId)
+        ->where('user_id', auth()->id())
+        ->first();
+
+    if ($submission) {
+        // Delete the physical file from /public/submissions/
+        $filePath = public_path($submission->file_path);
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        $submission->delete();
+        return back()->with('success', 'Submission deleted successfully.');
+    }
+
+    return back()->with('error', 'No submission found to delete.');
 }
 
 }

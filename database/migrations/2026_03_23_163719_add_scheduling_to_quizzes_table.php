@@ -11,12 +11,9 @@ return new class extends Migration
      */
     public function up()
 {
-    Schema::table('users', function (Blueprint $table) {
-        $table->string('student_id')->unique()->nullable(); // The custom ID
-    });
-
-    Schema::table('class_student', function (Blueprint $table) {
-        $table->string('student_id')->nullable(); // Foreign key reference
+    Schema::table('quizzes', function (Blueprint $table) {
+        $table->timestamp('published_at')->nullable(); // When it becomes visible
+        $table->timestamp('expires_at')->nullable();   // The deadline
     });
 }
 
@@ -25,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tables', function (Blueprint $table) {
+        Schema::table('quizzes', function (Blueprint $table) {
             //
         });
     }
