@@ -94,7 +94,9 @@ public function attempt($id)
 
 public function submit(Request $request, $id)
 {
-    $quiz = Quiz::with('questions.options')->findOrFail($id);
+    // 1. Eager load labSession so we have the ID for the redirect
+    $quiz = Quiz::with(['questions.options', 'labSession'])->findOrFail($id);
+    
     $submittedAnswers = $request->input('answers', []);
     $score = 0;
     $totalQuestions = $quiz->questions->count();
@@ -102,18 +104,16 @@ public function submit(Request $request, $id)
     foreach ($quiz->questions as $question) {
         $userAnswer = $submittedAnswers[$question->id] ?? null;
 
-        // --- 1. Handle SELECT ALL (Multiple Answers) ---
         if ($question->type === 'select_all') {
             $correctOptionTexts = $question->options->where('is_correct', true)
-                                    ->pluck('option_text')
-                                    ->map(fn($t) => strtolower(trim($t)))
-                                    ->toArray();
+                ->pluck('option_text')
+                ->map(fn($t) => strtolower(trim($t)))
+                ->toArray();
             
             $userAnswerArray = is_array($userAnswer) 
-                                ? array_map(fn($t) => strtolower(trim($t)), $userAnswer) 
-                                : [];
+                ? array_map(fn($t) => strtolower(trim($t)), $userAnswer) 
+                : [];
 
-            // Check if arrays match perfectly (sort them first to be safe)
             sort($correctOptionTexts);
             sort($userAnswerArray);
 
@@ -121,7 +121,6 @@ public function submit(Request $request, $id)
                 $score++;
             }
         } 
-        // --- 2. Handle IDENTIFICATION, MULTIPLE, & TRUE/FALSE ---
         else {
             $correctOption = $question->options->where('is_correct', true)->first();
             
@@ -148,8 +147,9 @@ public function submit(Request $request, $id)
         'time_spent' => $timeSpentInSeconds,
     ]);
 
-    return redirect()->route('student.dashboard')
-        ->with('success', "Quiz submitted! Score: $score/$totalQuestions");
+    // 2. REDIRECT TO SUBJECT/LAB SESSION
+    return redirect()->route('student.subject', $quiz->subject_id)
+    ->with('success', "Quiz submitted! Score: $score/$totalQuestions");
 }
 
 public function destroy($id)
@@ -159,4 +159,12 @@ public function destroy($id)
 
         return redirect()->back()->with('success', 'Quiz deleted successfully!');
     }
+
+    public function show($id)
+{
+    // Eager load labSession to get the subject_name
+    $quiz = Quiz::with(['labSession', 'questions.options'])->findOrFail($id);
+    
+    return view('student.quizzes.show', compact('quiz'));
+}
 }

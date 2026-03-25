@@ -286,7 +286,38 @@
             </div>
         </div>
     </template>
-
+<div x-show="showModal" class="fixed inset-0 z-[110] flex items-center justify-center bg-[#383838]/80 backdrop-blur-md p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200">
+            <h3 class="font-black text-2xl text-gray-900 mb-6">New Lab Activity</h3>
+            <form action="{{ route('admin.tasks.store') }}" method="POST" class="space-y-4">
+                @csrf
+                <input type="hidden" name="subject_id" value="{{ $session->id }}">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Activity Title</label>
+                    <input type="text" name="title" class="w-full border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-black outline-none" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Instructions</label>
+                    <textarea name="description" class="w-full border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-black outline-none" rows="3"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Max Pts</label>
+                        <input type="number" name="points" class="w-full border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-black outline-none" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Deadline</label>
+                        <input type="datetime-local" name="deadline" class="w-full border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-black outline-none" required>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" @click="showModal = false" class="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold uppercase text-xs">Cancel</button>
+                    <button type="submit" class="flex-1 py-3 bg-[#383838] text-white rounded-xl font-bold uppercase text-xs hover:bg-black transition shadow-lg shadow-gray-200">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 </div>
 
                         <div x-show="activeTab === 'students'"

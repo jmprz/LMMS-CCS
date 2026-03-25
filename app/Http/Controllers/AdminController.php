@@ -13,20 +13,25 @@ use App\Models\Submission;
 
 class AdminController extends Controller
 {
-    public function index()
-    {
-        $activeStudents = User::where('role', 'student')
-                            ->orderBy('name', 'asc')
-                            ->paginate(6);
-                            
-        $activeSessions = LabSession::where('is_active', true)
-            ->where('faculty_id', auth()->id())
-            ->latest()
-            ->get();
+ public function index(Request $request)
+{
+    // 1. Get all your active sessions
+    $activeSessions = LabSession::where('is_active', true)
+        ->where('faculty_id', auth()->id())
+        ->latest()
+        ->get();
 
-        return view('admin.dashboard', compact('activeStudents', 'activeSessions')); 
-    }
+    // 2. Identify WHICH class to display (Default to the latest one)
+    $selectedClassId = $request->query('session_id') ?? $activeSessions->first()?->id;
 
+    // 3. Get the specific class model
+    $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
+
+    // 4. Update activeStudents to ONLY be the students from THIS specific class
+    $activeStudents = $class ? $class->students : collect();
+
+    return view('admin.dashboard', compact('activeStudents', 'activeSessions', 'class')); 
+}
     public function toggle(LabSession $session)
     {
         try {
@@ -92,15 +97,19 @@ public function getActiveStatus()
 
 public function statusCheck(Request $request)
 {
-    // 1. Get the session ID from the URL query string (e.g., ?session_id=1)
     $sessionId = $request->query('session_id');
 
-    // 2. Query with both the Session ID and the heartbeat filter
+    // If no session is selected, return empty to avoid errors
+    if (!$sessionId) {
+        return response()->json(['present_ids' => []]);
+    }
+
     $presentIds = DB::table('class_student')
         ->where('lab_session_id', $sessionId)
         ->where('is_present', true)
-        ->where('updated_at', '>=', now()->subMinutes(1)) 
-        ->pluck('user_id'); // Ensure this matches your database column name
+        // Students who sent a heartbeat in the last 60 seconds
+        ->where('updated_at', '>=', now()->subSeconds(60)) 
+        ->pluck('user_id');
 
     return response()->json(['present_ids' => $presentIds]);
 }

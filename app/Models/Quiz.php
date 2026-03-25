@@ -25,9 +25,11 @@ public function getTotalPointsAttribute()
 {
     return $this->questions->sum('points');
 }
-public function labSession()
+// app/Models/Quiz.php
+
+public function labSession(): BelongsTo
 {
-    return $this->belongsTo(LabSession::class);
+    return $this->belongsTo(LabSession::class, 'subject_id');
 }
 
 public function attempts(): \Illuminate\Database\Eloquent\Relations\HasMany
