@@ -80,38 +80,8 @@
     }
 </style>
 
-<div id="successModal" class="hidden">
-    <div class="modal-card">
-        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i class="ri-checkbox-circle-fill text-5xl"></i>
-        </div>
-        
-        <h2 class="text-2xl font-black text-gray-900 mb-2">Quiz Submitted!</h2>
-        <p class="text-gray-500 text-sm mb-8">Your attempt has been recorded successfully.</p>
-
-        <div class="grid grid-cols-2 gap-3 mb-8">
-            <div class="stat-box col-span-2">
-                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Final Score</span>
-                <span class="text-2xl font-black text-[#383838]"><span id="modalScore">--</span> / {{ $quiz->questions->count() }}</span>
-            </div>
-            <div class="stat-box">
-                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Time Spent</span>
-                <span id="modalTimeSpent" class="text-lg font-bold text-gray-700">00:00</span>
-            </div>
-            <div class="stat-box">
-                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Remaining</span>
-                <span id="modalTimeLeft" class="text-lg font-bold text-gray-700">00:00</span>
-            </div>
-        </div>
-
-        <button type="button" onclick="finalizeRedirect()" class="w-full bg-[#383838] text-white py-4 rounded-xl font-bold hover:bg-black transition-all">
-            RETURN TO DASHBOARD
-        </button>
-    </div>
-</div>
-
 <div class="quiz-sticky-header">
-    <div class="container mt-6">
+    <div class="container mt-6 mx-auto px-4">
         <div class="subject-style-header">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
