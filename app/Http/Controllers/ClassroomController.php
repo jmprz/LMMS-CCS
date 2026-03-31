@@ -22,7 +22,8 @@ public function show($id)
         'students', 
         'tasks.submissions.user', 
         'quizzes.attempts.user', // This is for viewing student scores
-        'quizzes.questions'      // This is for the quiz overview
+        'quizzes.questions',
+        'materials'      // This is for the quiz overview
     ])->findOrFail($id);
 
     // 2. Keep your existing logic for the student dropdown

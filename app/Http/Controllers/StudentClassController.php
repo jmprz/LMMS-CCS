@@ -25,7 +25,7 @@ public function index() {
 public function show($id)
 {
     // 1. Fetch the specific session
-    $class = LabSession::with('students')->findOrFail($id);
+    $class = LabSession::with('students', 'materials')->findOrFail($id);
 
     // 2. Fetch the tasks for this session
     $tasks = Task::where('subject_id', $id) // Ensure this column name matches your DB (usually lab_session_id or subject_id)

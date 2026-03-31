@@ -208,13 +208,41 @@
 </div>
 
 <div x-show="tab === 'materials'" x-transition>
-    <div class="grid gap-4">
-        {{-- If you have a $materials variable, loop here --}}
-        <div class="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-            <i class="ri-folder-open-line text-gray-300 text-4xl mb-3 block"></i>
-            <p class="text-gray-400">No reference materials uploaded.</p>
+   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+    @foreach($class->materials as $material) 
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="p-3 bg-gray-100 rounded-xl">
+                @if($material->type == 'pdf') 
+                    <i class="ri-file-pdf-fill text-red-500 text-xl"></i>
+                @elseif($material->type == 'youtube') 
+                    <i class="ri-youtube-fill text-red-600 text-xl"></i>
+                @else 
+                    <i class="ri-file-ppt-2-fill text-orange-500 text-xl"></i>
+                @endif
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-900">{{ $material->title }}</h4>
+                <p class="text-xs text-gray-400 uppercase font-semibold">{{ $material->type }}</p>
+            </div>
         </div>
+        
+       @php
+    // If it's a file, we use the path stored in DB. If YouTube, use the URL.
+    $url = ($material->type === 'youtube') 
+            ? $material->content 
+            : url($material->content); // This points to your public folder
+@endphp
+
+<a href="{{ $url }}" 
+   target="_blank" 
+   class="inline-flex items-center text-[10px] font-black text-[#383838] bg-gray-100 px-3 py-2 rounded-lg hover:bg-black hover:text-white transition-all uppercase tracking-widest">
+    <i class="fas fa-eye me-2"></i> 
+    {{ $material->type === 'youtube' ? 'Watch Video' : 'View File' }}
+</a>
     </div>
+    @endforeach
+   </div>
 </div>
 
 <div x-show="tab === 'classmates'" x-transition>

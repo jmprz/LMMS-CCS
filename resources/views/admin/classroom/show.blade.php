@@ -123,6 +123,13 @@
                 target="_blank" class="flex-1 md:flex-none bg-white border-2 border-[#383838] text-[#383838] hover:bg-gray-50 px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 inline-flex items-center justify-center uppercase text-xs">
                 + Create Quiz
             </a>
+            <button @click="$dispatch('open-material-modal')" 
+        class="bg-[#383838] text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-black transition-all shadow-md flex items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+    Post Material
+</button>
         </div>
     </div>
 
@@ -318,6 +325,66 @@
         </div>
     </div>
 </div>
+</div>
+<div x-data="{ open: false, type: 'pdf' }" 
+     @open-material-modal.window="open = true" 
+     x-show="open" 
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     x-cloak>
+    
+    <div @click.away="open = false" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 class="text-xl font-black text-gray-900 uppercase">Upload Learning Content</h3>
+            <button @click="open = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <form action="{{ route('admin.materials.store', $session->id) }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-5">
+            @csrf
+            
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">Material Title</label>
+                <input type="text" name="title" required placeholder="e.g. Lesson 1: Variable Scoping" 
+                       class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#383838] focus:border-transparent outline-none transition-all">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">Type of Content</label>
+                <select name="type" x-model="type" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none cursor-pointer focus:ring-2 focus:ring-[#383838]">
+                    <option value="pdf">PDF Document</option>
+                    <option value="pptx">PowerPoint (.pptx)</option>
+                    <option value="youtube">YouTube Video URL</option>
+                </select>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                
+                <template x-if="type === 'youtube'">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1.5">Paste YouTube Link</label>
+                        <input type="url" name="content_url" required placeholder="https://www.youtube.com/watch?v=..." 
+                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg outline-none">
+                    </div>
+                </template>
+
+                <template x-if="type === 'pdf' || type === 'pptx'">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1.5">Select File</label>
+                        <input type="file" name="content_file" required 
+                               :accept="type === 'pdf' ? '.pdf' : '.ppt,.pptx'"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#383838] file:text-white hover:file:bg-black transition-all">
+                    </div>
+                </template>
+            </div>
+
+            <button type="submit" class="w-full bg-[#383838] text-white py-4 rounded-xl font-bold hover:bg-black transition-all shadow-lg uppercase">
+                Publish Material
+            </button>
+        </form>
+    </div>
 </div>
 
                         <div x-show="activeTab === 'students'"

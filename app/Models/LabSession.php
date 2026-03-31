@@ -69,4 +69,11 @@ class LabSession extends Model
     {
         return $this->hasMany(Quiz::class, 'subject_id');
     }
+
+    // App\Models\LabSession.php (or Classroom.php)
+
+public function materials()
+{
+    return $this->hasMany(Material::class);
+}
 }

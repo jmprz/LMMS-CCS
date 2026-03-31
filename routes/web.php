@@ -6,6 +6,7 @@ use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\StudentClassController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\QuizController;
+use App\Http\Controllers\MaterialController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -52,6 +53,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/quizzes/create', [QuizController::class, 'create'])->name('quizzes.create');
         Route::post('/quizzes', [QuizController::class, 'store'])->name('quizzes.store');
         Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
+        Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
         });
 
     // 4. PROFILE ROUTES
