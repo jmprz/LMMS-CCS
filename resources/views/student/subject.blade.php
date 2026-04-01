@@ -394,6 +394,48 @@
         </div>
     </div>
 </div>
+<div x-data="browserTabs()" class="bg-gray-100 rounded-3xl overflow-hidden border border-gray-200 shadow-xl">
+    <div class="bg-white p-3 flex items-center gap-2 border-b border-gray-200">
+        <template x-for="(tab, index) in tabs" :key="index">
+            <div @click="activeTab = index" 
+                 :class="activeTab === index ? 'bg-gray-100 border-gray-300' : 'bg-white border-transparent'"
+                 class="px-4 py-2 rounded-xl border text-sm font-bold flex items-center gap-3 cursor-pointer transition-all">
+                <i class="ri-global-line"></i>
+                <span x-text="tab.title" class="truncate max-w-[100px]"></span>
+                <i @click.stop="removeTab(index)" class="ri-close-line hover:text-red-500" x-show="tabs.length > 1"></i>
+            </div>
+        </template>
+        <button @click="addTab()" class="p-2 hover:bg-gray-100 rounded-lg text-blue-600">
+            <i class="ri-add-circle-fill text-xl"></i>
+        </button>
+    </div>
+
+    <div class="bg-white px-4 py-2 flex items-center gap-4 border-b border-gray-200">
+        <div class="flex gap-2 text-gray-600">
+            <button @click="refresh()" class="p-2 hover:bg-gray-100 rounded-lg">
+                <i class="ri-refresh-line"></i>
+            </button>
+        </div>
+        
+        <div class="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs text-gray-400 flex items-center gap-2 italic">
+            <i class="ri-lock-2-line"></i>
+            <span>Secure Research Mode: Use the Google search bar below to find resources. Direct URL entry is disabled.</span>
+        </div>
+        
+        <div class="text-[10px] font-mono text-gray-300">
+            SESSION: {{ $class->id }}
+        </div>
+    </div>
+
+    <div class="relative h-[700px] bg-white">
+        <template x-for="(tab, index) in tabs" :key="index">
+            <iframe :src="tab.url" 
+                    x-show="activeTab === index"
+                    :id="'browser-frame-' + index"
+                    class="absolute inset-0 w-full h-full border-none"></iframe>
+        </template>
+    </div>
+</div>
     </main>
 </div>
 <style>
@@ -546,5 +588,84 @@ setInterval(() => {
             alert("🚫 Access Denied.");
         }
     }
+</script>
+
+<script>
+// 1. Immediate sync to Electron Main Process
+if (window.electronAPI) {
+    window.electronAPI.setCurrentSession("{{ $class->id }}");
+}
+
+function browserTabs() {
+    return {
+        activeTab: 0,
+        tabs: [
+            { title: 'Google Search', url: 'https://www.google.com/search?igu=1' }
+        ],
+        
+        init() {
+            // Log that the research environment is active
+            this.logActivity('environment_start', 'Browser UI initialized in locked mode');
+            
+            // Watch for iframe changes (though Electron catches most of this now)
+            setInterval(() => {
+                const frame = document.getElementById('browser-frame-' + this.activeTab);
+                if (frame && frame.contentWindow) {
+                    try {
+                        const currentUrl = frame.contentWindow.location.href;
+                        if (currentUrl !== this.tabs[this.activeTab].url && currentUrl !== 'about:blank') {
+                            this.tabs[this.activeTab].url = currentUrl;
+                        }
+                    } catch (e) { /* CORS expected */ }
+                }
+            }, 2000);
+
+            window.addEventListener('beforeunload', () => {
+        if (window.electronAPI) {
+            // Tell Electron to trigger one last log calculation
+            window.electronAPI.triggerFinalLog("{{ $class->id }}");
+        }
+    });
+        },
+
+        addTab() {
+            this.tabs.push({ 
+                title: 'New Tab', 
+                url: 'https://www.google.com/search?igu=1' 
+            });
+            this.activeTab = this.tabs.length - 1;
+            this.logActivity('new_tab', 'Opened new research tab');
+        },
+
+        removeTab(index) {
+            this.tabs.splice(index, 1);
+            if (this.activeTab >= this.tabs.length) this.activeTab = this.tabs.length - 1;
+        },
+
+        refresh() {
+            const frame = document.getElementById('browser-frame-' + this.activeTab);
+            if (frame) {
+                frame.src = frame.src;
+                this.logActivity('refresh', 'Manual refresh triggered');
+            }
+        },
+
+        logActivity(type, detail) {
+            fetch('http://127.0.0.1:8000/student/log-behavior', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                },
+                body: JSON.stringify({ 
+                    type: type, 
+                    detail: detail,
+                    lab_session_id: "{{ $class->id }}" 
+                })
+            }).catch(err => console.error('Log Error:', err));
+        }
+    }
+}
 </script>
 </x-app-layout>

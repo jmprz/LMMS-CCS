@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return redirect('/');
     })->name('dashboard');
 
+   Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
     // 2. STUDENT ROUTES (Must be named student.x)
     Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->group(function () {
         Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');

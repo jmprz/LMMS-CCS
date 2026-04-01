@@ -8,7 +8,10 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Submission;
 use Carbon\Carbon;
 use App\Models\Task;
+use App\Models\ActivityLog;
 use App\Models\Quiz;
+use Illuminate\Support\Facades\DB;
+
 
 class StudentClassController extends Controller
 {
@@ -204,4 +207,52 @@ public function deleteTask($taskId)
     return back()->with('error', 'No submission found to delete.');
 }
 
+public function logBehavior(Request $request)
+{
+    $userId = auth()->id() ?? 1;
+    $labSessionId = $request->lab_session_id;
+    $detail = $request->detail;
+
+    // 1. CLEAN THE URL (Do this first)
+    if (str_contains($detail, 'google.com/search?q=')) {
+        parse_str(parse_url($detail, PHP_URL_QUERY), $query);
+        $detail = "Google Search: " . urldecode($query['q'] ?? 'unknown');
+    }
+
+    // 2. RAW UPDATE PREVIOUS LOG
+    // We look for the most recent log for this user/session and calculate duration
+    $lastLog = DB::table('activity_logs')
+                ->where('user_id', $userId)
+                ->where('lab_session_id', $labSessionId)
+                ->orderBy('id', 'desc')
+                ->first();
+
+    if ($lastLog) {
+        // We use raw PHP Unix timestamps to get the difference
+        $startTime = strtotime($lastLog->created_at);
+        $endTime = time(); // Current Unix timestamp (seconds)
+        $duration = $endTime - $startTime;
+
+        if ($duration > 0) {
+            DB::table('activity_logs')
+                ->where('id', $lastLog->id)
+                ->update(['duration_seconds' => $duration]);
+            
+            \Log::info("ID {$lastLog->id} updated. Start: $startTime, End: $endTime, Diff: $duration");
+        }
+    }
+
+    // 3. INSERT NEW LOG
+    DB::table('activity_logs')->insert([
+        'user_id' => $userId,
+        'log_type' => $request->type,
+        'content' => $detail,
+        'lab_session_id' => $labSessionId,
+        'duration_seconds' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return response()->json(['status' => 'success']);
+}
 }
