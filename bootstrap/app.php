@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin'   => \App\Http\Middleware\IsAdmin::class,
             'student' => \App\Http\Middleware\IsStudent::class,
+            'professor' => \App\Http\Middleware\IsProfessor::class,
         ]);
 
         // 2. Disable CSRF for Electron Logging

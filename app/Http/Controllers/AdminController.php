@@ -13,24 +13,38 @@ use App\Models\Submission;
 
 class AdminController extends Controller
 {
- public function index(Request $request)
+public function index(Request $request)
 {
-    // 1. Get all your active sessions
-    $activeSessions = LabSession::where('is_active', true)
-        ->where('faculty_id', auth()->id())
-        ->latest()
-        ->get();
+    $user = auth()->user();
 
-    // 2. Identify WHICH class to display (Default to the latest one)
-    $selectedClassId = $request->query('session_id') ?? $activeSessions->first()?->id;
+    // PROFESSOR VIEW
+    if ($user->role === 'professor') {
+        // Professors only see sessions where they are the faculty_id
+        $activeSessions = LabSession::where('faculty_id', $user->id)
+            ->where('is_active', true)
+            ->latest()
+            ->get();
 
-    // 3. Get the specific class model
-    $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
+        $selectedClassId = $request->query('session_id') ?? $activeSessions->first()?->id;
+        
+        // Use the relationship from your model
+        $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
+        $activeStudents = $class ? $class->students : collect();
 
-    // 4. Update activeStudents to ONLY be the students from THIS specific class
-    $activeStudents = $class ? $class->students : collect();
+        return view('professor.dashboard', compact('activeStudents', 'activeSessions', 'class'));
+    }
 
-    return view('admin.dashboard', compact('activeStudents', 'activeSessions', 'class')); 
+    // ADMIN VIEW
+    if ($user->role === 'admin') {
+        // Admins see a summary of the whole system
+        $allSessions = LabSession::with('faculty')->latest()->get();
+        $totalStudents = User::where('role', 'student')->count();
+        $totalProfessors = User::where('role', 'professor')->count();
+
+        return view('admin.dashboard', compact('allSessions', 'totalStudents', 'totalProfessors'));
+    }
+
+    return redirect('/');
 }
     public function toggle(LabSession $session)
     {
@@ -75,7 +89,11 @@ public function getActiveStatus()
             'program'      => 'required',
             'year_level'   => 'required',
             'section'      => 'required',
+            'faculty_id' => 'nullable|exists:users,id',
         ]);
+        
+        $user = auth()->user();
+        $facultyId = $user->role === 'admin' ? $request->faculty_id : $user->id;
 
         $code = strtoupper(Str::random(6));
         $formattedTime = date("g:i A", strtotime($request->start_time)) . ' - ' . date("g:i A", strtotime($request->end_time));

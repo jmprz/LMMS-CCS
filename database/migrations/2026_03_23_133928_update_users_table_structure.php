@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('name')->after('last_name'); 
 
             // 3. Add School & Academic Fields
+            $table->string('program')->nullable();
             $table->string('school_id')->unique()->after('email');
             $table->string('role')->default('student')->after('school_id'); 
             $table->integer('year_level')->nullable()->after('role');

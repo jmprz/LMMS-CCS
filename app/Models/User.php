@@ -2,56 +2,60 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-
-  public function joinedClasses()
-{
-    return $this->belongsToMany(LabSession::class, 'class_student', 'user_id', 'lab_session_id')
-                ->withPivot('is_present')
-                ->withTimestamps();
-}
-
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
+     * Role Helper Methods
+     * These make your Blade and Controller logic much cleaner.
      */
-   protected $fillable = [
-    'first_name',
-    'middle_name',
-    'last_name',
-    'name',
-    'email',
-    'password',
-    'school_id',
-    'role',
-    'year_level',
-];
+    public function isAdmin() { return $this->role === 'admin'; }
+    public function isProfessor() { return $this->role === 'professor'; }
+    public function isStudent() { return $this->role === 'student'; }
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
+     * Relationship for PROFESSORS
+     * A Professor "has many" lab sessions they are teaching.
      */
+    public function managedSessions()
+    {
+        return $this->hasMany(LabSession::class, 'faculty_id');
+    }
+
+    /**
+     * Relationship for STUDENTS
+     * (Your existing joinedClasses code)
+     */
+    public function joinedClasses()
+    {
+        return $this->belongsToMany(LabSession::class, 'class_student', 'user_id', 'lab_session_id')
+                    ->withPivot('is_present')
+                    ->withTimestamps();
+    }
+
+    protected $fillable = [
+        'first_name',
+        'middle_name',
+        'last_name',
+        'name',
+        'email',
+        'password',
+        'school_id',
+        'role',
+        'program',
+        'year_level',
+    ];
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [

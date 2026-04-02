@@ -30,27 +30,39 @@
                             class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none transition-all uppercase">
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" name="school_id" placeholder="Student / Faculty ID" required
-                            class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none">
-                        <select name="role" x-model="role"
-                            class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl outline-none cursor-pointer">
-                            <option value="student">Student</option>
-                            <option value="admin">Faculty</option>
-                        </select>
-                    </div>
-                    <template x-if="role === 'student'">
-                        <div class="grid grid-cols-1 gap-4">
-                            <select name="year_level" required
-                                class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl outline-none cursor-pointer">
-                                <option value="" disabled selected>Select Year Level</option>
-                                <option value="1">1st Year</option>
-                                <option value="2">2nd Year</option>
-                                <option value="3">3rd Year</option>
-                                <option value="4">4th Year</option>
-                            </select>
-                        </div>
-                    </template>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <input type="text" name="school_id" placeholder="Student / Faculty ID" required
+        class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none">
+    <select name="role" x-model="role"
+        class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl outline-none cursor-pointer">
+        <option value="student">Student</option>
+        <option value="professor">Faculty</option>
+    </select>
+</div>
+
+<template x-if="role === 'student'">
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 gap-4">
+            <select name="program" required
+                class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl outline-none cursor-pointer">
+                <option value="" disabled selected>Select Program</option>
+                <option value="BSCS">BSCS (Computer Science)</option>
+                <option value="BSIT">BSIT (Information Technology)</option>
+            </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4">
+            <select name="year_level" required
+                class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl outline-none cursor-pointer">
+                <option value="" disabled selected>Select Year Level</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+            </select>
+        </div>
+    </div>
+</template>
                     <input type="email" name="email" placeholder="Email Address" required
                         class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 outline-none">
 

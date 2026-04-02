@@ -45,12 +45,13 @@ class LabSession extends Model
      * Accessor for currently active/present students.
      */
     public function getActiveStudentsAttribute()
-    {
-        return $this->students()
-            ->wherePivot('is_present', true) // Using wherePivot because is_present is in the middle table
-            ->where('users.updated_at', '>=', now()->subMinutes(1)) 
-            ->get();
-    }
+{
+    return $this->students()
+        ->wherePivot('is_present', true)
+        // Check the pivot table's timestamp instead of the user's
+        ->wherePivot('updated_at', '>=', now()->subMinutes(1)) 
+        ->get();
+}
 
     /**
      * Tasks associated with this session.
