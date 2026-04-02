@@ -9,7 +9,7 @@
                         </div>
                         <div class="hidden md:flex flex-col">
                             <span class="font-black tracking-tighter text-lg uppercase leading-tight text-gray-900">
-                                Learning Management and Monitoring System
+                                Learning and Monitoring Management System
                             </span>
                             <span class="font-bold tracking-tighter text-xs uppercase text-gray-500 leading-tight">
                                College of Computing Studies

@@ -5,7 +5,7 @@
         <div class="hidden md:flex md:w-2/5 bg-[#383838] items-center justify-center p-12 relative">
             <div class="text-white text-center">
                <img src="{{ ('img/ccs_logo.png') }}" class="h-[350px] mx-auto mb-8 filter drop-shadow-lg">
-                <h1 class="text-3xl font-bold uppercase tracking-tight mb-4">Learning Management and Monitoring System</h1>
+                <h1 class="text-3xl font-bold uppercase tracking-tight mb-4">Learning and Monitoring Management System</h1>
                 <div class="mt-8 w-56 h-1 bg-gray-100 mx-auto rounded-full"></div>
                 <p class="font-medium tracking-widest uppercase text-lg mt-8">College of Computing Studies</p>
             </div>
