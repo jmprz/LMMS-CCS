@@ -1,7 +1,7 @@
 <x-app-layout>
     <div class="py-12 bg-gray-50/50 min-h-screen" x-data="quizForm()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <form action="{{ route('admin.quizzes.store') }}" method="POST" class="space-y-8">
+            <form action="{{ route('professor.quizzes.store') }}" method="POST" class="space-y-8">
                 @csrf
 
                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-200">

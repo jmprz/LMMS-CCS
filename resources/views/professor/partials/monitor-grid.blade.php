@@ -83,11 +83,20 @@
         });
 
         adminPeer.on('call', (call) => {
-            const studentId = call.peer.replace('STUDENT_', '');
-            call.answer();
-            call.on('stream', (remoteStream) => updateVideoUI(studentId, remoteStream));
-            call.on('close', () => resetStudentUI(studentId));
-        });
+    const studentId = call.peer.replace('STUDENT_', '');
+    console.log("Incoming feed from student:", studentId);
+    
+    // Answer the call without sending a local stream back
+    call.answer(); 
+    
+    call.on('stream', (remoteStream) => {
+        updateVideoUI(studentId, remoteStream);
+        connectedStudents.add(String(studentId));
+    });
+
+    call.on('close', () => resetStudentUI(studentId));
+    call.on('error', () => resetStudentUI(studentId));
+});
     }
 
     // 2. Start Spectating

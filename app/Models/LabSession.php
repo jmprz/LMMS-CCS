@@ -79,4 +79,28 @@ public function materials()
 {
     return $this->hasMany(Material::class);
 }
+
+public function isCurrentlyScheduled()
+{
+    $now = now(); // Gets current date and time
+    
+    // 1. Check if today matches the schedule_day (e.g., "Monday")
+    if ($now->format('l') !== $this->schedule_day) {
+        return false;
+    }
+
+    // 2. Parse the schedule_time string (e.g., "8:00 AM - 10:00 AM")
+    if (str_contains($this->schedule_time, '-')) {
+        [$startStr, $endStr] = explode('-', $this->schedule_time);
+        
+        // Convert strings to carbon objects for today
+        $startTime = \Carbon\Carbon::createFromFormat('g:i A', trim($startStr));
+        $endTime = \Carbon\Carbon::createFromFormat('g:i A', trim($endStr));
+
+        // 3. Check if current time is between start and end
+        return $now->between($startTime, $endTime);
+    }
+
+    return false;
+}
 }

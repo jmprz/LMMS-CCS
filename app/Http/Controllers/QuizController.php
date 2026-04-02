@@ -15,7 +15,7 @@ class QuizController extends Controller
         $sessionId = $request->query('session_id');
         $currentSession = LabSession::findOrFail($sessionId);
 
-        return view('admin.quizzes.create', compact('currentSession'));
+        return view('professor.quizzes.create', compact('currentSession'));
     }
 
     public function store(Request $request)
@@ -78,7 +78,7 @@ class QuizController extends Controller
                 }
             }
 
-            return redirect()->route('admin.classroom.show', $request->lab_session_id)
+            return redirect()->route('professor.classroom.show', $request->lab_session_id)
                              ->with('success', 'Quiz created successfully!');
         });
     }

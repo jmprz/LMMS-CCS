@@ -255,4 +255,15 @@ public function logBehavior(Request $request)
 
     return response()->json(['status' => 'success']);
 }
+
+public function enterClassroom($id)
+{
+    $session = LabSession::findOrFail($id);
+
+    if (!$session->isCurrentlyScheduled()) {
+        return back()->with('error', 'This classroom is currently closed. Please return during your scheduled time.');
+    }
+
+    return view('student.classroom', compact('session'));
+}
 }

@@ -24,17 +24,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return redirect('/');
     })->name('dashboard');
 
+
+     Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
+     
     // 2. STUDENT ROUTES
     Route::middleware(['student'])->prefix('student')->name('student.')->group(function () {
         Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
         Route::get('/classroom/{id}', [StudentClassController::class, 'show'])->name('subject');
+        Route::post('/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])->name('mark-present');
+        Route::post('/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('heartbeat');
+        Route::post('/stop-presenting/{labSession}', [StudentClassController::class, 'stopPresenting'])->name('stop-presenting');
         Route::post('/join', [StudentClassController::class, 'join'])->name('join');
         Route::get('/check-session-status/{id}', [StudentClassController::class, 'checkStatus'])->name('check-session-status');
         Route::post('/tasks/{task}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
+        Route::post('/tasks/{taskId}/delete', [StudentClassController::class, 'deleteTask'])->name('tasks.delete');
         Route::get('/quizzes/{quiz}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');
         Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
-        Route::post('/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])->name('mark-present');
-        Route::post('/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('heartbeat');
     });
 
     // 3. PROFESSOR ROUTES (Points to AdminController)

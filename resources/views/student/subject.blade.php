@@ -495,39 +495,71 @@
     }
 
     // 2. Start Screen Sharing (WebRTC)
-   async function startFullMonitoring() {
+ async function startFullMonitoring() {
     try {
-        // 1. Get the stream FIRST (so if they cancel, the UI doesn't say "Active")
-        localStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: { width: { max: 1280 }, frameRate: { max: 15 } } 
-        });
+        let streamConstraints;
+
+        // Check if we are running inside Electron
+        if (window.electronAPI) {
+            const sourceId = await window.electronAPI.getScreenId();
+            streamConstraints = {
+                audio: false,
+                video: {
+                    mandatory: {
+                        chromeMediaSource: 'desktop',
+                        chromeMediaSourceId: sourceId,
+                        minWidth: 1280,
+                        maxWidth: 1280,
+                        minHeight: 720,
+                        maxHeight: 720
+                    }
+                }
+            };
+            // Use getUserMedia for Electron desktop capture
+            localStream = await navigator.mediaDevices.getUserMedia(streamConstraints);
+        } else {
+            // Fallback for standard browser
+            localStream = await navigator.mediaDevices.getDisplayMedia({ 
+                video: { displaySurface: "monitor", width: { max: 1280 } },
+                audio: false
+            });
+        }
+
+        const videoTrack = localStream.getVideoTracks()[0];
+        
+        // VALIDATION (Only needed for web, Electron forces it via sourceId)
+        if (!window.electronAPI) {
+            const settings = videoTrack.getSettings();
+            if (settings.displaySurface && settings.displaySurface !== 'monitor') {
+                videoTrack.stop();
+                alert("❌ You must select 'ENTIRE SCREEN'.");
+                return;
+            }
+        }
 
         localStorage.setItem('is_sharing', 'true');
 
-        // 2. Handle what happens when they stop sharing
-        localStream.getVideoTracks()[0].onended = () => {
+        // Handle Disconnect
+        videoTrack.onended = () => {
             localStorage.setItem('is_sharing', 'false');
             fetch('{{ route("student.stop-presenting", $class->id) }}', {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': csrfToken }
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
             }).then(() => location.reload());
         };
 
-        // 3. Connect to the Admin
-        const adminPeerId = 'ADMIN_{{ $class->faculty_id }}';
+        // 3. Connect to Professor (Fixed ID)
+        const adminPeerId = 'PROF_{{ $class->faculty_id }}';
+        console.log("📞 Calling Professor:", adminPeerId);
         studentPeer.call(adminPeerId, localStream);
         
-        // 4. Update ONLY the status div, NOT the whole monitoring-area
+        // 4. UI Updates
         const statusDiv = document.getElementById('connection-status');
-        if (statusDiv) {
-            statusDiv.innerHTML = `<div class="text-green-600 font-bold animate-pulse">Status: ACTIVE MONITORING</div>`;
-        }
+        if (statusDiv) statusDiv.innerHTML = `<div class="text-green-600 font-black animate-pulse">● STATUS: ACTIVE</div>`;
         
-        // 5. Hide the start button by updating Alpine data instead of innerHTML
         const area = document.getElementById('monitoring-area');
-        if (area && Alpine.$data(area)) {
-             // You can add a new Alpine variable like 'isSharing' to hide the button nicely
-             Alpine.$data(area).isSharing = true; 
+        if (area && window.Alpine) {
+            Alpine.$data(area).isSharing = true; 
         }
 
         startHeartbeat();

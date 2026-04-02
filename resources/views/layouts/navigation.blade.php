@@ -3,7 +3,7 @@
         <div class="flex justify-between h-20">
             <div class="flex items-center">
                 <div class="shrink-0 flex items-center group">
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3">
                         <div class="p-1.5 rounded-lg shadow-sm">
                             <img src="{{ ('/img/ccs_logo.png') }}" class="h-14 w-auto" alt="Logo">
                         </div>
@@ -12,11 +12,10 @@
                                 Learning and Monitoring Management System
                             </span>
                             <span class="font-bold tracking-tighter text-xs uppercase text-gray-500 leading-tight">
-                               College of Computing Studies
+                                College of Computing Studies
                             </span>
                         </div>
-
-                    </a>
+                    </div>
                 </div>
             </div>
 
