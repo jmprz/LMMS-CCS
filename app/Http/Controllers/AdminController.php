@@ -17,9 +17,8 @@ public function index(Request $request)
 {
     $user = auth()->user();
 
-    // PROFESSOR VIEW
+    // --- PROFESSOR VIEW ---
     if ($user->role === 'professor') {
-        // Professors only see sessions where they are the faculty_id
         $activeSessions = LabSession::where('faculty_id', $user->id)
             ->where('is_active', true)
             ->latest()
@@ -27,23 +26,45 @@ public function index(Request $request)
 
         $selectedClassId = $request->query('session_id') ?? $activeSessions->first()?->id;
         
-        // Use the relationship from your model
         $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
         $activeStudents = $class ? $class->students : collect();
 
         return view('professor.dashboard', compact('activeStudents', 'activeSessions', 'class'));
     }
 
-    // ADMIN VIEW
+    // --- ADMIN VIEW ---
     if ($user->role === 'admin') {
-        // Admins see a summary of the whole system
+        // 1. Get the lists/collections
         $allSessions = LabSession::with('faculty')->latest()->get();
+        
+        // 2. Get the Specific Stats for your Dashboard cards
+        $totalUsers = User::count();
         $totalStudents = User::where('role', 'student')->count();
         $totalProfessors = User::where('role', 'professor')->count();
+        
+        $activeClassesCount = LabSession::where('is_active', true)->count();
+        
+        $upcomingClasses = LabSession::where('is_active', false)
+            ->orderBy('schedule_time', 'asc')
+            ->take(5)
+            ->get();
 
-        return view('admin.dashboard', compact('allSessions', 'totalStudents', 'totalProfessors'));
+        // 3. Activity Logs (Ensure you have an ActivityLog model/table)
+        $logs = \App\Models\ActivityLog::latest()->take(10)->get(); 
+
+        // Return EVERYTHING in one compact or array
+        return view('admin.dashboard', compact(
+            'allSessions', 
+            'totalStudents', 
+            'totalProfessors', 
+            'totalUsers', 
+            'activeClassesCount', 
+            'upcomingClasses', 
+            'logs'
+        ));
     }
 
+    // If neither, go home
     return redirect('/');
 }
     public function toggle(LabSession $session)
@@ -79,39 +100,40 @@ public function getActiveStatus()
 
     return response()->json(['present_ids' => $presentIds]);
 }
-    public function generateCode(Request $request) 
-    {
-        $request->validate([
-            'subject_name' => 'required|string|max:255',
-            'schedule_day' => 'required',
-            'start_time'   => 'required',
-            'end_time'     => 'required',
-            'program'      => 'required',
-            'year_level'   => 'required',
-            'section'      => 'required',
-            'faculty_id' => 'nullable|exists:users,id',
-        ]);
-        
-        $user = auth()->user();
-        $facultyId = $user->role === 'admin' ? $request->faculty_id : $user->id;
+ public function generateCode(Request $request) 
+{
+    $request->validate([
+        'faculty_id'    => 'required|exists:users,id', // Admin must choose a prof
+        'subject_name'  => 'required|string|max:255',
+        'semester'      => 'required|string',
+        'school_year'   => 'required|string',
+        'schedule_day'  => 'required',
+        'start_time'    => 'required',
+        'end_time'      => 'required',
+        'program'       => 'required',
+        'year_level'    => 'required',
+        'section'       => 'required',
+    ]);
+    
+    $code = strtoupper(Str::random(6));
+    $formattedTime = date("g:i A", strtotime($request->start_time)) . ' - ' . date("g:i A", strtotime($request->end_time));
 
-        $code = strtoupper(Str::random(6));
-        $formattedTime = date("g:i A", strtotime($request->start_time)) . ' - ' . date("g:i A", strtotime($request->end_time));
+    LabSession::create([
+        'class_code'    => $code,
+        'subject_name'  => $request->subject_name,
+        'semester'      => $request->semester,
+        'school_year'   => $request->school_year,
+        'schedule_day'  => $request->schedule_day,
+        'schedule_time' => $formattedTime,
+        'program'       => $request->program,
+        'year_level'    => $request->year_level, 
+        'section'       => $request->section,    
+        'faculty_id'    => $request->faculty_id, // Assigned from Admin choice
+        'is_active'     => true,
+    ]);
 
-        LabSession::create([
-            'class_code'    => $code,
-            'subject_name'  => $request->subject_name,
-            'schedule_day'  => $request->schedule_day,
-            'schedule_time' => $formattedTime,
-            'program'       => $request->program,
-            'year_level'    => $request->year_level, 
-            'section'       => $request->section,    
-            'faculty_id'    => auth()->id(),
-            'is_active'     => true,
-        ]);
-
-        return back()->with('success', 'Session started!');
-    }
+    return back()->with('success', 'Academic session created successfully!');
+}
 
 public function statusCheck(Request $request)
 {

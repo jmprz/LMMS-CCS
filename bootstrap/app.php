@@ -26,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // 3. IMPORTANT: Disable Auth Redirects for this route
         // This stops the "405 Method Not Allowed" caused by 
         // redirecting unauthenticated Electron requests to /login
-        $middleware->redirectGuestsTo(function (Request $request) {
+        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): string | null{
             if ($request->is('student/log-behavior')) {
                 return null; // Do NOT redirect; let the request hit the controller
             }

@@ -65,7 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
         Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
         Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
-        
+        Route::put('/classroom/{classroom}/edit', [ClassroomController::class, 'update'])->name('classroom.edit');
+        Route::delete('/classroom/{classroom}', [ClassroomController::class, 'destroy'])->name('classroom.destroy');
         // Admin-Specific User Management
         Route::get('/students/create', [AdminController::class, 'createStudent'])->name('students.create');
         Route::post('/students/store', [AdminController::class, 'storeStudent'])->name('students.store');

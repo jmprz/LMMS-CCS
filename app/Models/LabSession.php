@@ -21,6 +21,8 @@ class LabSession extends Model
         'year_level',
         'section',
         'faculty_id', 
+        'semester',
+        'school_year',
         'is_active'
     ];
 
