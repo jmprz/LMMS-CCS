@@ -18,15 +18,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 1. DASHBOARD SWITCHER
     Route::get('/dashboard', function () {
         $role = auth()->user()->role;
-        if ($role === 'admin') return redirect()->route('admin.dashboard');
-        if ($role === 'professor') return redirect()->route('professor.dashboard');
-        if ($role === 'student') return redirect()->route('student.dashboard');
+        if ($role === 'admin')
+            return redirect()->route('admin.dashboard');
+        if ($role === 'professor')
+            return redirect()->route('professor.dashboard');
+        if ($role === 'student')
+            return redirect()->route('student.dashboard');
         return redirect('/');
     })->name('dashboard');
 
 
-     Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
-     
+    Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
+
     // 2. STUDENT ROUTES
     Route::middleware(['student'])->prefix('student')->name('student.')->group(function () {
         Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
@@ -40,25 +43,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/tasks/{taskId}/delete', [StudentClassController::class, 'deleteTask'])->name('tasks.delete');
         Route::get('/quizzes/{quiz}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');
         Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
+        Route::get('/refresh-statuses', [StudentClassController::class, 'refreshClassStatuses'])->name('refresh-class-statuses');
     });
 
     // 3. PROFESSOR ROUTES (Points to AdminController)
     Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
         // Professor Dashboard
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-        
+
         // Use the same show/monitor logic
         Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
         Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
-          Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
+        Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
         // Professor-Specific Academic Actions
         Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
         Route::post('/grade/{id}', [AdminController::class, 'gradeSubmission'])->name('grade');
         Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
-        
+
         // Session Controls
-        Route::post('/sessions/{session}/toggle', [AdminController::class, 'toggle'])->name('sessions.toggle'); 
-        Route::post('/sessions/{session}/end', [AdminController::class, 'endSession'])->name('sessions.end');
+        Route::post('/sessions/{id}/toggle', [AdminController::class, 'toggleSession'])->name('sessions.toggle');
+
+        // 2. New Broadcast Toggle (Professor's Screen Share)
+        Route::post('/sessions/{id}/broadcast', [AdminController::class, 'toggleBroadcast'])->name('sessions.broadcast');
+
+        Route::post('/sessions/{id}/end', [AdminController::class, 'endSession'])->name('sessions.end');
 
         // Quiz Management
         Route::get('/quizzes/create', [QuizController::class, 'create'])->name('quizzes.create');

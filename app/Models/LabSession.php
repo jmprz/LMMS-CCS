@@ -82,23 +82,33 @@ public function materials()
 
 public function isCurrentlyScheduled()
 {
-    $now = now(); // Gets current date and time
-    
-    // 1. Check if today matches the schedule_day (e.g., "Monday")
-    if ($now->format('l') !== $this->schedule_day) {
+    // 1. Manual Override: If the Professor explicitly started the session, it's LIVE.
+    if ($this->is_active) {
+        return true;
+    }
+
+    $now = now(); 
+
+    // 2. Day Check (e.g., "Monday")
+    // Ensure the database value matches the case (e.g., 'Monday' vs 'monday')
+    if (strcasecmp($now->format('l'), $this->schedule_day) !== 0) {
         return false;
     }
 
-    // 2. Parse the schedule_time string (e.g., "8:00 AM - 10:00 AM")
+    // 3. Time Range Check
     if (str_contains($this->schedule_time, '-')) {
-        [$startStr, $endStr] = explode('-', $this->schedule_time);
-        
-        // Convert strings to carbon objects for today
-        $startTime = \Carbon\Carbon::createFromFormat('g:i A', trim($startStr));
-        $endTime = \Carbon\Carbon::createFromFormat('g:i A', trim($endStr));
+        try {
+            [$startStr, $endStr] = explode('-', $this->schedule_time);
+            
+            // Set the Carbon objects to today so 'between' works correctly
+            $startTime = \Carbon\Carbon::createFromFormat('g:i A', trim($startStr), $now->timezone);
+            $endTime = \Carbon\Carbon::createFromFormat('g:i A', trim($endStr), $now->timezone);
 
-        // 3. Check if current time is between start and end
-        return $now->between($startTime, $endTime);
+            return $now->between($startTime, $endTime);
+        } catch (\Exception $e) {
+            // If the time format in DB is messy, fail gracefully
+            return false;
+        }
     }
 
     return false;

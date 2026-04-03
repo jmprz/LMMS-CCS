@@ -1,114 +1,126 @@
 <x-app-layout>
-    <div class="flex min-h-screen bg-gray-50">
-        
-        <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col sticky top-0 h-screen">
-            <div class="px-6 pt-8 pb-4">
-                <h2 class="font-black text-[#383838] uppercase tracking-widest text-[10px] opacity-50">
-                    Main Navigation
-                </h2>
+    <div id="dashboard-root" 
+         class="p-4 md:p-8 max-w-7xl mx-auto" 
+         x-data="{ 
+            classes: @js($joinedClasses->map(fn($item) => [
+                'id' => $item->id,
+                'name' => $item->subject_name,
+                'code' => $item->class_code,
+                'instructor' => $item->faculty->name,
+                'day' => $item->schedule_day,
+                'time' => $item->schedule_time,
+                'attendance' => $item->total_attended_days ?? 0,
+                'isOpen' => $item->isCurrentlyScheduled(),
+                'route' => route('student.subject', $item->id)
+            ])),
+            // Filters classes that are currently LIVE
+            get activeClasses() {
+                return this.classes.filter(c => c.isOpen);
+            },
+            // Filters classes that are currently CLOSED
+            get offlineClasses() {
+                return this.classes.filter(c => !c.isOpen);
+            }
+         }">
+
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+            <div>
+                <h1 class="text-3xl font-black text-gray-900">My Dashboard</h1>
+                <p class="text-gray-500 font-bold mt-1">
+                    You have <span class="text-green-600" x-text="activeClasses.length"></span> active lab sessions right now.
+                </p>
             </div>
 
-            <nav class="px-4 space-y-1 flex-1">
-                <a href="{{ route('student.dashboard') }}" 
-                   class="flex items-center py-3 px-4 rounded-xl transition duration-200 {{ request()->routeIs('student.dashboard') ? 'bg-[#383838] text-white font-bold shadow-lg shadow-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' }}">
-                    <i class="ri-home-4-line mr-3 text-lg"></i>
-                    <span class="text-sm">Home</span>
-                </a>
-
-                <div class="my-6 px-2">
-                    <hr class="border-gray-100">
-                </div>
-
-                <h2 class="px-2 font-black text-[#383838] uppercase tracking-widest text-[10px] opacity-50 mb-4">
-                    My Enrolled Classes
-                </h2>
-
-                <div class="space-y-1 overflow-y-auto max-h-[calc(100vh-300px)] custom-scrollbar">
-                    @foreach(auth()->user()->joinedClasses as $enrolled)
-                        @php
-                            $isActive = request()->routeIs('student.subject') && request()->route('id') == $enrolled->id;
-                        @endphp
-
-                        <a href="{{ route('student.subject', $enrolled->id) }}" 
-                           class="flex items-center py-3 px-4 rounded-xl transition duration-200 {{ $isActive ? 'bg-[#383838] text-white font-bold shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' }}">
-                            <i class="{{ $isActive ? 'ri-book-open-fill' : 'ri-book-read-line' }} mr-3 text-lg"></i>
-                            <div class="flex flex-col truncate">
-                                <span class="text-sm truncate leading-tight">{{ $enrolled->subject_name }}</span>
-                                <span class="text-[10px] {{ $isActive ? 'text-gray-300' : 'text-gray-400' }} font-medium">
-                                   {{ $enrolled->program }} - {{ $enrolled->year_level }}{{ $enrolled->section }}
-                                </span>
-                            </div>
-                        </a>
-                    @endforeach
-                </div>
-            </nav>
-
-            <div class="p-4 border-t border-gray-100">
-                <form method="POST" action="{{ route('logout') }}">
+            <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm w-full lg:w-auto">
+                <form action="{{ route('student.join') }}" method="POST" class="flex gap-2">
                     @csrf
-                    <button type="submit" class="w-full flex items-center py-3 px-4 rounded-xl text-red-500 hover:bg-red-50 transition duration-200 text-sm font-bold">
-                        <i class="ri-logout-box-r-line mr-3 text-lg"></i>
-                        Logout
+                    <input type="text" name="class_code" placeholder="Enter Class Code" 
+                           class="border-gray-200 rounded-xl focus:ring-black text-sm w-full lg:w-48" required>
+                    <button type="submit" class="bg-black text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800 transition text-sm">
+                        Join
                     </button>
                 </form>
             </div>
-        </aside>
+        </div>
 
-        <main class="flex-1 p-8 overflow-y-auto">
-            <div class="max-w-7xl mx-auto">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8">
-                    <h2 class="text-xl font-black text-gray-900 mb-4">Join New Class</h2>
-                    <form action="{{ route('student.join') }}" method="POST" class="flex gap-4">
-                        @csrf
-                        <input type="text" name="class_code" placeholder="Enter Class Code (e.g. ABC123)" 
-                            class="flex-1 border-gray-300 rounded-xl shadow-sm focus:ring-black focus:border-black p-3" required>
-                        <button type="submit" class="bg-[#383838] text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition">
-                            Join
-                        </button>
-                    </form>
-                </div>
-
-                <h3 class="text-2xl font-black text-gray-900 mb-6">Your Enrolled Classes</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @forelse($joinedClasses as $item)
-                        @php $isOpen = $item->isCurrentlyScheduled(); @endphp
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border transition duration-300 flex flex-col justify-between {{ $isOpen ? 'border-green-500 ring-1 ring-green-500' : 'border-gray-200 hover:border-black' }}">
-                            <div>
-                                <div class="flex justify-between items-start mb-4">
-                                    <h4 class="text-xl font-black text-gray-900 leading-tight">{{ $item->subject_name }}</h4>
-                                    <div class="flex flex-col items-end gap-2">
-                                        <span class="text-[10px] font-bold bg-[#383838] text-white px-2.5 py-1 rounded-full">{{ $item->class_code }}</span>
-                                        <span class="text-[9px] font-black px-2 py-0.5 rounded-md {{ $isOpen ? 'bg-green-100 text-green-700 animate-pulse' : 'bg-gray-100 text-gray-400' }}">
-                                            {{ $isOpen ? '● LIVE' : 'CLOSED' }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <p class="text-sm font-bold text-gray-700 mb-4">Instructor: {{ $item->faculty->name }}</p>
-                                <div class="flex flex-wrap gap-2 mb-6">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 uppercase">
-                                        <i class="ri-calendar-line mr-1.5"></i> {{ $item->schedule_day }}
-                                    </span>
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 uppercase">
-                                        <i class="ri-time-line mr-1.5"></i> {{ $item->schedule_time }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div>
-                                @if($isOpen)
-                                    <a href="{{ route('student.subject', $item->id) }}" class="block text-center w-full bg-black text-white font-bold py-3 px-4 rounded-xl hover:scale-[1.02] transition shadow-lg shadow-green-100">Enter Classroom</a>
-                                @else
-                                    <button disabled class="block text-center w-full bg-gray-100 text-gray-400 font-bold py-3 px-4 rounded-xl cursor-not-allowed"><i class="ri-lock-line mr-2"></i> Closed</button>
-                                @endif
-                            </div>
-                        </div>
-                    @empty
-                        <div class="col-span-full text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                            <p class="text-gray-500 font-bold italic">No classes joined yet.</p>
-                        </div>
-                    @endforelse
-                </div>
+        <div x-show="activeClasses.length > 0" x-transition:enter="transition ease-out duration-300" class="mb-12">
+            <div class="flex items-center gap-2 mb-6">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <h2 class="text-xs font-black text-green-700 uppercase tracking-widest">Active Lab Sessions</h2>
             </div>
-        </main>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="cls in activeClasses" :key="cls.id">
+                    <div class="bg-white p-6 rounded-3xl border-2 border-green-500 shadow-xl shadow-green-100/50 flex flex-col justify-between transform hover:scale-[1.02] transition duration-300">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-xl font-black text-gray-900 leading-tight" x-text="cls.name"></h3>
+                                <span class="text-[10px] font-black bg-green-100 text-green-700 px-3 py-1 rounded-full">LIVE</span>
+                            </div>
+                            <div class="space-y-1 mb-6">
+                                <p class="text-xs font-bold text-gray-500" x-text="'Prof. ' + cls.instructor"></p>
+                                <p class="text-[10px] font-black text-gray-400 uppercase" x-text="cls.attendance + ' Sessions Recorded'"></p>
+                            </div>
+                        </div>
+                        <a :href="cls.route" class="block text-center w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-green-600 transition shadow-lg">
+                            Enter Classroom
+                        </a>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Class Schedule</h2>
+            <div class="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-400">
+                        <tr>
+                            <th class="px-6 py-4 text-[10px] font-black uppercase">Subject</th>
+                            <th class="px-6 py-4 text-[10px] font-black uppercase">Schedule</th>
+                            <th class="px-6 py-4 text-[10px] font-black uppercase text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        <template x-for="cls in offlineClasses" :key="cls.id">
+                            <tr class="hover:bg-gray-50/50 transition">
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-gray-800" x-text="cls.name"></span>
+                                        <span class="text-[10px] font-black text-gray-400" x-text="cls.code"></span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-xs font-bold text-gray-600" x-text="cls.day + ' | ' + cls.time"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <span class="text-[10px] font-black text-gray-300 bg-gray-100 px-3 py-1 rounded-full">CLOSED</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
+
+    <script>
+        // Use a 5-second interval for better performance, checks for live sessions automatically
+        setInterval(() => {
+            fetch("{{ route('student.refresh-class-statuses') }}")
+                .then(res => res.json())
+                .then(data => {
+                    const alpine = Alpine.$data(document.getElementById('dashboard-root'));
+                    alpine.classes.forEach(cls => {
+                        if (data[cls.id] !== undefined) {
+                            cls.isOpen = data[cls.id];
+                        }
+                    });
+                });
+        }, 5000);
+    </script>
 </x-app-layout>

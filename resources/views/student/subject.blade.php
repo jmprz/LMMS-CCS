@@ -1,52 +1,5 @@
 <x-app-layout>
  <div class="flex h-screen bg-gray-50" x-data="{ activeTask: null }">
-    <aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col">
-    <div class="px-6 pt-8 pb-4">
-        <h2 class="font-black text-[#383838] uppercase tracking-widest text-[10px] opacity-50">
-            Main Navigation
-        </h2>
-    </div>
-
-    <nav class="px-4 space-y-1 flex-1">
-        <a href="{{ route('student.dashboard') }}" 
-           class="flex items-center py-3 px-4 rounded-xl transition duration-200 {{ request()->routeIs('student.dashboard') ? 'bg-[#383838] text-white font-bold shadow-lg shadow-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' }}">
-            <i class="ri-home-4-line mr-3 text-lg"></i>
-            <span class="text-sm">Home</span>
-        </a>
-
-        <div class="my-6 px-2">
-            <hr class="border-gray-100">
-        </div>
-
-        <h2 class="px-2 font-black text-[#383838] uppercase tracking-widest text-[10px] opacity-50 mb-4">
-            My Enrolled Classes
-        </h2>
-
-        <div class="space-y-1 overflow-y-auto max-h-[calc(100vh-300px)] custom-scrollbar">
-            @foreach(auth()->user()->joinedClasses as $enrolled)
-                <a href="{{ route('student.subject', $enrolled->id) }}" 
-                   class="flex items-center py-3 px-4 rounded-xl transition duration-200 {{ $class->id == $enrolled->id ? 'bg-[#383838] text-white font-bold shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900' }}">
-                    
-                    <i class="{{ $class->id == $enrolled->id ? 'ri-book-open-fill' : 'ri-book-read-line' }} mr-3 text-lg"></i>
-                    
-                    <div class="flex flex-col truncate">
-                        <span class="text-sm truncate leading-tight">{{ $enrolled->subject_name }}</span>
-                        <span class="text-[10px] {{ $class->id == $enrolled->id ? 'text-gray-300' : 'text-gray-400' }} font-medium">
-                           {{ $enrolled->program }} - {{ $enrolled->year_level }}{{ $enrolled->section }}
-                        </span>
-                    </div>
-                </a>
-            @endforeach
-        </div>
-    </nav>
-
-    <div class="p-4 border-t border-gray-100">
-        <a href="#" class="flex items-center py-3 px-4 rounded-xl text-red-500 hover:bg-red-50 transition duration-200 text-sm font-bold">
-            <i class="ri-logout-box-r-line mr-3 text-lg"></i>
-            Logout
-        </a>
-    </div>
-</aside>
 
   <main class="flex-1 p-8 overflow-y-auto" x-data="{ tab: 'activities', activeTask: null }">
    <div class="max-w-5xl mx-auto space-y-6">
@@ -66,35 +19,52 @@
                 </div>
             </div>
 
-    <div id="monitoring-area" class="mt-6" x-data="{ sessionActive: {{ $class->is_active ? 'true' : 'false' }} }">
-                <template x-if="!sessionActive">
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-center gap-4">
-                        <div class="bg-amber-100 p-3 rounded-full text-amber-600 animate-pulse">
-                            <i class="ri-error-warning-line text-2xl"></i>
-                        </div>
-                        <div>
-                            <p class="font-bold text-amber-900">Class Not Started</p>
-                            <p class="text-sm text-amber-700">The instructor has not started the session. Please wait for the signal.</p>
-                        </div>
-                    </div>
+<div id="classroom-root" 
+     x-data="{ 
+        labMode: {{ $class->is_active ? 'true' : 'false' }}, 
+        sessionActive: {{ $class->is_active ? 'true' : 'false' }},
+        isPresent: {{ $isPresent ? 'true' : 'false' }},
+        showBroadcast: {{ $class->is_broadcasting ? 'true' : 'false' }},
+        loading: false
+     }">
+
+    <div id="monitoring-area" class="mt-6">
+        <div x-show="!sessionActive" x-transition>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-center gap-4">
+                <div class="bg-amber-100 p-3 rounded-full text-amber-600 animate-pulse">
+                    <i class="ri-error-warning-line text-2xl"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-amber-900">Class Not Started</p>
+                    <p class="text-sm text-amber-700">The instructor has not started the session. Please wait...</p>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="sessionActive" x-transition>
+            <div class="flex justify-center bg-white p-10 rounded-2xl border border-gray-200 shadow-sm">
+                
+                <template x-if="!isPresent">
+                    <button @click="markAttendance()" 
+                        :disabled="loading"
+                        class="bg-green-600 text-white px-10 py-4 rounded-xl shadow-lg hover:bg-green-700 font-black flex items-center gap-3 transition-all transform hover:scale-105">
+                        <i x-show="!loading" class="ri-user-check-line text-xl"></i>
+                        <i x-show="loading" class="ri-loader-4-line animate-spin text-xl"></i>
+                        <span x-text="loading ? 'Marking Presence...' : 'Join Classroom & Mark Present'"></span>
+                    </button>
                 </template>
 
-   <template x-if="sessionActive">
-                    <div class="flex justify-center bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
-                        @if(!$isPresent)
-                            <button id="join-btn" onclick="joinClassroom({{ $class->id }})" 
-                                class="bg-[#383838] text-white px-10 py-4 rounded-xl shadow-lg hover:bg-black transition-all font-bold flex items-center gap-3">
-                                <i class="ri-door-open-line"></i> Join Classroom
-                            </button>
-                        @else
-                            <button id="start-btn" onclick="startFullMonitoring()" 
-                                class="bg-[#383838] text-white px-10 py-4 rounded-xl shadow-lg hover:bg-black transition-all font-bold flex items-center gap-3 animate-bounce-short">
-                                <i class="ri-screenshot-2-line"></i> Start Screen Sharing
-                            </button>
-                        @endif
-                    </div>
+                <template x-if="isPresent">
+                    <button onclick="startFullMonitoring()" 
+                        class="bg-black text-white px-10 py-4 rounded-xl shadow-xl hover:bg-gray-800 font-black flex items-center gap-3 animate-pulse-slow">
+                        <i class="ri-screenshot-2-line"></i> Start Screen Sharing
+                    </button>
                 </template>
+
             </div>
+        </div>
+    </div>
+</div>
 
         <div class="flex border-b border-gray-200">
                 <template x-for="t in ['activities', 'quizzes', 'materials', 'classmates']">
@@ -456,6 +426,7 @@
     let heartbeatInterval;
     let studentPeer;
     let localStream;
+    let isAttemptingToShare = false; // Prevent multiple triggers
     const classId = {{ $class->id }};
     const csrfToken = '{{ csrf_token() }}';
     const allowedDomains = @json($class->whitelisted_urls ? explode(',', $class->whitelisted_urls) : ['google.com']);
@@ -463,113 +434,120 @@
     document.addEventListener('DOMContentLoaded', () => {
         studentPeer = new Peer('STUDENT_{{ auth()->id() }}');
         
-        // Start heartbeat immediately
         startHeartbeat();
 
-       studentPeer.on('open', (id) => {
-    console.log('✅ Peer ready: ' + id);
-    const wasSharing = localStorage.getItem('is_sharing');
-    
-    // Most browsers require a USER CLICK to start screen capture.
-    // Auto-resume often fails unless the user interacts with the page first.
-    if (wasSharing === 'true') {
-        console.log("Session was active. Please click 'Start Screen Sharing' to resume.");
-    }
-});
+        studentPeer.on('open', (id) => {
+            console.log('✅ Peer ready: ' + id);
+            const wasSharing = localStorage.getItem('is_sharing');
+            if (wasSharing === 'true') {
+                console.log("Session was active. Please click 'Start Screen Sharing' to resume.");
+            }
+        });
 
-       studentPeer.on('call', (call) => {
-    if (localStream && localStream.active) {
-        call.answer(localStream);
-    } else {
+        studentPeer.on('call', (call) => {
+            if (localStream && localStream.active) {
+                call.answer(localStream);
+            } else {
                 console.warn("⚠️ Admin requested feed, but local stream is not active.");
             }
         });
     });
 
-    // 1. Join Classroom
-    function joinClassroom(classId) {
-        fetch(`/student/mark-present/${classId}`, {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
-        }).then(() => location.reload());
-    }
-
-    // 2. Start Screen Sharing (WebRTC)
- async function startFullMonitoring() {
-    try {
-        let streamConstraints;
-
-        // Check if we are running inside Electron
-        if (window.electronAPI) {
-            const sourceId = await window.electronAPI.getScreenId();
-            streamConstraints = {
-                audio: false,
-                video: {
-                    mandatory: {
-                        chromeMediaSource: 'desktop',
-                        chromeMediaSourceId: sourceId,
-                        minWidth: 1280,
-                        maxWidth: 1280,
-                        minHeight: 720,
-                        maxHeight: 720
-                    }
-                }
-            };
-            // Use getUserMedia for Electron desktop capture
-            localStream = await navigator.mediaDevices.getUserMedia(streamConstraints);
-        } else {
-            // Fallback for standard browser
-            localStream = await navigator.mediaDevices.getDisplayMedia({ 
-                video: { displaySurface: "monitor", width: { max: 1280 } },
-                audio: false
-            });
+function joinClassroom(classId) {
+    fetch(`/student/mark-present/${classId}`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
+    }).then(response => {
+        if (response.ok) {
+            const alpine = Alpine.$data(document.getElementById('classroom-root'));
+            alpine.isPresent = true; // Swaps Join button for Start button instantly
+            console.log("✅ Attendance marked successfully");
         }
-
-        const videoTrack = localStream.getVideoTracks()[0];
-        
-        // VALIDATION (Only needed for web, Electron forces it via sourceId)
-        if (!window.electronAPI) {
-            const settings = videoTrack.getSettings();
-            if (settings.displaySurface && settings.displaySurface !== 'monitor') {
-                videoTrack.stop();
-                alert("❌ You must select 'ENTIRE SCREEN'.");
-                return;
-            }
-        }
-
-        localStorage.setItem('is_sharing', 'true');
-
-        // Handle Disconnect
-        videoTrack.onended = () => {
-            localStorage.setItem('is_sharing', 'false');
-            fetch('{{ route("student.stop-presenting", $class->id) }}', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
-            }).then(() => location.reload());
-        };
-
-        // 3. Connect to Professor (Fixed ID)
-        const adminPeerId = 'PROF_{{ $class->faculty_id }}';
-        console.log("📞 Calling Professor:", adminPeerId);
-        studentPeer.call(adminPeerId, localStream);
-        
-        // 4. UI Updates
-        const statusDiv = document.getElementById('connection-status');
-        if (statusDiv) statusDiv.innerHTML = `<div class="text-green-600 font-black animate-pulse">● STATUS: ACTIVE</div>`;
-        
-        const area = document.getElementById('monitoring-area');
-        if (area && window.Alpine) {
-            Alpine.$data(area).isSharing = true; 
-        }
-
-        startHeartbeat();
-    } catch (err) {
-        console.error("❌ Capture failed:", err);
-        localStorage.setItem('is_sharing', 'false');
-    }
+    });
 }
 
-    // 3. Heartbeat Loop
+    async function startFullMonitoring() {
+        if (isAttemptingToShare) return; 
+        isAttemptingToShare = true;
+
+        try {
+            let streamConstraints;
+
+            if (window.electronAPI) {
+                const sourceId = await window.electronAPI.getScreenId();
+                streamConstraints = {
+                    audio: false,
+                    video: {
+                        mandatory: {
+                            chromeMediaSource: 'desktop',
+                            chromeMediaSourceId: sourceId,
+                            minWidth: 1280, maxWidth: 1280,
+                            minHeight: 720, maxHeight: 720
+                        }
+                    }
+                };
+                localStream = await navigator.mediaDevices.getUserMedia(streamConstraints);
+            } else {
+                localStream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: { displaySurface: "monitor", width: { max: 1280 } },
+                    audio: false
+                });
+            }
+
+            const videoTrack = localStream.getVideoTracks()[0];
+            
+            if (!window.electronAPI) {
+                const settings = videoTrack.getSettings();
+                if (settings.displaySurface && settings.displaySurface !== 'monitor') {
+                    videoTrack.stop();
+                    alert("❌ You must select 'ENTIRE SCREEN'.");
+                    isAttemptingToShare = false;
+                    return;
+                }
+            }
+
+            localStorage.setItem('is_sharing', 'true');
+
+            videoTrack.onended = () => {
+                localStorage.setItem('is_sharing', 'false');
+                fetch('{{ route("student.stop-presenting", $class->id) }}', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
+                }).then(() => location.reload());
+            };
+
+            const adminPeerId = 'PROF_{{ $class->faculty_id }}';
+            
+            const callProfessor = () => {
+                console.log("📞 Attempting to connect to Professor:", adminPeerId);
+                const call = studentPeer.call(adminPeerId, localStream);
+
+                if (!call) {
+                    console.error("❌ PeerJS call failed to initialize.");
+                    return;
+                }
+
+                studentPeer.on('error', (err) => {
+                    if (err.type === 'peer-unavailable') {
+                        console.warn("⚠️ Professor page is still loading... retrying in 3s");
+                        setTimeout(callProfessor, 3000);
+                    }
+                });
+
+                call.on('stream', (remoteStream) => {
+                    console.log("✅ Connection established with Professor!");
+                });
+            };
+
+            callProfessor();
+
+        } catch (err) {
+            console.error("❌ Capture failed:", err);
+            localStorage.setItem('is_sharing', 'false');
+            isAttemptingToShare = false;
+        }
+    }
+
     function startHeartbeat() {
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(() => {
@@ -580,37 +558,42 @@
         }, 30000);
     }
 
-    // 4. Session Status Polling
 setInterval(() => {
     fetch("{{ route('student.check-session-status', $class->id) }}")
-        .then(res => res.ok ? res.json() : null)
+        .then(res => res.json())
         .then(data => {
-            if (!data) return;
+            // Target the one and only Master Root
+            const root = document.getElementById('classroom-root');
+            if (!root || !window.Alpine) return;
+            
+            const alpine = Alpine.$data(root);
+            
+            // 1. Sync Session Active State (Shows/Hides the UI box)
+            alpine.sessionActive = data.is_active;
 
-            const area = document.getElementById('monitoring-area');
-            if (area) {
-                // Accessing data for Alpine v3
-                const alpineData = Alpine.$data(area);
+            // 2. Handle Lab Mode Transition
+            if (data.is_active && !alpine.labMode) {
+                alpine.labMode = true; 
+                console.log("🔒 Session is now active. Locking UI...");
                 
-                // Only trigger if the status actually changed
-                if (alpineData.sessionActive !== data.is_active) {
-                    alpineData.sessionActive = data.is_active;
-                    
-                    // Give Alpine a split second to render the buttons 
-                    // then check if we should auto-resume sharing
-                    setTimeout(() => {
-                        const wasSharing = localStorage.getItem('is_sharing');
-                        if (data.is_active && wasSharing === 'true') {
-                            startFullMonitoring();
-                        }
-                    }, 500);
+                // If they are already marked present, auto-trigger the capture
+                if (alpine.isPresent && !localStorage.getItem('is_sharing')) {
+                    startFullMonitoring();
                 }
             }
+
+            // 3. Handle Session End
+            if (!data.is_active && alpine.labMode) {
+                alpine.labMode = false;
+                alert("The instructor has ended the session.");
+                location.reload(); 
+            }
+            
+            alpine.showBroadcast = data.is_broadcasting;
         })
-        .catch(err => console.log("Polling..."));
+        .catch(err => console.error("Poll error:", err));
 }, 5000);
 
-    // 5. Browser Navigation
     function navigateBrowser() {
         const input = document.getElementById('browserUrl').value;
         const targetUrl = input.includes('.') ? (input.startsWith('http') ? input : 'https://' + input) : 'https://www.google.com/search?q=' + encodeURIComponent(input) + '&igu=1';
@@ -698,6 +681,32 @@ function browserTabs() {
             }).catch(err => console.error('Log Error:', err));
         }
     }
+}
+</script>
+<script>
+function markAttendance() {
+    const root = Alpine.$data(document.getElementById('classroom-root'));
+    root.loading = true;
+
+    // Call your StudentClassController@markPresent method
+    fetch("{{ route('student.mark-present', $class->id) }}", {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            root.isPresent = true;
+            // Optional: Trigger a toast notification here
+        }
+    })
+    .catch(err => console.error(err))
+    .finally(() => {
+        root.loading = false;
+    });
 }
 </script>
 </x-app-layout>

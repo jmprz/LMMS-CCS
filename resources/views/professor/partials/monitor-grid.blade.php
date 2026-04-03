@@ -1,15 +1,19 @@
-@if(isset($class) && $class)
+{{-- Check if class exists and if the professor has flipped the "Start Session" switch --}}
+@if(isset($class) && $class->is_active)
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="student-grid">
-        @forelse($activeStudents as $student) {{-- Use activeStudents passed from controller --}}
-            <div class="border rounded-lg p-4 bg-gray-50 transition-all duration-300" id="student-card-{{ $student->id }}" data-student-id="{{ $student->id }}">
+        @forelse($activeStudents as $student) 
+            <div class="border rounded-lg p-4 bg-gray-50 transition-all duration-300 shadow-sm hover:shadow-md" 
+                 id="student-card-{{ $student->id }}" 
+                 data-student-id="{{ $student->id }}">
                 
                 <div class="flex items-center justify-between mb-3">
                     <span class="font-bold text-sm text-gray-800">{{ $student->name }}</span>
-                    {{-- Accessing pivot safely --}}
-                    <div class="w-3 h-3 rounded-full {{ ($student->pivot && $student->pivot->is_present) ? 'bg-green-500 animate-pulse' : 'bg-gray-300' }}" id="status-dot-{{ $student->id }}"></div>
+                    <div class="w-3 h-3 rounded-full {{ ($student->pivot && $student->pivot->is_present) ? 'bg-green-500 animate-pulse' : 'bg-gray-300' }}" 
+                         id="status-dot-{{ $student->id }}"></div>
                 </div>
 
-                <div class="bg-gray-200 h-56 rounded flex items-center justify-center mb-4 relative overflow-hidden" id="video-container-{{ $student->id }}">
+                <div class="bg-gray-200 h-56 rounded flex items-center justify-center mb-4 relative overflow-hidden" 
+                     id="video-container-{{ $student->id }}">
                     <video id="video-{{ $student->id }}" class="w-full h-full object-cover hidden" muted playsinline></video>
                     <span class="text-xs text-gray-500" id="video-overlay-{{ $student->id }}">
                         {{ ($student->pivot && $student->pivot->is_present) ? 'Connecting...' : 'Offline' }}
@@ -35,13 +39,26 @@
             </div>
         @endforelse
     </div>
+
+@elseif(isset($class) && !$class->is_active)
+    {{-- This shows when the class exists but the "Start Session" button hasn't been clicked --}}
+    <div class="col-span-full py-20 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+        <div class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="ri-shield-user-line text-3xl text-gray-400"></i>
+        </div>
+        <h3 class="text-gray-600 font-bold">Proctoring Paused</h3>
+        <p class="text-gray-400 text-sm">Monitoring is disabled. Click "Start Lab Session" to begin.</p>
+    </div>
+
 @else
+    {{-- This shows if no class/subject is selected at all --}}
     <div class="col-span-full py-20 text-center bg-white rounded-xl border border-dashed">
         <i class="ri-error-warning-line text-4xl text-gray-300 mb-2"></i>
         <p class="text-gray-500">No active laboratory session selected.</p>
     </div>
 @endif
 
+{{-- Fullscreen Modal Viewer --}}
 <div x-data="{ open: false, studentName: '' }" 
      @open-modal.window="open = true; studentName = $event.detail.name"
      x-show="open" 
@@ -56,7 +73,9 @@
             </h3>
             <button @click="open = false; document.getElementById('modal-video').srcObject = null" 
                     class="text-gray-400 hover:text-gray-600 transition">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
             </button>
         </div>
 

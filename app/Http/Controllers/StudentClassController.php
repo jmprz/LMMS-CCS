@@ -17,11 +17,22 @@ class StudentClassController extends Controller
 {
 // 1. For the Dashboard (The list)
 public function index() {
-    $joinedClasses = auth()->user()->joinedClasses;
-    // Query your active sessions
+    $user = auth()->user();
+    
+    // 1. Get joined classes and MAP through them to add the attendance count
+    $joinedClasses = $user->joinedClasses->map(function($class) use ($user) {
+        // Count how many unique days this student was present for THIS specific class
+        $class->total_attended_days = \App\Models\Attendance::where('user_id', $user->id)
+            ->where('lab_session_id', $class->id)
+            ->count();
+            
+        return $class;
+    });
+
+    // 2. Query globally active sessions (if you still need this for a sidebar)
     $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
     
-    // Combine everything into one view return
+    // 3. Return everything to the view
     return view('student.dashboard', compact('joinedClasses', 'activeSessions'));
 }
 
@@ -42,6 +53,12 @@ public function show($id)
     $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
     $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
 
+    // Check if they are present for TODAY specifically
+    $isPresentToday = \App\Models\Attendance::where('user_id', auth()->id())
+        ->where('lab_session_id', $id)
+        ->where('attendance_date', now()->toDateString())
+        ->exists();
+        
     // 5. Fetch AVAILABLE Quizzes (Scheduled and not Expired)
     // FIX: Changed $sessionId to $id
     $availableQuizzes = Quiz::where('subject_id', $id)
@@ -64,17 +81,32 @@ public function show($id)
 
 public function markPresent(\App\Models\LabSession $labSession)
 {
-    // Update the 'is_present' column for this specific student and this specific session
-    // We use the joinedClasses relationship (belongsToMany)
+    $userId = auth()->id();
+    $today = now()->toDateString();
+    
+
+    // 1. Permanent Record: Create or update the daily attendance
+    \App\Models\Attendance::updateOrCreate(
+        [
+            'user_id' => $userId,
+            'lab_session_id' => $labSession->id,
+            'attendance_date' => $today
+        ],
+        [
+            'joined_at' => now()->toTimeString(),
+            'status' => 'present'
+        ]
+    );
+
+    // 2. UI Toggle: Update the pivot table so the "Join" button disappears
+    // and the "Screen Share" button appears for this specific session.
     auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
         'is_present' => true,
     ]);
 
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Attendance marked and monitoring active.'
-    ]);
+    return response()->json(['status' => 'success']);
 }
+
 public function heartbeat(LabSession $labSession)
 {
     // Update the timestamp on the pivot table to show the student is still active
@@ -265,5 +297,15 @@ public function enterClassroom($id)
     }
 
     return view('student.classroom', compact('session'));
+}
+
+public function refreshClassStatuses()
+{
+    $classes = auth()->user()->joinedClasses;
+    $statusMap = $classes->mapWithKeys(function ($item) {
+        return [$item->id => $item->isCurrentlyScheduled()];
+    });
+
+    return response()->json($statusMap);
 }
 }

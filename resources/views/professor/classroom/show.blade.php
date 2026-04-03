@@ -55,6 +55,7 @@
                     </div>
                 </div>
 
+                
                 <div x-data="{ activeTab: 'monitoring' }" class="mt-8">
                     <div class="flex space-x-1 border-b border-gray-200">
                         <button @click="activeTab = 'monitoring'"
@@ -85,13 +86,27 @@
                                     </p>
                                 </div>
 
-                                <form action="{{ route('professor.sessions.toggle', $session->id) }}" method="POST">
-                                    @csrf
-                                    <button type="submit"
-                                        class="px-6 py-2 rounded-lg font-bold text-white transition {{ $session->is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }}">
-                                        {{ $session->is_active ? 'Stop Session' : 'Start Session' }}
-                                    </button>
-                                </form>
+                                <div class="flex items-center space-x-3 mb-6">
+    <form action="{{ route('professor.sessions.toggle', $class->id) }}" method="POST">
+        @csrf
+        <button type="submit"
+            class="px-6 py-2 rounded-lg font-bold text-white shadow-sm transition-all {{ $class->is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }}">
+            <i class="{{ $class->is_active ? 'ri-stop-circle-line' : 'ri-play-circle-line' }} mr-1"></i>
+            {{ $class->is_active ? 'Stop Lab Session' : 'Start Lab Session' }}
+        </button>
+    </form>
+
+    @if($class->is_active)
+        <form action="{{ route('professor.sessions.broadcast', $class->id) }}" method="POST">
+            @csrf
+            <button type="submit"
+                class="px-6 py-2 rounded-lg font-bold text-white shadow-sm transition-all {{ $class->is_broadcasting ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700' }}">
+                <i class="ri-broadcast-line mr-1"></i>
+                {{ $class->is_broadcasting ? 'Stop Broadcasting' : 'Share My Screen' }}
+            </button>
+        </form>
+    @endif
+</div>
                             </div>
 
                             @if($session->is_active)
@@ -454,4 +469,59 @@
             </div>
         </main>
     </div>
+    <div x-data="{ 
+    isActive: {{ $class->is_active ? 'true' : 'false' }},
+    isBroadcasting: {{ $class->is_broadcasting ? 'true' : 'false' }} 
+}">
+    <button 
+        @click="toggleSession()" 
+        :class="isActive ? 'bg-red-600' : 'bg-green-600'"
+        class="px-6 py-2 rounded text-white font-bold transition-all">
+        <span x-text="isActive ? '🛑 End Lab Session' : '🚀 Start Lab Session'"></span>
+    </button>
+
+    <button 
+        x-show="isActive"
+        @click="toggleBroadcast()" 
+        :class="isBroadcasting ? 'bg-orange-600' : 'bg-blue-600'"
+        class="ml-2 px-6 py-2 rounded text-white font-bold">
+        <span x-text="isBroadcasting ? '📡 Stop Broadcasting' : '🎥 Share My Screen'"></span>
+    </button>
+</div>
+
+<script>
+function toggleSession() {
+    // Note the route name change here:
+    fetch("{{ route('professor.sessions.toggle', $class->id) }}", {
+        method: 'POST',
+        headers: { 
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json' 
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const alpine = Alpine.$data(document.querySelector('[x-data]'));
+        alpine.isActive = data.is_active;
+        if (!data.is_active) alpine.isBroadcasting = false;
+    });
+}
+
+function toggleBroadcast() {
+    // Note the route name change here:
+    fetch("{{ route('professor.sessions.broadcast', $class->id) }}", {
+        method: 'POST',
+        headers: { 
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json' 
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const alpine = Alpine.$data(document.querySelector('[x-data]'));
+        alpine.isBroadcasting = data.is_broadcasting;
+    });
+}
+</script>
 </x-app-layout>
+

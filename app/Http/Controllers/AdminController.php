@@ -67,26 +67,33 @@ public function index(Request $request)
     // If neither, go home
     return redirect('/');
 }
-    public function toggle(LabSession $session)
-    {
-        try {
-            // 1. Toggle the session status
-            $session->is_active = !$session->is_active;
-            $session->save();
+public function toggleSession($id)
+{
+    $session = LabSession::findOrFail($id);
+    $session->is_active = !$session->is_active;
 
-            // 2. If stopping, reset student attendance in the pivot table
-            if (!$session->is_active) {
-                DB::table('class_student')
-                    ->where('lab_session_id', $session->id)
-                    ->update(['is_present' => false]);
-            }
-
-            return back()->with('success', 'Session status updated!');
-        } catch (\Exception $e) {
-            Log::error("Toggle Error: " . $e->getMessage());
-            return back()->with('error', 'Error: ' . $e->getMessage());
-        }
+    if (!$session->is_active) {
+        $session->is_broadcasting = false;
     }
+
+    // GET: List of everyone who marked attendance TODAY
+    $presentToday = \App\Models\Attendance::where('lab_session_id', $id)
+        ->where('attendance_date', now()->toDateString())
+        ->with('student') // Loads the User model info
+        ->get();
+        
+    $session->save();
+    return back()->with('success', $session->is_active ? 'Session Started' : 'Session Ended');
+}
+
+public function toggleBroadcast($id)
+{
+    $session = LabSession::findOrFail($id);
+    $session->is_broadcasting = !$session->is_broadcasting;
+    $session->save();
+    
+    return back()->with('success', 'Broadcast Status Updated');
+}
 public function getActiveStatus()
 {
     // Only check students present in the current active session
@@ -165,4 +172,5 @@ public function gradeSubmission(Request $request, $id)
 
     return back()->with('success', 'Grade and Feedback saved!');
 }
+
 }
