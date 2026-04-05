@@ -165,10 +165,13 @@
     <div class="flex h-screen bg-gray-50" x-data="{ activeTask: null }">
 
         <main class="flex-1 p-8 overflow-y-auto" 
-      x-data="{ 
-          tab: 'activities', 
-          activeTask: null,
-          tasks: [],
+              @screen-shared.window="isSharing = true"
+              @screen-stopped.window="isSharing = false"
+              x-data="{ 
+                  isSharing: false, // 🟢 ALWAYS start locked on page load!
+                  tab: 'activities',
+                  activeTask: null,
+                  tasks: [],
           fetchTasks() {
               fetch(`/student/classroom/{{ $class->id }}/live-tasks`)
                   .then(res => res.json())
@@ -236,30 +239,26 @@
                             </div>
                         </div>
 
-                        <div x-show="sessionActive" x-transition>
-                            <div class="flex justify-center bg-white p-10 rounded-2xl border border-gray-200 shadow-sm">
+                        <div x-show="sessionActive && !isSharing" x-transition>
+                            <div class="flex flex-col items-center justify-center bg-white p-12 rounded-3xl border border-gray-200 shadow-sm text-center">
                                 
-                                <template x-if="!isPresent">
-                                    <button @click="markAttendance()" 
-                                        :disabled="loading"
-                                        class="bg-green-600 text-white px-10 py-4 rounded-xl shadow-lg hover:bg-green-700 font-black flex items-center gap-3 transition-all transform hover:scale-105">
-                                        <i x-show="!loading" class="ri-user-check-line text-xl"></i>
-                                        <i x-show="loading" class="ri-loader-4-line animate-spin text-xl"></i>
-                                        <span x-text="loading ? 'Marking Presence...' : 'Join Classroom & Mark Present'"></span>
-                                    </button>
-                                </template>
+                                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                                    <i class="ri-macbook-line text-4xl text-[#383838]"></i>
+                                </div>
+                                
+                                <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Security Check Required</h3>
+                                <p class="text-gray-500 mb-8 max-w-md">To maintain lab integrity, you must share your <span class="font-bold text-gray-800">Entire Screen</span> to unlock the activities and browser.</p>
 
-                                <template x-if="isPresent">
-                                    <button onclick="startFullMonitoring()" 
-                                        class="bg-black text-white px-10 py-4 rounded-xl shadow-xl hover:bg-gray-800 font-black flex items-center gap-3 animate-pulse-slow">
-                                        <i class="ri-screenshot-2-line"></i> Start Screen Sharing
-                                    </button>
-                                </template>
+                                <button onclick="enterClassroom()" 
+                                        class="bg-black text-white px-10 py-4 rounded-xl shadow-xl hover:bg-gray-800 font-black flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 animate-pulse-slow">
+                                    <i class="ri-login-box-line text-xl"></i> Share Screen & Enter Classroom
+                                </button>
 
                             </div>
                         </div>
-                    </div>
                 </div>
+
+                <div x-show="isSharing" x-transition.opacity.duration.500ms x-cloak>
 
                 <div class="flex border-b border-gray-200">
                     <template x-for="t in ['activities', 'quizzes', 'materials', 'classmates']">
@@ -589,7 +588,7 @@
             </div>
 
             <!-- Browser Tabs -->
-            <div x-data="browserTabs()" class="bg-gray-100 rounded-3xl overflow-hidden border border-gray-200 shadow-xl">
+            <div x-data="browserTabs()" x-show="isSharing" x-cloak class="bg-gray-100 rounded-3xl overflow-hidden border border-gray-200 shadow-xl mt-6">
                 <div class="bg-white p-3 flex items-center gap-2 border-b border-gray-200">
                     <template x-for="(tab, index) in tabs" :key="index">
                         <div @click="activeTab = index" 
@@ -631,7 +630,7 @@
                     </template>
                 </div>
             </div>
-        </main>
+        </div>    </main>
     </div>
 
     <style>
@@ -664,6 +663,10 @@
     const classId = {{ $class->id }};
     const csrfToken = '{{ csrf_token() }}';
     const allowedDomains = @json($class->whitelisted_urls ? explode(',', $class->whitelisted_urls) : ['google.com']);
+
+    window.addEventListener('beforeunload', () => {
+        localStorage.setItem('is_sharing', 'false');
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         studentPeer = new Peer('STUDENT_{{ auth()->id() }}');
@@ -706,7 +709,7 @@
                 }
             });
 
-            // 🟢 NEW: Listen for the professor ending the screen share
+            // 🟢 Listen for the professor ending the screen share
             call.on('close', () => {
                 console.log("Stream closed by Professor.");
                 // Redirect to dashboard
@@ -756,9 +759,14 @@
             }
 
             localStorage.setItem('is_sharing', 'true');
+            
+            // 🟢 Safely unlock the UI via Window Event!
+            window.dispatchEvent(new CustomEvent('screen-shared'));
 
             videoTrack.onended = () => {
                 localStorage.setItem('is_sharing', 'false');
+                window.dispatchEvent(new CustomEvent('screen-stopped')); // Lock the UI again
+                
                 fetch('{{ route("student.stop-presenting", $class->id) }}', {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
@@ -807,9 +815,10 @@
         }, 30000);
     }
 
-    // 🟢 NEW: Track the previous broadcasting state
+    // 🟢 Track the previous broadcasting state
     let wasBroadcasting = {{ $class->is_broadcasting ? 'true' : 'false' }};
 
+    // 🟢 Single, clean polling interval
     setInterval(() => {
         fetch("{{ route('student.check-session-status', $class->id) }}")
             .then(res => res.json())
@@ -825,8 +834,10 @@
                     alpine.labMode = true; 
                     console.log("🔒 Session is now active. Locking UI...");
                     
-                    if (alpine.isPresent && !localStorage.getItem('is_sharing')) {
-                        startFullMonitoring();
+                    if (!data.is_active && alpine.labMode) {
+                        alpine.labMode = false;
+                        alert("The instructor has ended the session.");
+                        window.location.href = "{{ route('student.dashboard') }}";
                     }
                 }
 
@@ -836,44 +847,13 @@
                     window.location.href = "{{ route('student.dashboard') }}"; 
                 }
                 
-                // 🟢 NEW: Detect if broadcasting just stopped
+                // 🟢 Detect if broadcasting just stopped
                 if (wasBroadcasting && !data.is_broadcasting) {
                     console.log("Professor ended screen share. Refreshing to show workspace.");
                     window.location.reload();
                 }
                 wasBroadcasting = data.is_broadcasting;
 
-                alpine.showBroadcast = data.is_broadcasting;
-            })
-            .catch(err => console.error("Poll error:", err));
-    }, 5000);
-
-    setInterval(() => {
-        fetch("{{ route('student.check-session-status', $class->id) }}")
-            .then(res => res.json())
-            .then(data => {
-                const root = document.getElementById('classroom-root');
-                if (!root || !window.Alpine) return;
-                
-                const alpine = Alpine.$data(root);
-                
-                alpine.sessionActive = data.is_active;
-
-                if (data.is_active && !alpine.labMode) {
-                    alpine.labMode = true; 
-                    console.log("🔒 Session is now active. Locking UI...");
-                    
-                    if (alpine.isPresent && !localStorage.getItem('is_sharing')) {
-                        startFullMonitoring();
-                    }
-                }
-
-                if (!data.is_active && alpine.labMode) {
-                    alpine.labMode = false;
-                    alert("The instructor has ended the session.");
-                    location.reload(); 
-                }
-                
                 alpine.showBroadcast = data.is_broadcasting;
             })
             .catch(err => console.error("Poll error:", err));
@@ -966,27 +946,27 @@
     </script>
 
     <script>
-    function markAttendance() {
+    function enterClassroom() {
         const root = Alpine.$data(document.getElementById('classroom-root'));
-        root.loading = true;
 
-        fetch("{{ route('student.mark-present', $class->id) }}", {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                root.isPresent = true;
-            }
-        })
-        .catch(err => console.error(err))
-        .finally(() => {
-            root.loading = false;
-        });
+        // 1. Check if they need to be marked present, and do it quietly in the background
+        if (!root.isPresent) {
+            fetch("{{ route('student.mark-present', $class->id) }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            }).then(() => { 
+                root.isPresent = true; 
+            }).catch(err => console.error(err));
+        }
+
+        // 2. IMMEDIATELY trigger the screen share prompt
+        // Because this is directly tied to the user's click, the browser will ALWAYS allow it!
+        if (typeof startFullMonitoring === "function") {
+            startFullMonitoring();
+        }
     }
     </script>
 </x-app-layout>

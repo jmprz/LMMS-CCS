@@ -70,6 +70,7 @@
 
                     <div class="mt-6">
                         <div x-show="activeTab === 'monitoring'">
+                            
                             <div class="bg-white p-6 rounded-xl shadow border border-gray-100 mb-6 flex justify-between items-center">
                                 <div>
                                     <h2 class="font-bold text-lg">Session Control</h2>
@@ -81,100 +82,119 @@
                                 </div>
 
                                 <div id="broadcast-wrapper" class="flex items-center space-x-3"
-                                    x-data="{ 
-                                        isActive: {{ $class->is_active ? 'true' : 'false' }},
-                                        isBroadcasting: {{ $class->is_broadcasting ? 'true' : 'false' }}, 
-                                        showTaskModal: false,
-                                        taskTitle: '',
-                                        taskDesc: '',
-                                        taskDeadline: '',
-                                        taskPoints: 100,
-                                        submitTask() {
-                                            fetch(`/professor/classroom/{{ $class->id }}/live-tasks`, {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                },
-                                                body: JSON.stringify({ 
-                                                    title: this.taskTitle, 
-                                                    description: this.taskDesc,
-                                                    deadline: this.taskDeadline,
-                                                    points: this.taskPoints
-                                                })
-                                            })
-                                            .then(res => {
-                                                if(res.ok) {
-                                                    this.showTaskModal = false; 
-                                                    this.taskTitle = ''; 
-                                                    this.taskDesc = '';
-                                                    this.taskDeadline = '';
-                                                    this.taskPoints = 100;
-                                                    alert('Task pushed to all students instantly!');
-                                                    window.location.reload(); 
-                                                }
-                                            })
-                                            .catch(err => console.error('Failed to assign task:', err));
-                                        }
-                                    }">
+                                     x-data="{ 
+                                         isActive: {{ $class->is_active ? 'true' : 'false' }},
+                                         isBroadcasting: {{ $class->is_broadcasting ? 'true' : 'false' }} 
+                                     }">
 
-                                    <button @click.prevent="toggleSession()" 
-                                    :class="isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'" 
-                                    class="px-6 py-2 rounded-lg font-bold text-white shadow-sm transition-all flex items-center">
-                                    <i :class="isActive ? 'ri-stop-circle-line' : 'ri-play-circle-line'" class="mr-1"></i>
-                                    <span x-text="isActive ? 'Stop Lab Session' : 'Start Lab Session'"></span>
-                                    </button>
+                                     <button @click.prevent="toggleSession()" 
+                                         x-show="!isActive"
+                                         class="px-6 py-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all flex items-center">
+                                         <i class="ri-play-circle-line mr-1"></i> Start Lab Session
+                                     </button>
 
-                                    @if($class->is_active)
-                                        <button type="button" 
-                                                @click.prevent="toggleBroadcast()"
-                                                :class="isBroadcasting ? 'bg-orange-600' : 'bg-blue-600'"
-                                                class="px-6 py-2 rounded-lg text-white font-bold transition-all shadow-sm flex items-center">
-                                            <span x-text="isBroadcasting ? 'Stop Broadcasting' : 'Share My Screen'"></span>
-                                        </button>
+                                     <button @click.prevent="toggleSession()" 
+                                         x-show="isActive"
+                                         style="display: none;"
+                                         class="px-6 py-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-all flex items-center">
+                                         <i class="ri-stop-circle-line mr-1"></i> Stop Lab Session
+                                     </button>
 
-                                        <button x-show="isBroadcasting" style="display: none;" 
-                                                @click.prevent="showTaskModal = true" 
-                                                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-all shadow-sm">
-                                            <i class="ri-add-line mr-1"></i> Give Task
-                                        </button>
-                                    @endif
+                                     <button type="button" 
+                                         x-show="isActive && !isBroadcasting" 
+                                         style="display: none;"
+                                         @click.prevent="toggleBroadcast()"
+                                         class="px-6 py-2 rounded-lg text-white font-bold bg-blue-600 hover:bg-blue-700 transition-all shadow-sm flex items-center">
+                                         <i class="ri-computer-line mr-1"></i> Share My Screen
+                                     </button>
 
-                                    <div x-show="showTaskModal" style="display: none;" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
-                                        <div class="bg-white w-1/3 p-6 rounded-2xl shadow-2xl" @click.away="showTaskModal = false">
-                                            <h2 class="text-2xl font-black text-gray-800 mb-4">Assign Live Task</h2>
-                                            
-                                            <div class="space-y-4">
-                                                <div>
-                                                    <label class="block text-sm font-bold text-gray-700 mb-1">Task Title</label>
-                                                    <input type="text" x-model="taskTitle" placeholder="e.g. Create a Laravel Route" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500">
-                                                </div>
-                                                
-                                                <div class="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label class="block text-sm font-bold text-gray-700 mb-1">Deadline</label>
-                                                        <input type="datetime-local" x-model="taskDeadline" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" required>
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-sm font-bold text-gray-700 mb-1">Max Points</label>
-                                                        <input type="number" x-model="taskPoints" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" required>
-                                                    </div>
-                                                </div>
+                                     <button type="button" 
+                                         x-show="isActive && isBroadcasting" 
+                                         style="display: none;"
+                                         @click.prevent="toggleBroadcast()"
+                                         class="px-6 py-2 rounded-lg text-white font-bold bg-orange-600 hover:bg-orange-700 transition-all shadow-sm flex items-center">
+                                         <i class="ri-broadcast-line animate-pulse mr-1"></i> Stop Broadcasting
+                                     </button>
 
-                                                <div>
-                                                    <label class="block text-sm font-bold text-gray-700 mb-1">Instructions</label>
-                                                    <textarea x-model="taskDesc" placeholder="Describe what the students need to do..." class="w-full border border-gray-300 rounded-lg p-3 h-28 focus:ring-purple-500 focus:border-purple-500"></textarea>
-                                                </div>
-                                            </div>
+                                     <button type="button" 
+                                         x-show="isActive && isBroadcasting" 
+                                         style="display: none;"
+                                         @click.prevent="$dispatch('open-task-modal')" 
+                                         class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-all shadow-sm">
+                                         <i class="ri-add-line mr-1"></i> Give Task
+                                     </button>
+                                </div>
+                            </div> <div x-data="{ 
+                                     showTaskModal: false,
+                                     taskTitle: '',
+                                     taskDesc: '',
+                                     taskDeadline: '',
+                                     taskPoints: 100,
+                                     submitTask() {
+                                         fetch('/professor/classroom/{{ $class->id }}/live-tasks', {
+                                             method: 'POST',
+                                             headers: {
+                                                 'Content-Type': 'application/json',
+                                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                             },
+                                             body: JSON.stringify({ 
+                                                 title: this.taskTitle, 
+                                                 description: this.taskDesc,
+                                                 deadline: this.taskDeadline,
+                                                 points: this.taskPoints
+                                             })
+                                         })
+                                         .then(res => {
+                                             if(res.ok) {
+                                                 this.showTaskModal = false; 
+                                                 this.taskTitle = ''; 
+                                                 this.taskDesc = '';
+                                                 this.taskDeadline = '';
+                                                 this.taskPoints = 100;
+                                                 alert('Task pushed to all students instantly!');
+                                                 silentRefresh();
+                                             }
+                                         })
+                                         .catch(err => console.error('Failed to assign task:', err));
+                                     }
+                                 }"
+                                 @open-task-modal.window="showTaskModal = true">
 
-                                            <div class="flex justify-end gap-3 mt-6">
-                                                <button @click.prevent="showTaskModal = false" type="button" class="px-5 py-2 font-bold text-gray-500 hover:text-gray-800">Cancel</button>
-                                                <button @click.prevent="submitTask()" type="button" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all">Push to Students</button>
-                                            </div>
-                                        </div>
-                                    </div> 
-                                </div> 
-                            </div> 
+                                 <div x-show="showTaskModal" style="display: none;" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+                                      <div class="bg-white w-1/3 p-6 rounded-2xl shadow-2xl" @click.away="showTaskModal = false">
+                                          <h2 class="text-2xl font-black text-gray-800 mb-4">Assign Live Task</h2>
+                                          
+                                          <div class="space-y-4">
+                                              <div>
+                                                  <label class="block text-sm font-bold text-gray-700 mb-1">Task Title</label>
+                                                  <input type="text" x-model="taskTitle" placeholder="e.g. Create a Laravel Route" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500">
+                                              </div>
+                                              
+                                              <div class="grid grid-cols-2 gap-4">
+                                                  <div>
+                                                      <label class="block text-sm font-bold text-gray-700 mb-1">Deadline</label>
+                                                      <input type="datetime-local" x-model="taskDeadline" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" required>
+                                                  </div>
+                                                  <div>
+                                                      <label class="block text-sm font-bold text-gray-700 mb-1">Max Points</label>
+                                                      <input type="number" x-model="taskPoints" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" required>
+                                                  </div>
+                                              </div>
+
+                                              <div>
+                                                  <label class="block text-sm font-bold text-gray-700 mb-1">Instructions</label>
+                                                  <textarea x-model="taskDesc" placeholder="Describe what the students need to do..." class="w-full border border-gray-300 rounded-lg p-3 h-28 focus:ring-purple-500 focus:border-purple-500"></textarea>
+                                              </div>
+                                          </div>
+
+                                          <div class="flex justify-end gap-3 mt-6">
+                                              <button @click.prevent="showTaskModal = false" type="button" class="px-5 py-2 font-bold text-gray-500 hover:text-gray-800">Cancel</button>
+                                              <button @click.prevent="submitTask()" type="button" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all">Push to Students</button>
+                                          </div>
+                                      </div>
+                                 </div> 
+                            </div>
+
                             @if($session->is_active)
                                 <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
                                     <h2 class="font-bold mb-4">Live Laboratory Monitor</h2>
@@ -217,8 +237,8 @@
                             <h3 class="font-black text-gray-400 mb-5 flex items-center uppercase tracking-widest text-[10px]">
                                 <i class="fas fa-flask me-2"></i> Lab Tasks
                             </h3>
-                            <div class="grid grid-cols-1 gap-4">
-                                @forelse($tasks as $task)
+                            <div id="tasks-list-container" class="grid grid-cols-1 gap-4">
+                                    @forelse($tasks as $task)
                                     <div class="p-5 border border-gray-200 rounded-2xl flex justify-between items-center bg-white hover:border-gray-900 transition-all group">
                                         <div>
                                             <h4 class="font-bold text-lg text-gray-900">{{ $task->title }}</h4>
@@ -245,8 +265,8 @@
                             <h3 class="font-black text-gray-400 mb-5 flex items-center uppercase tracking-widest text-[10px]">
                                 <i class="fas fa-stopwatch me-2"></i> Active Quizzes
                             </h3>
-                            <div class="grid grid-cols-1 gap-4">
-                                @forelse($session->quizzes ?? [] as $quiz)
+                            <div id="quizzes-list-container" class="grid grid-cols-1 gap-4">
+                                    @forelse($session->quizzes ?? [] as $quiz)
                                     <div class="p-5 border border-gray-200 rounded-2xl flex justify-between items-center bg-white hover:border-gray-900 transition-all">
                                         <div>
                                             <h4 class="font-bold text-lg text-gray-900">{{ $quiz->title }}</h4>
@@ -377,7 +397,7 @@
                         <div x-show="showModal" class="fixed inset-0 z-[110] flex items-center justify-center bg-[#383838]/80 backdrop-blur-md p-4">
                             <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200">
                                 <h3 class="font-black text-2xl text-gray-900 mb-6">New Lab Activity</h3>
-                                <form action="{{ route('professor.tasks.store') }}" method="POST" class="space-y-4">
+                                <form action="{{ route('professor.tasks.store') }}" method="POST" class="space-y-4" @submit.prevent="submitAjaxForm($event, () => showModal = false)">
                                     @csrf
                                     <input type="hidden" name="subject_id" value="{{ $session->id }}">
                                     <div>
@@ -424,7 +444,7 @@
                             </button>
                         </div>
 
-                        <form action="{{ route('professor.materials.store', $session->id) }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-5">
+                        <form action="{{ route('professor.materials.store', $session->id) }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-5" @submit.prevent="submitAjaxForm($event, () => open = false)">
                             @csrf
                             
                             <div>
@@ -713,4 +733,68 @@ function toggleSession() {
             });
         }
     </script>
+
+    <script>
+    // 🟢 1. The function that invisibly grabs the newest tasks and updates the screen
+    async function silentRefresh() {
+        try {
+            const response = await fetch(window.location.href, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Instantly swap the Tasks list
+            const newTasks = doc.getElementById('tasks-list-container');
+            if (newTasks && document.getElementById('tasks-list-container')) {
+                document.getElementById('tasks-list-container').innerHTML = newTasks.innerHTML;
+            }
+
+            // Instantly swap the Quizzes list
+            const newQuizzes = doc.getElementById('quizzes-list-container');
+            if (newQuizzes && document.getElementById('quizzes-list-container')) {
+                document.getElementById('quizzes-list-container').innerHTML = newQuizzes.innerHTML;
+            }
+        } catch (err) {
+            console.error("Silent refresh failed:", err);
+        }
+    }
+
+    // 🟢 2. Auto-poll every 3 seconds! 
+    // If you create a Quiz in a new tab, this pulls it into the dashboard automatically.
+    setInterval(silentRefresh, 3000);
+
+    // 🟢 3. The function that uploads your forms in the background without refreshing
+    function submitAjaxForm(event, closeAlpineModal) {
+        const form = event.target;
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        
+        // Show a loading state on the button
+        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Processing...';
+        btn.disabled = true;
+
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' } // Lets Laravel know it's AJAX
+        })
+        .then(res => {
+            if (res.ok) {
+                closeAlpineModal(); // Closes the popup immediately
+                form.reset();       // Clears your typed inputs
+                silentRefresh();    // Visually pops the new item into the list instantly!
+            } else {
+                alert("Something went wrong. Please check your inputs and try again.");
+            }
+        })
+        .catch(err => console.error("Upload failed:", err))
+        .finally(() => {
+            // Restore the button
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+</script>
 </x-app-layout>
