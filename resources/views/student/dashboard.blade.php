@@ -1,4 +1,18 @@
 <x-app-layout>
+
+    <div id="lockdown-ui" class="hidden fixed inset-0 z-[9999] bg-white w-full h-screen">
+        <div class="flex w-full h-full">
+            <div class="w-1/2 h-full bg-black relative">
+                <video id="professor-screen" autoplay playsinline class="absolute inset-0 w-full h-full object-contain"></video>
+            </div>
+            
+            <div class="w-1/2 h-full p-8 overflow-y-auto bg-gray-50 border-l border-gray-200">
+                <h2 class="text-2xl font-black text-gray-800 mb-4">Your Workspace</h2>
+                <p class="text-gray-500">The professor has locked your screen. Please complete the tasks shown on the left.</p>
+            </div>
+        </div>
+    </div>
+
     <div id="dashboard-root" 
          class="p-4 md:p-8 max-w-7xl mx-auto" 
          x-data="{ 
@@ -32,7 +46,7 @@
             </div>
 
             <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm w-full lg:w-auto">
-                <form action="{{ route('student.join') }}" method="POST" class="flex gap-2">
+                <form action="#">
                     @csrf
                     <input type="text" name="class_code" placeholder="Enter Class Code" 
                            class="border-gray-200 rounded-xl focus:ring-black text-sm w-full lg:w-48" required>
@@ -72,6 +86,67 @@
                 </template>
             </div>
         </div>
+
+        <!-- Graded Tasks Section -->
+<div x-data="{ 
+    gradedTasks: [],
+    
+    init() {
+        this.fetchGradedTasks();
+        setInterval(() => this.fetchGradedTasks(), 5000);
+    },
+    
+    fetchGradedTasks() {
+        fetch('{{ route('student.graded-tasks') }}')
+            .then(res => res.json())
+            .then(data => {
+                this.gradedTasks = data;
+            });
+    }
+}" class="mb-12">
+    
+    <div x-show="gradedTasks.length > 0" x-transition class="mb-12">
+        <div class="flex items-center gap-2 mb-6">
+            <span class="flex h-3 w-3 relative">
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+            <h2 class="text-xs font-black text-blue-700 uppercase tracking-widest">Recently Graded</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="task in gradedTasks" :key="task.id">
+                <div class="bg-white p-6 rounded-3xl border-2 border-blue-500 shadow-xl shadow-blue-100/50 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-black text-gray-900 leading-tight" x-text="task.title"></h3>
+                            <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-3 py-1 rounded-full">GRADED</span>
+                        </div>
+                        
+                        <div class="mb-4 p-4 bg-gray-50 rounded-xl">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-gray-500">Your Score</span>
+                                <span class="text-2xl font-black" 
+                                      :class="(task.submission.grade / task.points) >= 0.7 ? 'text-green-600' : 'text-amber-600'"
+                                      x-text="task.submission.grade + '/' + task.points"></span>
+                            </div>
+                            
+                            <div x-show="task.submission.feedback" class="mt-3 pt-3 border-t border-gray-200">
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Feedback</p>
+                                <p class="text-sm text-gray-700 italic" x-text="task.submission.feedback"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <p class="text-xs font-bold text-gray-500" x-text="'Prof. ' + task.lab_session.faculty.name"></p>
+                            <p class="text-[10px] font-black text-gray-400 uppercase" 
+                               x-text="'Graded: ' + new Date(task.submission.updated_at).toLocaleDateString()"></p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
 
         <div>
             <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Class Schedule</h2>
@@ -122,5 +197,43 @@
                     });
                 });
         }, 5000);
+    </script>
+
+        <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            const studentId = '{{ auth()->user()->id ?? "default-id" }}'; 
+            const peer = new Peer('student-' + studentId); 
+
+            peer.on('call', (call) => {
+                call.answer(); 
+                
+                call.on('stream', (professorStream) => {
+                    const videoElement = document.getElementById('professor-screen');
+                    videoElement.srcObject = professorStream;
+                    videoElement.play();
+                    
+                    if (window.electronAPI) {
+                        window.electronAPI.lockScreen();
+                    }
+                    
+                    const ui = document.getElementById('lockdown-ui');
+                    ui.classList.remove('hidden');
+                });
+            });
+
+            if (window.Echo) {
+                window.Echo.channel('lab-session-1') 
+                    .listen('ProfessorStoppedSharing', (e) => {
+                        if (window.electronAPI) {
+                            window.electronAPI.unlockScreen();
+                        }
+                        document.getElementById('lockdown-ui').classList.add('hidden');
+                    });
+            } else {
+                console.warn("Laravel Echo is not initialized.");
+            }
+        });
     </script>
 </x-app-layout>

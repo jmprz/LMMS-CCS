@@ -12,300 +12,307 @@ use App\Models\ActivityLog;
 use App\Models\Quiz;
 use Illuminate\Support\Facades\DB;
 
-
 class StudentClassController extends Controller
 {
-// 1. For the Dashboard (The list)
-public function index() {
-    $user = auth()->user();
-    
-    // 1. Get joined classes and MAP through them to add the attendance count
-    $joinedClasses = $user->joinedClasses->map(function($class) use ($user) {
-        // Count how many unique days this student was present for THIS specific class
-        $class->total_attended_days = \App\Models\Attendance::where('user_id', $user->id)
-            ->where('lab_session_id', $class->id)
-            ->count();
+    // 1. For the Dashboard (The list)
+    public function index() {
+        $user = auth()->user();
+        
+        $joinedClasses = $user->joinedClasses->map(function($class) use ($user) {
+            $class->total_attended_days = \App\Models\Attendance::where('user_id', $user->id)
+                ->where('lab_session_id', $class->id)
+                ->count();
+                
+            return $class;
+        });
+
+        $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
+        
+        return view('student.dashboard', compact('joinedClasses', 'activeSessions'));
+    }
+
+    public function show($id)
+    {
+        $class = LabSession::with('students', 'materials')->findOrFail($id);
+
+        $tasks = Task::where('subject_id', $id)
+            ->with(['currentUserSubmission']) 
+            ->get();
+
+        $activeSessions = LabSession::where('is_active', true)->get();
+        
+        $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
+        $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
+
+        $isPresentToday = \App\Models\Attendance::where('user_id', auth()->id())
+            ->where('lab_session_id', $id)
+            ->where('attendance_date', now()->toDateString())
+            ->exists();
             
-        return $class;
-    });
+        $availableQuizzes = Quiz::where('subject_id', $id)
+            ->where('published_at', '<=', now()) 
+            ->where(function($query) {
+                $query->whereNull('expires_at') 
+                      ->orWhere('expires_at', '>', now());
+            })
+            ->get();
 
-    // 2. Query globally active sessions (if you still need this for a sidebar)
-    $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
-    
-    // 3. Return everything to the view
-    return view('student.dashboard', compact('joinedClasses', 'activeSessions'));
-}
-
-public function show($id)
-{
-    // 1. Fetch the specific session
-    $class = LabSession::with('students', 'materials')->findOrFail($id);
-
-    // 2. Fetch the tasks for this session
-    $tasks = Task::where('subject_id', $id) // Ensure this column name matches your DB (usually lab_session_id or subject_id)
-        ->with(['currentUserSubmission']) 
-        ->get();
-
-    // 3. Fetch active sessions for the sidebar/navigation
-    $activeSessions = LabSession::where('is_active', true)->get();
-    
-    // 4. Check if student is in this class and get their presence status
-    $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
-    $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
-
-    // Check if they are present for TODAY specifically
-    $isPresentToday = \App\Models\Attendance::where('user_id', auth()->id())
-        ->where('lab_session_id', $id)
-        ->where('attendance_date', now()->toDateString())
-        ->exists();
-        
-    // 5. Fetch AVAILABLE Quizzes (Scheduled and not Expired)
-    // FIX: Changed $sessionId to $id
-    $availableQuizzes = Quiz::where('subject_id', $id)
-        ->where('published_at', '<=', now()) 
-        ->where(function($query) {
-            $query->whereNull('expires_at') 
-                  ->orWhere('expires_at', '>', now());
-        })
-        ->get();
-
-    // 6. Pass EVERYTHING to the view
-    return view('student.subject', [
-        'class' => $class, 
-        'activeSessions' => $activeSessions,
-        'isPresent' => $isPresent,
-        'tasks' => $tasks,
-        'quizzes' => $availableQuizzes // Added this!
-    ]);
-}
-
-public function markPresent(\App\Models\LabSession $labSession)
-{
-    $userId = auth()->id();
-    $today = now()->toDateString();
-    
-
-    // 1. Permanent Record: Create or update the daily attendance
-    \App\Models\Attendance::updateOrCreate(
-        [
-            'user_id' => $userId,
-            'lab_session_id' => $labSession->id,
-            'attendance_date' => $today
-        ],
-        [
-            'joined_at' => now()->toTimeString(),
-            'status' => 'present'
-        ]
-    );
-
-    // 2. UI Toggle: Update the pivot table so the "Join" button disappears
-    // and the "Screen Share" button appears for this specific session.
-    auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
-        'is_present' => true,
-    ]);
-
-    return response()->json(['status' => 'success']);
-}
-
-public function heartbeat(LabSession $labSession)
-{
-    // Update the timestamp on the pivot table to show the student is still active
-    auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
-        'is_present' => true,
-        'updated_at' => now(),
-    ]);
-
-    return response()->json(['status' => 'alive']);
-}
-
-public function join(Request $request)
-{
-    $request->validate(['class_code' => 'required']);
-
-    $session = \App\Models\LabSession::where('class_code', $request->class_code)->first();
-
-    if (!$session) {
-        return back()->with('error', 'Invalid Class Code.');
+        return view('student.subject', [
+            'class' => $class, 
+            'activeSessions' => $activeSessions,
+            'isPresent' => $isPresent,
+            'tasks' => $tasks,
+            'quizzes' => $availableQuizzes
+        ]);
     }
 
-    // Attach student to class
-    auth()->user()->joinedClasses()->syncWithoutDetaching([$session->id]);
+    public function markPresent(\App\Models\LabSession $labSession)
+    {
+        $userId = auth()->id();
+        $today = now()->toDateString();
+        
+        \App\Models\Attendance::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'lab_session_id' => $labSession->id,
+                'attendance_date' => $today
+            ],
+            [
+                'joined_at' => now()->toTimeString(),
+                'status' => 'present'
+            ]
+        );
 
-    return redirect()->route('student.dashboard')->with('success', 'Successfully joined ' . $session->subject_name);
-}
+        auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
+            'is_present' => true,
+        ]);
 
-public function stopPresenting(Request $request, $labSessionId)
-{
-    // Update the pivot table for this specific session
-    auth()->user()->joinedClasses()->updateExistingPivot($labSessionId, [
-        'is_present' => false,
-    ]);
-
-    return response()->json(['status' => 'success']);
-}
-public function checkStatus($id)
-{
-    $class = LabSession::findOrFail($id);
-
-    // Calculate if the student is present
-    $isPresent = auth()->user()->joinedClasses()
-                    ->where('lab_session_id', $id)
-                    ->where('is_present', true)
-                    ->exists();
-
-    // Return the full JSON object in one go
-    return response()->json([
-        'is_active' => (bool) $class->is_active,
-        'is_present' => $isPresent
-    ]);
-}
-
-public function submitTask(Request $request, $taskId)
-{
-    $task = Task::findOrFail($taskId);
-
-    // 1. Check if deadline has passed
-    if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
-        return back()->with('error', 'The deadline for this task has passed. You can no longer submit or update files.');
+        return response()->json(['status' => 'success']);
     }
 
-    $request->validate([
-        'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240',
-    ]);
+    public function heartbeat(LabSession $labSession)
+    {
+        auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
+            'is_present' => true,
+            'updated_at' => now(),
+        ]);
 
-    if ($request->hasFile('submission')) {
-        $file = $request->file('submission');
-        $filename = auth()->id() . '_' . time() . '_' . $file->getClientOriginalName();
-        
-        // Move the file directly to the public/submissions folder (Your fix)
-        $file->move(public_path('submissions/task_' . $taskId), $filename);
+        return response()->json(['status' => 'alive']);
+    }
 
-        $path = 'submissions/task_' . $taskId . '/' . $filename;
+    public function join(Request $request)
+    {
+        $request->validate(['class_code' => 'required']);
 
-        // If replacing an old file, we should delete the old physical file to save space
-        $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', auth()->id())->first();
-        if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
-            unlink(public_path($oldSubmission->file_path));
+        $session = \App\Models\LabSession::where('class_code', $request->class_code)->first();
+
+        if (!$session) {
+            return back()->with('error', 'Invalid Class Code.');
         }
 
-        $openedAtMs = $request->input('opened_at');
-        $nowMs = round(microtime(true) * 1000); 
+        auth()->user()->joinedClasses()->syncWithoutDetaching([$session->id]);
 
-        $durationSeconds = $openedAtMs ? floor(($nowMs - $openedAtMs) / 1000) : 0;
-
-    // Safety check: if duration is negative (due to clock sync issues) or over 24 hours, set to 0
-    if ($durationSeconds < 0 || $durationSeconds > 86400) {
-        $durationSeconds = 0;
+        return redirect()->route('student.dashboard')->with('success', 'Successfully joined ' . $session->subject_name);
     }
 
-        Submission::updateOrCreate(
+    public function stopPresenting(Request $request, $labSessionId)
+    {
+        auth()->user()->joinedClasses()->updateExistingPivot($labSessionId, [
+            'is_present' => false,
+        ]);
+
+        return response()->json(['status' => 'success']);
+    }
+
+    public function checkStatus($id)
+    {
+        $class = LabSession::findOrFail($id);
+
+        $isPresent = auth()->user()->joinedClasses()
+                        ->where('lab_session_id', $id)
+                        ->where('is_present', true)
+                        ->exists();
+
+        return response()->json([
+            'is_active' => (bool) $class->is_active,
+            'is_broadcasting' => (bool) $class->is_broadcasting,
+            'is_present' => $isPresent
+        ]);
+    }
+
+    public function submitTask(Request $request, $taskId)
+    {
+        $task = Task::findOrFail($taskId);
+
+        if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
+            return back()->with('error', 'The deadline for this task has passed. You can no longer submit or update files.');
+        }
+
+        $request->validate([
+            'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240',
+        ]);
+
+        if ($request->hasFile('submission')) {
+            $file = $request->file('submission');
+            $filename = auth()->id() . '_' . time() . '_' . $file->getClientOriginalName();
+            
+            $file->move(public_path('submissions/task_' . $taskId), $filename);
+
+            $path = 'submissions/task_' . $taskId . '/' . $filename;
+
+            $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', auth()->id())->first();
+            if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
+                unlink(public_path($oldSubmission->file_path));
+            }
+
+            $durationSeconds = abs(now()->diffInSeconds($task->created_at));
+
+            Submission::updateOrCreate(
             ['task_id' => $taskId, 'user_id' => auth()->id()],
             [
                 'file_path' => $path,
                 'original_filename' => $file->getClientOriginalName(),
-                'duration_seconds' => $durationSeconds, 
-                'submitted_at' => now(),               
-            ]
+                'duration_seconds' => $durationSeconds,
+                'submitted_at' => now(),
+            ] // <--- This was the missing bracket!
         );
 
         return back()->with('success', 'Task submitted successfully!');
-    }
-}
 
-public function deleteTask($taskId)
-{
-    $task = Task::findOrFail($taskId);
-
-    // 2. Check if deadline has passed before allowing delete
-    if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
-        return back()->with('error', 'The deadline has passed. You can no longer delete your submission.');
-    }
-
-    $submission = Submission::where('task_id', $taskId)
-        ->where('user_id', auth()->id())
-        ->first();
-
-    if ($submission) {
-        // Delete the physical file from /public/submissions/
-        $filePath = public_path($submission->file_path);
-        if (file_exists($filePath)) {
-            unlink($filePath);
-        }
-
-        $submission->delete();
-        return back()->with('success', 'Submission deleted successfully.');
-    }
-
-    return back()->with('error', 'No submission found to delete.');
-}
-
-public function logBehavior(Request $request)
-{
-    $userId = auth()->id() ?? 1;
-    $labSessionId = $request->lab_session_id;
-    $detail = $request->detail;
-
-    // 1. CLEAN THE URL (Do this first)
-    if (str_contains($detail, 'google.com/search?q=')) {
-        parse_str(parse_url($detail, PHP_URL_QUERY), $query);
-        $detail = "Google Search: " . urldecode($query['q'] ?? 'unknown');
-    }
-
-    // 2. RAW UPDATE PREVIOUS LOG
-    // We look for the most recent log for this user/session and calculate duration
-    $lastLog = DB::table('activity_logs')
-                ->where('user_id', $userId)
-                ->where('lab_session_id', $labSessionId)
-                ->orderBy('id', 'desc')
-                ->first();
-
-    if ($lastLog) {
-        // We use raw PHP Unix timestamps to get the difference
-        $startTime = strtotime($lastLog->created_at);
-        $endTime = time(); // Current Unix timestamp (seconds)
-        $duration = $endTime - $startTime;
-
-        if ($duration > 0) {
-            DB::table('activity_logs')
-                ->where('id', $lastLog->id)
-                ->update(['duration_seconds' => $duration]);
-            
-            \Log::info("ID {$lastLog->id} updated. Start: $startTime, End: $endTime, Diff: $duration");
+            return back()->with('success', 'Task submitted successfully!');
         }
     }
 
-    // 3. INSERT NEW LOG
-    DB::table('activity_logs')->insert([
-        'user_id' => $userId,
-        'log_type' => $request->type,
-        'content' => $detail,
-        'lab_session_id' => $labSessionId,
-        'duration_seconds' => 0,
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
+    public function deleteTask($taskId)
+    {
+        $task = Task::findOrFail($taskId);
 
-    return response()->json(['status' => 'success']);
-}
+        if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
+            return back()->with('error', 'The deadline has passed. You can no longer delete your submission.');
+        }
 
-public function enterClassroom($id)
-{
-    $session = LabSession::findOrFail($id);
+        $submission = Submission::where('task_id', $taskId)
+            ->where('user_id', auth()->id())
+            ->first();
 
-    if (!$session->isCurrentlyScheduled()) {
-        return back()->with('error', 'This classroom is currently closed. Please return during your scheduled time.');
+        if ($submission) {
+            $filePath = public_path($submission->file_path);
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+
+            $submission->delete();
+            return back()->with('success', 'Submission deleted successfully.');
+        }
+
+        return back()->with('error', 'No submission found to delete.');
     }
 
-    return view('student.classroom', compact('session'));
-}
+    public function logBehavior(Request $request)
+    {
+        $userId = auth()->id() ?? 1;
+        $labSessionId = $request->lab_session_id;
+        $detail = $request->detail;
 
-public function refreshClassStatuses()
-{
-    $classes = auth()->user()->joinedClasses;
-    $statusMap = $classes->mapWithKeys(function ($item) {
-        return [$item->id => $item->isCurrentlyScheduled()];
-    });
+        if (str_contains($detail, 'google.com/search?q=')) {
+            parse_str(parse_url($detail, PHP_URL_QUERY), $query);
+            $detail = "Google Search: " . urldecode($query['q'] ?? 'unknown');
+        }
 
-    return response()->json($statusMap);
-}
+        $lastLog = DB::table('activity_logs')
+                    ->where('user_id', $userId)
+                    ->where('lab_session_id', $labSessionId)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+        if ($lastLog) {
+            $startTime = strtotime($lastLog->created_at);
+            $endTime = time();
+            $duration = $endTime - $startTime;
+
+            if ($duration > 0) {
+                DB::table('activity_logs')
+                    ->where('id', $lastLog->id)
+                    ->update(['duration_seconds' => $duration]);
+                
+                \Log::info("ID {$lastLog->id} updated. Start: $startTime, End: $endTime, Diff: $duration");
+            }
+        }
+
+        DB::table('activity_logs')->insert([
+            'user_id' => $userId,
+            'log_type' => $request->type,
+            'content' => $detail,
+            'lab_session_id' => $labSessionId,
+            'duration_seconds' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['status' => 'success']);
+    }
+
+    public function enterClassroom($id)
+    {
+        $session = LabSession::findOrFail($id);
+
+        if (!$session->isCurrentlyScheduled()) {
+            return back()->with('error', 'This classroom is currently closed. Please return during your scheduled time.');
+        }
+
+        return view('student.classroom', compact('session'));
+    }
+
+    public function refreshClassStatuses()
+    {
+        $classes = auth()->user()->joinedClasses;
+        $statusMap = $classes->mapWithKeys(function ($item) {
+            return [$item->id => $item->isCurrentlyScheduled()];
+        });
+
+        return response()->json($statusMap);
+    }
+        /**
+     * Get tasks that have been graded for the student
+     */
+    public function getGradedTasks()
+    {
+        $userId = auth()->id();
+        
+        // Get all tasks where user has a submission that's been graded
+        $gradedTasks = Task::whereHas('submissions', function($query) use ($userId) {
+            $query->where('user_id', $userId)
+                ->whereNotNull('grade');
+        })
+        ->with([
+            'labSession.faculty',
+            'submissions' => function($query) use ($userId) {
+                $query->where('user_id', $userId);
+            }
+        ])
+        ->latest()
+        ->take(6) // Only show 6 most recent
+        ->get()
+        ->map(function($task) {
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'points' => $task->points,
+                'lab_session' => [
+                    'subject_name' => $task->labSession->subject_name,
+                    'faculty' => [
+                        'name' => $task->labSession->faculty->name ?? 'Unknown'
+                    ]
+                ],
+                'submission' => [
+                    'grade' => $task->submissions->first()->grade,
+                    'feedback' => $task->submissions->first()->feedback,
+                    'updated_at' => $task->submissions->first()->updated_at
+                ]
+            ];
+        });
+        
+        return response()->json($gradedTasks);
+    }
 }
