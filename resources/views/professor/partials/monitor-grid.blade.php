@@ -96,47 +96,34 @@
 
         adminPeer.on('open', (id) => {
             console.log('✅ Professor Peer ready: ' + id);
-            // Restore sessions from localStorage after Peer ID is ready
-            const saved = JSON.parse(localStorage.getItem('watching') || '[]');
-            saved.forEach(sId => startSpectating(sId));
         });
 
+        // 🟢 NEW: Safely accept incoming student screens!
         adminPeer.on('call', (call) => {
-    const studentId = call.peer.replace('STUDENT_', '');
-    console.log("Incoming feed from student:", studentId);
-    
-    // Answer the call without sending a local stream back
-    call.answer(); 
-    
-    call.on('stream', (remoteStream) => {
-        updateVideoUI(studentId, remoteStream);
-        connectedStudents.add(String(studentId));
-    });
+            const studentId = call.peer.replace('STUDENT_', '');
+            console.log("📞 Incoming feed from student:", studentId);
+            
+            // Answer the call without sending our own video back
+            call.answer(); 
+            
+            call.on('stream', (remoteStream) => {
+                console.log("🎥 Stream received from student:", studentId);
+                updateVideoUI(studentId, remoteStream);
+                connectedStudents.add(String(studentId));
+            });
 
-    call.on('close', () => resetStudentUI(studentId));
-    call.on('error', () => resetStudentUI(studentId));
-});
+            call.on('close', () => resetStudentUI(studentId));
+            call.on('error', () => resetStudentUI(studentId));
+        });
+
+        adminPeer.on('error', (err) => {
+            if (err.type === 'unavailable-id') {
+                console.warn("⚠️ Professor ID taken! Close duplicate tabs.");
+            }
+        });
     }
 
-    // 2. Start Spectating
-    function startSpectating(studentId) {
-        if (connectedStudents.has(String(studentId))) return; // Avoid duplicate calls
-
-        const targetId = 'STUDENT_' + studentId;
-        const call = adminPeer.call(targetId, new MediaStream());
-        
-        const btn = document.querySelector(`#btn-container-${studentId} button`);
-        if (btn) btn.innerText = "Connecting...";
-
-        call.on('stream', (remoteStream) => updateVideoUI(studentId, remoteStream));
-        call.on('error', () => resetStudentUI(studentId));
-        call.on('close', () => resetStudentUI(studentId));
-
-        connectedStudents.add(String(studentId));
-        saveToLocalStorage(studentId);
-    }
-
-    // 3. UI Helpers
+    // 2. UI Helpers
     function updateVideoUI(studentId, remoteStream) {
         const video = document.getElementById('video-' + studentId);
         const overlay = document.getElementById('video-overlay-' + studentId);
@@ -146,8 +133,16 @@
             video.srcObject = remoteStream;
             video.classList.remove('hidden');
             if (overlay) overlay.classList.add('hidden');
-            video.play();
-            if (btn) btn.innerText = "● LIVE";
+            
+            // Force play and catch any browser auto-play errors
+            video.play().catch(e => console.log("Play error:", e));
+            
+            if (btn) {
+                btn.innerText = "View Screen";
+                btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btn.classList.add('bg-[#383838]', 'text-white', 'hover:bg-black');
+                btn.disabled = false;
+            }
         }
     }
 
@@ -156,78 +151,44 @@
         const overlay = document.getElementById('video-overlay-' + studentId);
         const btn = document.querySelector(`#btn-container-${studentId} button`);
 
-        if (video) { video.srcObject = null; video.classList.add('hidden'); }
-        if (overlay) overlay.classList.remove('hidden');
-        if (btn) { btn.innerText = "Connect Feed"; btn.classList.replace('bg-red-600', 'bg-indigo-600'); }
+        if (video) { 
+            video.srcObject = null; 
+            video.classList.add('hidden'); 
+        }
+        
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.innerText = "Offline";
+        }
+        
+        if (btn) { 
+            btn.innerText = "Waiting..."; 
+            btn.classList.remove('bg-[#383838]', 'text-white', 'hover:bg-black');
+            btn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            btn.disabled = true;
+        }
 
         connectedStudents.delete(String(studentId));
-        removeFromLocalStorage(studentId);
     }
 
-    // 4. Persistence Management
-    function saveToLocalStorage(id) {
-        let list = JSON.parse(localStorage.getItem('watching') || '[]');
-        if (!list.includes(String(id))) {
-            list.push(String(id));
-            localStorage.setItem('watching', JSON.stringify(list));
+    // 3. Fullscreen Viewer
+    function openFullscreenViewer(studentId, studentName) {
+        const gridVideo = document.getElementById(`video-${studentId}`);
+        const modalVideo = document.getElementById('modal-video');
+
+        if (gridVideo && gridVideo.srcObject) {
+            modalVideo.srcObject = gridVideo.srcObject;
+            
+            window.dispatchEvent(new CustomEvent('open-modal', { 
+                detail: { name: studentName } 
+            }));
+        } else {
+            alert("No active screen share to view.");
         }
     }
 
-    function removeFromLocalStorage(id) {
-        let list = JSON.parse(localStorage.getItem('watching') || '[]');
-        list = list.filter(item => String(item) !== String(id));
-        localStorage.setItem('watching', JSON.stringify(list));
-    }
-
-    // 5. Presence Syncing
-    function checkPresence() {
-    const sessionId = '{{ $class->id ?? 0 }}'; 
-
-    if (sessionId === '0') return;
-
-    fetch(`{{ route("professor.status-check") }}?session_id=${sessionId}`)
-        .then(res => {
-            if (!res.ok) throw new Error('Network response was not ok');
-            return res.json();
-        })
-        .then(data => {
-            if (!data.present_ids) return;
-            const presentIds = data.present_ids.map(String);
-            
-            // 1. Remove students who are no longer in the DB
-            connectedStudents.forEach(sId => {
-                if (!presentIds.includes(sId)) resetStudentUI(sId);
-            });
-
-            // 2. Auto-connect to new students
-            presentIds.forEach(sId => {
-                if (!connectedStudents.has(sId)) startSpectating(sId);
-            });
-        })
-        .catch(err => {
-            console.log("Monitoring sync paused: " + err.message);
-        });
-}
-
+    // Initialize immediately
     document.addEventListener('DOMContentLoaded', () => {
         initAdminPeer();
-        setInterval(checkPresence, 5000);
     });
-
-    function openFullscreenViewer(studentId, studentName) {
-    const gridVideo = document.getElementById(`video-${studentId}`);
-    const modalVideo = document.getElementById('modal-video');
-
-    if (gridVideo && gridVideo.srcObject) {
-        // Transfer the stream to the modal video
-        modalVideo.srcObject = gridVideo.srcObject;
-        
-        // Dispatch event to Alpine.js to open the modal
-        window.dispatchEvent(new CustomEvent('open-modal', { 
-            detail: { name: studentName } 
-        }));
-    } else {
-        alert("Wait for the connection to be established first.");
-    }
-}
 </script>

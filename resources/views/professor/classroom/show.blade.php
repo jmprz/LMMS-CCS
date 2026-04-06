@@ -633,102 +633,151 @@ function toggleSession() {
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <script type="module">
-        let profPeer;
-        let localStream;
-        let currentCall;
+        let receiverPeer = null;   // Phone 1: For receiving student screens
+        let broadcastPeer = null;  // Phone 2: For sending professor screen
+        let profLocalStream = null;
+        let activeBroadcastCalls = [];
+        const enrolledStudentIds = @json($class->students->pluck('id'));
 
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("1. Initializing Professor PeerJS...");
-            const profId = 'professor-{{ auth()->user()->id }}';
-            profPeer = new Peer(profId);
-
-            profPeer.on('open', (id) => {
-                console.log("2. Professor PeerJS Ready! My ID is: " + id);
-            });
-            
-            profPeer.on('error', (err) => {
-                console.error("PeerJS Error:", err);
-            });
+        window.addEventListener('beforeunload', () => {
+            if (receiverPeer) { receiverPeer.disconnect(); receiverPeer.destroy(); }
+            if (broadcastPeer) { broadcastPeer.disconnect(); broadcastPeer.destroy(); }
         });
 
-        window.toggleBroadcast = async function() {
-            console.log("3. Button Clicked!");
+        // 🟢 PHONE 1: The Receiver (Listens for students on PROF_ID)
+        function initReceiverPeer() {
+            if (receiverPeer) { receiverPeer.destroy(); receiverPeer = null; }
             
-            const wrapper = document.getElementById('broadcast-wrapper');
-            if (!wrapper) {
-                console.error("CRITICAL: Could not find id='broadcast-wrapper' in the HTML!");
-                return;
-            }
-            
-            const alpine = Alpine.$data(wrapper);
-            console.log("4. Current State - Is Broadcasting?", alpine.isBroadcasting);
+            const profId = 'PROF_{{ auth()->user()->id }}';
+            receiverPeer = new Peer(profId);
 
-            // IF STARTING THE BROADCAST
-            if (!alpine.isBroadcasting) {
-                try {
-                    console.log("5. Requesting screen permissions...");
-                    localStream = await navigator.mediaDevices.getDisplayMedia({
-                        video: { cursor: "always" },
-                        audio: false
-                    });
-                    console.log("6. Screen captured successfully!");
+            receiverPeer.on('open', (id) => console.log("✅ Receiver Peer Ready:", id));
 
-                    const testStudentId = 'STUDENT_3'; 
+            receiverPeer.on('call', (call) => {
+                const studentId = call.peer.replace('STUDENT_', '');
+                console.log("📞 Incoming student monitor from:", studentId);
+                call.answer(); 
+                call.on('stream', (remoteStream) => {
+                    const video = document.getElementById('video-' + studentId);
+                    const overlay = document.getElementById('video-overlay-' + studentId);
+                    const btn = document.querySelector(`#btn-container-${studentId} button`);
                     
-                    console.log(`7. Calling Student: ${testStudentId}...`);
-                    currentCall = profPeer.call(testStudentId, localStream);
+                    if (video) {
+                        video.srcObject = remoteStream;
+                        video.classList.remove('hidden');
+                        video.play().catch(e => console.log("Play error:", e));
+                    }
+                    if (overlay) overlay.classList.add('hidden');
+                    if (btn) {
+                        btn.innerText = "View Screen";
+                        btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                        btn.classList.add('bg-[#383838]', 'text-white', 'hover:bg-black');
+                        btn.disabled = false;
+                    }
+                });
+                call.on('close', () => resetStudentUI(studentId));
+            });
 
-                    localStream.getVideoTracks()[0].onended = function () {
-                        console.log("Browser 'Stop sharing' clicked.");
+            receiverPeer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    console.warn("⚠️ Receiver ID ghosted by public server. Existing incoming screens will still work!");
+                }
+            });
+        }
+
+        // 🟢 PHONE 2: The Broadcaster (Uses a random ID so it NEVER crashes!)
+        function initBroadcastPeer() {
+            if (broadcastPeer) { broadcastPeer.destroy(); broadcastPeer = null; }
+            
+            // Passing empty parameters generates a guaranteed unique random ID
+            broadcastPeer = new Peer(); 
+
+            broadcastPeer.on('open', (id) => console.log("✅ Broadcast Peer Ready (Random ID):", id));
+            
+            broadcastPeer.on('disconnected', () => {
+                if (broadcastPeer && !broadcastPeer.destroyed) broadcastPeer.reconnect();
+            });
+            
+            broadcastPeer.on('error', (err) => console.error("Broadcast Peer Error:", err));
+        }
+
+        function resetStudentUI(studentId) {
+            const video = document.getElementById('video-' + studentId);
+            const overlay = document.getElementById('video-overlay-' + studentId);
+            const btn = document.querySelector(`#btn-container-${studentId} button`);
+
+            if (video) { video.srcObject = null; video.classList.add('hidden'); }
+            if (overlay) overlay.classList.remove('hidden');
+            if (btn) { 
+                btn.innerText = "Waiting..."; 
+                btn.classList.remove('bg-[#383838]', 'text-white', 'hover:bg-black');
+                btn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btn.disabled = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initReceiverPeer();
+            initBroadcastPeer();
+        });
+
+        // 🟢 BROADCASTING NOW USES PHONE 2
+        window.toggleBroadcast = async function() {
+            const wrapper = document.getElementById('broadcast-wrapper');
+            if (!wrapper) return;
+            const alpine = Alpine.$data(wrapper);
+
+            if (!alpine.isBroadcasting) {
+                
+                // Ensure the Broadcaster is alive
+                if (!broadcastPeer || broadcastPeer.destroyed) {
+                    initBroadcastPeer();
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                } else if (broadcastPeer.disconnected) {
+                    broadcastPeer.reconnect();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                try {
+                    profLocalStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { cursor: "always" }, audio: false
+                    });
+
+                    activeBroadcastCalls = [];
+                    enrolledStudentIds.forEach(studentId => {
+                        const targetPeerId = 'STUDENT_' + studentId;
+                        console.log("📡 Broadcasting to:", targetPeerId);
+                        
+                        const call = broadcastPeer.call(targetPeerId, profLocalStream);
+                        if (call) {
+                            activeBroadcastCalls.push(call);
+                            call.on('error', err => console.error("Broadcast call error:", err));
+                        }
+                    });
+
+                    profLocalStream.getVideoTracks()[0].onended = function () {
                         if (alpine.isBroadcasting) window.toggleBroadcast();
                     };
 
                 } catch (err) {
-                    console.error("Screen capture failed or was cancelled:", err);
-                    return; 
+                    console.error("Screen capture failed:", err);
+                    return;
                 }
-            } 
-            // IF STOPPING THE BROADCAST
-            else {
-                console.log("5. Stopping stream...");
-                if (localStream) localStream.getTracks().forEach(track => track.stop());
-                if (currentCall) currentCall.close();
+            } else {
+                if (profLocalStream) profLocalStream.getTracks().forEach(track => track.stop());
+                activeBroadcastCalls.forEach(call => call.close());
+                activeBroadcastCalls = [];
             }
 
-            console.log("8. Pinging Laravel to update database...");
-            
             fetch("{{ route('professor.sessions.broadcast', $class->id) }}", {
                 method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json', 'Accept': 'application/json' }
             })
-            .then(res => {
-                if (!res.ok) throw new Error("Backend returned an error.");
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
-                console.log("9. Success! Database updated.", data);
-                
-                // This instantly syncs EVERY broadcasting button on the screen
-                const alpineElements = document.querySelectorAll('[x-data]');
-                alpineElements.forEach(el => {
-                    const alpineData = Alpine.$data(el);
-                    if (alpineData.isBroadcasting !== undefined) {
-                        alpineData.isBroadcasting = data.is_broadcasting;
-                    }
-                });
-            })
-            .catch(err => {
-                console.error("Database update failed:", err);
-                // Fallback sync if database fails
-                const alpineElements = document.querySelectorAll('[x-data]');
-                alpineElements.forEach(el => {
-                    const alpineData = Alpine.$data(el);
-                    if (alpineData.isBroadcasting !== undefined) {
-                        alpineData.isBroadcasting = !alpineData.isBroadcasting;
-                    }
+                document.querySelectorAll('[x-data]').forEach(el => {
+                    const d = Alpine.$data(el);
+                    if (d.isBroadcasting !== undefined) d.isBroadcasting = data.is_broadcasting;
                 });
             });
         }

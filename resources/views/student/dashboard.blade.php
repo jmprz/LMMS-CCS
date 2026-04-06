@@ -24,7 +24,7 @@
                 'day' => $item->schedule_day,
                 'time' => $item->schedule_time,
                 'attendance' => $item->total_attended_days ?? 0,
-                'isOpen' => $item->isCurrentlyScheduled(),
+                'isOpen' => (bool)$item->is_active,
                 'route' => route('student.subject', $item->id)
             ])),
             // Filters classes that are currently LIVE
@@ -46,10 +46,9 @@
             </div>
 
             <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm w-full lg:w-auto">
-                <form action="#">
-                    @csrf
+                <form action="{{ route('student.join') }}" method="POST"> @csrf
                     <input type="text" name="class_code" placeholder="Enter Class Code" 
-                           class="border-gray-200 rounded-xl focus:ring-black text-sm w-full lg:w-48" required>
+                        class="border-gray-200 rounded-xl focus:ring-black text-sm w-full lg:w-48" required>
                     <button type="submit" class="bg-black text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800 transition text-sm">
                         Join
                     </button>
@@ -87,6 +86,36 @@
             </div>
         </div>
 
+        @if($pendingTasks->count() > 0)
+            <div class="mb-12">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="flex h-3 w-3 relative">
+                        <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    </span>
+                    <h2 class="text-xs font-black text-amber-700 uppercase tracking-widest">Pending Review</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach($pendingTasks as $task)
+                        <div class="bg-white p-6 rounded-3xl border-2 border-amber-500 shadow-xl shadow-amber-100/50 flex flex-col justify-between opacity-80">
+                            <div>
+                                <div class="flex justify-between items-start mb-4">
+                                    <h3 class="text-xl font-black text-gray-900 leading-tight">{{ $task->title }}</h3>
+                                    <span class="text-[10px] font-black bg-amber-100 text-amber-700 px-3 py-1 rounded-full">SUBMITTED</span>
+                                </div>
+                                <p class="text-xs font-bold text-gray-500 mb-4">Instructor is currently reviewing your work.</p>
+                                <div class="space-y-1">
+                                    <p class="text-xs font-bold text-gray-500">Prof. {{ $task->labSession->faculty->name }}</p>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase">{{ $task->labSession->subject_name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+        
         <!-- Graded Tasks Section -->
 <div x-data="{ 
     gradedTasks: [],

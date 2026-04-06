@@ -33,20 +33,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 2. STUDENT ROUTES
     Route::middleware(['student'])->prefix('student')->name('student.')->group(function () {
         Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
-        Route::get('/classroom/{id}', [StudentClassController::class, 'show'])->name('subject');
+        Route::get('/classroom/{id}', [StudentClassController::class, 'enterClassroom'])->name('subject');
         Route::post('/join', [StudentClassController::class, 'join'])->name('join');
         Route::post('/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])->name('mark-present');
         Route::post('/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('heartbeat');
         Route::post('/stop-presenting/{labSession}', [StudentClassController::class, 'stopPresenting'])->name('stop-presenting');
         
-        // Fetch live tasks for the Alpine polling - ONLY UNSUBMITTED TASKS
+        // Fetch live tasks for the Alpine polling
         Route::get('/classroom/{id}/live-tasks', function ($id) {
-            $userId = auth()->id();
-            
             $tasks = App\Models\Task::where('subject_id', $id)
-            ->with('currentUserSubmission')
-            ->latest()
-            ->get();
+                ->latest()
+                ->get();
                         
             return response()->json($tasks);
         })->name('live-tasks');
@@ -104,8 +101,8 @@ Route::middleware(['professor'])->prefix('professor')->name('professor.')->group
     Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
 
     // Session Controls
-    Route::post('/sessions/{id}/toggle', [AdminController::class, 'toggleSession'])->name('sessions.toggle');
-    Route::post('/sessions/{id}/broadcast', [AdminController::class, 'toggleBroadcast'])->name('sessions.broadcast');
+    Route::post('/sessions/{id}/toggle', [ClassroomController::class, 'toggleSession'])->name('sessions.toggle');
+    Route::post('/sessions/{id}/broadcast', [ClassroomController::class, 'broadcast'])->name('sessions.broadcast');
     Route::post('/sessions/{id}/end', [AdminController::class, 'endSession'])->name('sessions.end');
 });
 

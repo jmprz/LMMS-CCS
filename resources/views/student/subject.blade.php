@@ -6,7 +6,6 @@
             <video id="professor-screen" autoplay playsinline muted class="w-full h-full object-contain" style="background: black; min-height: 400px;"></video>
         </div>
 
-        <!-- UPDATED: Real-time task workspace with file submission -->
         <div class="w-1/2 h-full p-8 overflow-y-auto bg-gray-50 border-l border-gray-200"
              x-data="{ 
                  tasks: [],
@@ -27,7 +26,6 @@
                              return res.json();
                          })
                          .then(data => { 
-                             // Only show unsubmitted tasks
                              this.tasks = data.filter(task => !task.current_user_submission);
                          })
                          .catch(err => console.warn('Fetch error:', err));
@@ -56,7 +54,6 @@
                          });
                          
                          if (response.ok) {
-                             // Remove task from UI immediately
                              this.tasks = this.tasks.filter(t => t.id !== taskId);
                              alert('✅ Task submitted! It will appear on your dashboard once graded.');
                          } else {
@@ -92,7 +89,6 @@
                                   x-text="task.points + ' PTS'"></span>
                         </div>
                         
-                        <!-- File Upload Form -->
                         <form @submit.prevent="submitTask(task.id, $event)" 
                               class="mt-4 space-y-3"
                               enctype="multipart/form-data">
@@ -168,38 +164,34 @@
               @screen-shared.window="isSharing = true"
               @screen-stopped.window="isSharing = false"
               x-data="{ 
-                  isSharing: false, // 🟢 ALWAYS start locked on page load!
+                  isSharing: false,
                   tab: 'activities',
                   activeTask: null,
                   tasks: [],
-          fetchTasks() {
-              fetch(`/student/classroom/{{ $class->id }}/live-tasks`)
-                  .then(res => res.json())
-                  .then(data => { this.tasks = data; })
-                  .catch(err => console.error('Failed to fetch tasks:', err));
-          },
-          // NEW: Background Form Submission
-          submitTask(event) {
-              let formData = new FormData(event.target);
-              
-              fetch(`/student/tasks/${this.activeTask.id}/submit`, {
-                  method: 'POST',
-                  body: formData,
-                  headers: {
-                      'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                  fetchTasks() {
+                      fetch(`/student/classroom/{{ $class->id }}/live-tasks`)
+                          .then(res => res.json())
+                          .then(data => { this.tasks = data; })
+                          .catch(err => console.error('Failed to fetch tasks:', err));
+                  },
+                  submitTask(event) {
+                      let formData = new FormData(event.target);
+                      fetch(`/student/tasks/${this.activeTask.id}/submit`, {
+                          method: 'POST',
+                          body: formData,
+                          headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                      })
+                      .then(res => {
+                          if(res.ok) {
+                              this.activeTask = null;
+                              this.fetchTasks();
+                          } else {
+                              alert('Something went wrong submitting the task.');
+                          }
+                      });
                   }
-              })
-              .then(res => {
-                  if(res.ok) {
-                      this.activeTask = null; // Closes the modal
-                      this.fetchTasks();      // Refreshes the task list quietly
-                  } else {
-                      alert('Something went wrong submitting the task.');
-                  }
-              });
-          }
-      }"
-      x-init="fetchTasks(); setInterval(() => fetchTasks(), 3000)">
+              }"
+              x-init="fetchTasks(); setInterval(() => fetchTasks(), 3000)">
             <div class="max-w-5xl mx-auto space-y-6">
             
                 <div class="bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6">
@@ -638,30 +630,26 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out;
-        }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
         .animate-bounce-short { animation: bounce 1s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        
-        input[type="file"]::file-selector-button {
-            background-color: #383838 !important;
-            border-radius: 8px !important;
-        }
-        input[type="file"]::file-selector-button:hover {
-            background-color: #000 !important;
-        }
+        input[type="file"]::file-selector-button { background-color: #383838 !important; border-radius: 8px !important; }
+        input[type="file"]::file-selector-button:hover { background-color: #000 !important; }
     </style>
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
    
     <script>
+    // ============================================================
+    // FIXED: Two-way PeerJS Street (Complete)
+    // ============================================================
     let heartbeatInterval;
-    let studentPeer;
-    let localStream;
-    let isAttemptingToShare = false;
+    let studentPeer = null;
+    let localStream = null;
+    let monitorCall = null;
     const classId = {{ $class->id }};
     const csrfToken = '{{ csrf_token() }}';
+    const profPeerId = 'PROF_{{ $class->faculty_id }}';
     const allowedDomains = @json($class->whitelisted_urls ? explode(',', $class->whitelisted_urls) : ['google.com']);
 
     window.addEventListener('beforeunload', () => {
@@ -669,59 +657,55 @@
     });
 
     document.addEventListener('DOMContentLoaded', () => {
+        if (studentPeer) studentPeer.destroy();
         studentPeer = new Peer('STUDENT_{{ auth()->id() }}');
-        
+
+        // 🟢 RESTORED: Starts the heartbeat so the script doesn't crash!
         startHeartbeat();
 
         studentPeer.on('open', (id) => {
-            console.log('✅ Peer ready: ' + id);
-            const wasSharing = localStorage.getItem('is_sharing');
-            if (wasSharing === 'true') {
-                console.log("Session was active. Please click 'Start Screen Sharing' to resume.");
-            }
+            console.log('✅ Student Peer ready:', id);
         });
 
+        // 🟢 1. RECEIVE PROFESSOR'S BROADCAST (Lockdown)
         studentPeer.on('call', (call) => {
-            console.log("📞 Incoming call detected from Professor!");
-            
-            if (typeof localStream !== 'undefined' && localStream && localStream.active) {
-                call.answer(localStream); 
-            } else {
-                call.answer(); 
-            }
+            console.log('📞 Professor is broadcasting! Answering...');
+            call.answer();
 
             call.on('stream', (incomingStream) => {
-                console.log("🎥 Professor's screen received! Locking down...");
-                
+                console.log('🎥 Professor stream received! Showing lockdown UI...');
                 const lockdownUi = document.getElementById('lockdown-ui');
+                const profVideo = document.getElementById('professor-screen');
+                
                 if (lockdownUi) {
                     lockdownUi.classList.remove('hidden');
-                    lockdownUi.classList.add('flex'); 
+                    lockdownUi.classList.add('flex');
                 }
-                
-                const profVideo = document.getElementById('professor-screen');
                 if (profVideo) {
                     profVideo.srcObject = incomingStream;
+                    profVideo.play().catch(e => console.warn('Autoplay blocked:', e));
                 }
-                
-                if (window.electronAPI) {
-                    window.electronAPI.lockScreen();
-                }
+                if (window.electronAPI) window.electronAPI.lockScreen();
             });
 
-            // 🟢 Listen for the professor ending the screen share
             call.on('close', () => {
-                console.log("Stream closed by Professor.");
-                // Redirect to dashboard
-                window.location.href = "{{ route('student.dashboard') }}";
+                console.log('📴 Professor ended broadcast.');
+                const lockdownUi = document.getElementById('lockdown-ui');
+                if (lockdownUi) {
+                    lockdownUi.classList.remove('flex');
+                    lockdownUi.classList.add('hidden');
+                }
+                if (window.electronAPI) window.electronAPI.unlockScreen();
             });
+        });
+
+        studentPeer.on('error', (err) => {
+            console.error('PeerJS error:', err);
         });
     });
 
+    // 🟢 2. SEND STUDENT SCREEN TO PROFESSOR
     async function startFullMonitoring() {
-        if (isAttemptingToShare) return; 
-        isAttemptingToShare = true;
-
         try {
             let streamConstraints;
 
@@ -729,82 +713,40 @@
                 const sourceId = await window.electronAPI.getScreenId();
                 streamConstraints = {
                     audio: false,
-                    video: {
-                        mandatory: {
-                            chromeMediaSource: 'desktop',
-                            chromeMediaSourceId: sourceId,
-                            minWidth: 1280, maxWidth: 1280,
-                            minHeight: 720, maxHeight: 720
-                        }
-                    }
+                    video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId, minWidth: 1280, maxWidth: 1280, minHeight: 720, maxHeight: 720 } }
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(streamConstraints);
             } else {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: { displaySurface: "monitor", width: { max: 1280 } },
-                    audio: false
+                    video: { displaySurface: "monitor", width: { max: 1280 } }, audio: false
                 });
             }
 
             const videoTrack = localStream.getVideoTracks()[0];
             
-            if (!window.electronAPI) {
-                const settings = videoTrack.getSettings();
-                if (settings.displaySurface && settings.displaySurface !== 'monitor') {
-                    videoTrack.stop();
-                    alert("❌ You must select 'ENTIRE SCREEN'.");
-                    isAttemptingToShare = false;
-                    return;
-                }
-            }
-
             localStorage.setItem('is_sharing', 'true');
-            
-            // 🟢 Safely unlock the UI via Window Event!
             window.dispatchEvent(new CustomEvent('screen-shared'));
+
+            // Dial the Professor and send them the screen!
+            console.log('📡 Sending my screen to professor:', profPeerId);
+            monitorCall = studentPeer.call(profPeerId, localStream);
 
             videoTrack.onended = () => {
                 localStorage.setItem('is_sharing', 'false');
-                window.dispatchEvent(new CustomEvent('screen-stopped')); // Lock the UI again
-                
+                window.dispatchEvent(new CustomEvent('screen-stopped'));
+                if (monitorCall) monitorCall.close();
                 fetch('{{ route("student.stop-presenting", $class->id) }}', {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
+                    method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }
                 }).then(() => location.reload());
             };
 
-            const adminPeerId = 'PROF_{{ $class->faculty_id }}';
-            
-            const callProfessor = () => {
-                console.log("📞 Attempting to connect to Professor:", adminPeerId);
-                const call = studentPeer.call(adminPeerId, localStream);
-
-                if (!call) {
-                    console.error("❌ PeerJS call failed to initialize.");
-                    return;
-                }
-
-                studentPeer.on('error', (err) => {
-                    if (err.type === 'peer-unavailable') {
-                        console.warn("⚠️ Professor page is still loading... retrying in 3s");
-                        setTimeout(callProfessor, 3000);
-                    }
-                });
-
-                call.on('stream', (remoteStream) => {
-                    console.log("✅ Connection established with Professor!");
-                });
-            };
-
-            callProfessor();
-
         } catch (err) {
-            console.error("❌ Capture failed:", err);
+            console.error('❌ Screen capture failed:', err);
             localStorage.setItem('is_sharing', 'false');
-            isAttemptingToShare = false;
         }
     }
 
+    // 🟢 3. RESTORED: The Missing Function!
     function startHeartbeat() {
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(() => {
@@ -815,10 +757,9 @@
         }, 30000);
     }
 
-    // 🟢 Track the previous broadcasting state
+    // 🟢 4. Polling UI Check
     let wasBroadcasting = {{ $class->is_broadcasting ? 'true' : 'false' }};
 
-    // 🟢 Single, clean polling interval
     setInterval(() => {
         fetch("{{ route('student.check-session-status', $class->id) }}")
             .then(res => res.json())
@@ -827,47 +768,27 @@
                 if (!root || !window.Alpine) return;
                 
                 const alpine = Alpine.$data(root);
-                
                 alpine.sessionActive = data.is_active;
-
-                if (data.is_active && !alpine.labMode) {
-                    alpine.labMode = true; 
-                    console.log("🔒 Session is now active. Locking UI...");
-                    
-                    if (!data.is_active && alpine.labMode) {
-                        alpine.labMode = false;
-                        alert("The instructor has ended the session.");
-                        window.location.href = "{{ route('student.dashboard') }}";
-                    }
-                }
 
                 if (!data.is_active && alpine.labMode) {
                     alpine.labMode = false;
                     alert("The instructor has ended the session.");
-                    window.location.href = "{{ route('student.dashboard') }}"; 
+                    window.location.href = "{{ route('student.dashboard') }}";
                 }
                 
-                // 🟢 Detect if broadcasting just stopped
                 if (wasBroadcasting && !data.is_broadcasting) {
-                    console.log("Professor ended screen share. Refreshing to show workspace.");
-                    window.location.reload();
+                    console.log('Professor ended screen share. Closing UI...');
+                    const lockdownUi = document.getElementById('lockdown-ui');
+                    if (lockdownUi) {
+                        lockdownUi.classList.remove('flex');
+                        lockdownUi.classList.add('hidden');
+                    }
                 }
                 wasBroadcasting = data.is_broadcasting;
-
                 alpine.showBroadcast = data.is_broadcasting;
             })
-            .catch(err => console.error("Poll error:", err));
+            .catch(err => console.error('Poll error:', err));
     }, 5000);
-
-    function navigateBrowser() {
-        const input = document.getElementById('browserUrl').value;
-        const targetUrl = input.includes('.') ? (input.startsWith('http') ? input : 'https://' + input) : 'https://www.google.com/search?q=' + encodeURIComponent(input) + '&igu=1';
-        if (allowedDomains.some(d => targetUrl.includes(d.trim().toLowerCase()))) {
-            document.getElementById('mainFrame').src = targetUrl;
-        } else {
-            alert("🚫 Access Denied.");
-        }
-    }
     </script>
 
     <script>
@@ -878,9 +799,7 @@
     function browserTabs() {
         return {
             activeTab: 0,
-            tabs: [
-                { title: 'Google Search', url: 'https://www.google.com/search?igu=1' }
-            ],
+            tabs: [{ title: 'Google Search', url: 'https://www.google.com/search?igu=1' }],
             
             init() {
                 this.logActivity('environment_start', 'Browser UI initialized in locked mode');
@@ -905,10 +824,7 @@
             },
 
             addTab() {
-                this.tabs.push({ 
-                    title: 'New Tab', 
-                    url: 'https://www.google.com/search?igu=1' 
-                });
+                this.tabs.push({ title: 'New Tab', url: 'https://www.google.com/search?igu=1' });
                 this.activeTab = this.tabs.length - 1;
                 this.logActivity('new_tab', 'Opened new research tab');
             },
@@ -946,10 +862,79 @@
     </script>
 
     <script>
+    if (window.electronAPI) {
+        window.electronAPI.setCurrentSession("{{ $class->id }}");
+    }
+
+    function browserTabs() {
+        return {
+            activeTab: 0,
+            tabs: [{ title: 'Google Search', url: 'https://www.google.com/search?igu=1' }],
+            
+            init() {
+                this.logActivity('environment_start', 'Browser UI initialized in locked mode');
+                
+                setInterval(() => {
+                    const frame = document.getElementById('browser-frame-' + this.activeTab);
+                    if (frame && frame.contentWindow) {
+                        try {
+                            const currentUrl = frame.contentWindow.location.href;
+                            if (currentUrl !== this.tabs[this.activeTab].url && currentUrl !== 'about:blank') {
+                                this.tabs[this.activeTab].url = currentUrl;
+                            }
+                        } catch (e) { /* CORS expected */ }
+                    }
+                }, 2000);
+
+                window.addEventListener('beforeunload', () => {
+                    if (window.electronAPI) {
+                        window.electronAPI.triggerFinalLog("{{ $class->id }}");
+                    }
+                });
+            },
+
+            addTab() {
+                this.tabs.push({ title: 'New Tab', url: 'https://www.google.com/search?igu=1' });
+                this.activeTab = this.tabs.length - 1;
+                this.logActivity('new_tab', 'Opened new research tab');
+            },
+
+            removeTab(index) {
+                this.tabs.splice(index, 1);
+                if (this.activeTab >= this.tabs.length) this.activeTab = this.tabs.length - 1;
+            },
+
+            refresh() {
+                const frame = document.getElementById('browser-frame-' + this.activeTab);
+                if (frame) {
+                    frame.src = frame.src;
+                    this.logActivity('refresh', 'Manual refresh triggered');
+                }
+            },
+
+            logActivity(type, detail) {
+                fetch('/student/log-behavior', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                    },
+                    body: JSON.stringify({ 
+                        type: type, 
+                        detail: detail,
+                        lab_session_id: "{{ $class->id }}" 
+                    })
+                }).catch(err => console.error('Log Error:', err));
+            }
+        }
+    }
+    </script>
+
+    <script>
     function enterClassroom() {
         const root = Alpine.$data(document.getElementById('classroom-root'));
 
-        // 1. Check if they need to be marked present, and do it quietly in the background
         if (!root.isPresent) {
             fetch("{{ route('student.mark-present', $class->id) }}", {
                 method: 'POST',
@@ -962,8 +947,6 @@
             }).catch(err => console.error(err));
         }
 
-        // 2. IMMEDIATELY trigger the screen share prompt
-        // Because this is directly tied to the user's click, the browser will ALWAYS allow it!
         if (typeof startFullMonitoring === "function") {
             startFullMonitoring();
         }

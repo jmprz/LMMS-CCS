@@ -27,43 +27,13 @@ class StudentClassController extends Controller
         });
 
         $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
+
+        // 🟢 NEW: Get tasks the student has submitted but are not yet graded
+        $pendingTasks = \App\Models\Task::whereHas('submissions', function($q) {
+            $q->where('user_id', auth()->id())->whereNull('grade');
+        })->with('labSession.faculty')->latest()->get();
         
-        return view('student.dashboard', compact('joinedClasses', 'activeSessions'));
-    }
-
-    public function show($id)
-    {
-        $class = LabSession::with('students', 'materials')->findOrFail($id);
-
-        $tasks = Task::where('subject_id', $id)
-            ->with(['currentUserSubmission']) 
-            ->get();
-
-        $activeSessions = LabSession::where('is_active', true)->get();
-        
-        $sessionStatus = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
-        $isPresent = $sessionStatus ? $sessionStatus->pivot->is_present : false;
-
-        $isPresentToday = \App\Models\Attendance::where('user_id', auth()->id())
-            ->where('lab_session_id', $id)
-            ->where('attendance_date', now()->toDateString())
-            ->exists();
-            
-        $availableQuizzes = Quiz::where('subject_id', $id)
-            ->where('published_at', '<=', now()) 
-            ->where(function($query) {
-                $query->whereNull('expires_at') 
-                      ->orWhere('expires_at', '>', now());
-            })
-            ->get();
-
-        return view('student.subject', [
-            'class' => $class, 
-            'activeSessions' => $activeSessions,
-            'isPresent' => $isPresent,
-            'tasks' => $tasks,
-            'quizzes' => $availableQuizzes
-        ]);
+        return view('student.dashboard', compact('joinedClasses', 'activeSessions', 'pendingTasks'));
     }
 
     public function markPresent(\App\Models\LabSession $labSession)
@@ -254,20 +224,32 @@ class StudentClassController extends Controller
 
     public function enterClassroom($id)
     {
-        $session = LabSession::findOrFail($id);
+        // 1. Fetch class with students and materials
+        $class = LabSession::with(['students', 'materials', 'faculty'])->findOrFail($id);
 
-        if (!$session->isCurrentlyScheduled()) {
-            return back()->with('error', 'This classroom is currently closed. Please return during your scheduled time.');
-        }
+        // 2. Fetch quizzes for this specific subject
+        $quizzes = \App\Models\Quiz::where('subject_id', $id)
+            ->where('published_at', '<=', now()) 
+            ->get();
 
-        return view('student.classroom', compact('session'));
+        // 3. Check if THIS student is marked as present
+        $isPresent = $class->students()
+                           ->where('user_id', auth()->id())
+                           ->first()?->pivot->is_present ?? false;
+
+        // 🟢 FIXED: We send exactly what subject.blade.php needs
+        return view('student.subject', [
+            'class' => $class,
+            'isPresent' => $isPresent,
+            'quizzes' => $quizzes
+        ]);
     }
-
     public function refreshClassStatuses()
     {
         $classes = auth()->user()->joinedClasses;
         $statusMap = $classes->mapWithKeys(function ($item) {
-            return [$item->id => $item->isCurrentlyScheduled()];
+            // 🟢 FIX: Return the active status so the dashboard turns "LIVE" instantly
+            return [$item->id => (bool)$item->is_active];
         });
 
         return response()->json($statusMap);

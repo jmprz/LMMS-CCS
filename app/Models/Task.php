@@ -35,6 +35,7 @@ class Task extends Model
      */
     public function currentUserSubmission()
     {
+        // This allows us to check if the specific student viewing the task has a submission
         return $this->hasOne(Submission::class)->where('user_id', auth()->id());
     }
 }

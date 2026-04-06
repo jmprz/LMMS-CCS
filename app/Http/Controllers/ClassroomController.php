@@ -44,35 +44,38 @@ class ClassroomController extends Controller
 }
     // app/Http/Controllers/ClassroomController.php
 public function show($id)
-{
-    $session = LabSession::with([
-        'students', 
-        'tasks.submissions.user', 
-        'quizzes.attempts.user', 
-        'quizzes.questions',
-        'materials',
-        'faculty' // Add this to see who is teaching
-    ])->findOrFail($id);
+    {
+        // 1. Fetch the lab session with only the necessary data for this specific class
+        $session = LabSession::with([
+            'students', 
+            'tasks.submissions.user', 
+            'quizzes.attempts.user', 
+            'materials', 
+            'faculty'
+        ])->findOrFail($id);
 
-    // SECURITY CHECK: Allow if user is the Faculty OR if user is an Admin
-    if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
-        abort(403, 'Unauthorized access to this classroom.');
+        // 2. SECURITY CHECK: Ensure only the assigned Professor or an Admin can enter
+        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized access to this classroom.');
+        }
+
+        // 3. FIXED: Only grab students who are actually enrolled in THIS specific session
+        // This stops all students in the database from appearing in your grid.
+        $activeStudents = $session->students; 
+
+        $tasks = $session->tasks;
+
+        // 4. Determine which view to show based on the user's role
+        $view = Auth::user()->role === 'admin' ? 'admin.classroom.show' : 'professor.classroom.show';
+
+        return view($view, [
+            'session' => $session,
+            'class' => $session, 
+            'activeStudents' => $activeStudents,
+            'tasks' => $tasks,
+            'quizzes' => $session->quizzes ?? collect()
+        ]);
     }
-
-    $activeStudents = \App\Models\User::where('role', 'student')->get();
-    $tasks = $session->tasks; 
-    
-    // Determine which view to show based on role
-    $view = Auth::user()->role === 'admin' ? 'admin.classroom.show' : 'professor.classroom.show';
-
-    return view($view, [
-        'session' => $session,
-        'class' => $session, 
-        'activeStudents' => $activeStudents,
-        'tasks' => $tasks,
-        'quizzes' => $session->quizzes ?? collect()
-    ]);
-}
 
 // Edit - Show the form
 public function update(Request $request, $id)
@@ -106,10 +109,46 @@ public function update(Request $request, $id)
 }
 
 // Delete - Remove from DB
-public function destroy(LabSession $classroom) // This is correct
+public function destroy(LabSession $classroom)
 {
     $classroom->delete();
     return back()->with('success', 'Classroom deleted successfully.');
-}
+    }
 
+    // 🟢 1. Handles the "Start / Stop Lab Session" Button
+    public function toggleSession(Request $request, $id)
+    {
+        $class = LabSession::findOrFail($id);
+
+        // Flip the active status
+        $class->is_active = !$class->is_active;
+
+        // Safety feature: If a professor stops the class, automatically stop the screen share too
+        if (!$class->is_active) {
+            $class->is_broadcasting = false;
+        }
+
+        $class->save();
+
+        return response()->json([
+            'success' => true,
+            'is_active' => $class->is_active
+        ]);
+    }
+
+    // 🟢 2. Handles the "Share My Screen / Stop Broadcasting" Button
+    public function broadcast(Request $request, $id)
+    {
+        $class = LabSession::findOrFail($id);
+        
+        // Flip the broadcasting status
+        $class->is_broadcasting = !$class->is_broadcasting;
+        $class->save();
+
+        // Return a clean JSON response so the Javascript doesn't crash!
+        return response()->json([
+            'success' => true,
+            'is_broadcasting' => $class->is_broadcasting
+        ]);
+    }
 }
