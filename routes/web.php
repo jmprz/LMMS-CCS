@@ -112,7 +112,7 @@ Route::middleware(['professor'])->prefix('professor')->name('professor.')->group
     // 4. ADMIN ROUTES
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-        Route::get('/classroom', [AdminController::class, 'index'])->name('classroom');
+        Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
         Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
         Route::put('/classroom/{classroom}/edit', [ClassroomController::class, 'update'])->name('classroom.edit');
         Route::delete('/classroom/{classroom}', [ClassroomController::class, 'destroy'])->name('classroom.destroy');
