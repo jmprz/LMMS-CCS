@@ -22,10 +22,10 @@
                     @csrf
                     
                     <div>
-                        <input type="email" name="email" value="{{ old('email') }}"
+                        <input type="text" name="school_id" value="{{ old('school_id') }}"
                                class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all" 
-                               placeholder="Email" required autofocus>
-                        <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                               placeholder="School ID" required autofocus>
+                        <x-input-error :messages="$errors->get('school_id')" class="mt-2" />
                     </div>
 
                     <div class="relative">
