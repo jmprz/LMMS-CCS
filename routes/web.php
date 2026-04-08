@@ -38,18 +38,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/mark-present/{labSession}', [StudentClassController::class, 'markPresent'])->name('mark-present');
         Route::post('/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('heartbeat');
         Route::post('/stop-presenting/{labSession}', [StudentClassController::class, 'stopPresenting'])->name('stop-presenting');
-        
-        // Fetch live tasks for the Alpine polling
-        Route::get('/classroom/{id}/live-tasks', function ($id) {
-            $tasks = App\Models\Task::where('subject_id', $id)
-                ->latest()
-                ->get();
-                        
-            return response()->json($tasks);
-        })->name('live-tasks');
-        
         Route::get('/check-session-status/{id}', [StudentClassController::class, 'checkStatus'])->name('check-session-status');
-        Route::post('/tasks/{task}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
+        // 🟢 FIXED: Removed duplicate and matched 'user_id' to your controller
+        Route::get('/classroom/{id}/live-tasks', function ($id) {
+            return App\Models\Task::where('subject_id', $id)
+                ->with(['submissions' => function($query) {
+                    $query->where('user_id', auth()->id()); // Matches your controller!
+                }])
+                ->latest()
+                ->get()
+                ->map(function($task) {
+                    $task->current_user_submission = $task->submissions->first();
+                    unset($task->submissions); 
+                    return $task;
+                });
+        })->name('live-tasks');
+        Route::post('/tasks/{taskId}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
         Route::post('/tasks/{taskId}/delete', [StudentClassController::class, 'deleteTask'])->name('tasks.delete');
         Route::get('/graded-tasks', [StudentClassController::class, 'getGradedTasks'])->name('graded-tasks');
         Route::get('/quizzes/{quiz}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');

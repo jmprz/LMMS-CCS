@@ -115,6 +115,36 @@
                 </div>
             </div>
         @endif
+
+        @if(isset($pendingTasks) && $pendingTasks->count() > 0)
+        <div class="mb-12">
+            <div class="flex items-center gap-2 mb-6">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                </span>
+                <h2 class="text-xs font-black text-amber-700 uppercase tracking-widest">Pending Review</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach($pendingTasks as $task)
+                    <div class="bg-white p-6 rounded-3xl border-2 border-amber-500 shadow-xl shadow-amber-100/50 flex flex-col justify-between opacity-90 transition-all hover:scale-[1.01]">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-xl font-black text-gray-900 leading-tight">{{ $task->title }}</h3>
+                                <span class="text-[10px] font-black bg-amber-100 text-amber-700 px-3 py-1 rounded-full uppercase">Submitted</span>
+                            </div>
+                            <p class="text-xs font-bold text-gray-400 mb-4 italic">The instructor is currently reviewing your file.</p>
+                            <div class="space-y-1">
+                                <p class="text-xs font-bold text-gray-500">Prof. {{ $task->labSession->faculty->name ?? 'Unknown' }}</p>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{{ $task->labSession->subject_name }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
         
         <!-- Graded Tasks Section -->
 <div x-data="{ 

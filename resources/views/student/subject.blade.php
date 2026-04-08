@@ -791,75 +791,6 @@
     }, 5000);
     </script>
 
-    <script>
-    if (window.electronAPI) {
-        window.electronAPI.setCurrentSession("{{ $class->id }}");
-    }
-
-    function browserTabs() {
-        return {
-            activeTab: 0,
-            tabs: [{ title: 'Google Search', url: 'https://www.google.com/search?igu=1' }],
-            
-            init() {
-                this.logActivity('environment_start', 'Browser UI initialized in locked mode');
-                
-                setInterval(() => {
-                    const frame = document.getElementById('browser-frame-' + this.activeTab);
-                    if (frame && frame.contentWindow) {
-                        try {
-                            const currentUrl = frame.contentWindow.location.href;
-                            if (currentUrl !== this.tabs[this.activeTab].url && currentUrl !== 'about:blank') {
-                                this.tabs[this.activeTab].url = currentUrl;
-                            }
-                        } catch (e) { /* CORS expected */ }
-                    }
-                }, 2000);
-
-                window.addEventListener('beforeunload', () => {
-                    if (window.electronAPI) {
-                        window.electronAPI.triggerFinalLog("{{ $class->id }}");
-                    }
-                });
-            },
-
-            addTab() {
-                this.tabs.push({ title: 'New Tab', url: 'https://www.google.com/search?igu=1' });
-                this.activeTab = this.tabs.length - 1;
-                this.logActivity('new_tab', 'Opened new research tab');
-            },
-
-            removeTab(index) {
-                this.tabs.splice(index, 1);
-                if (this.activeTab >= this.tabs.length) this.activeTab = this.tabs.length - 1;
-            },
-
-            refresh() {
-                const frame = document.getElementById('browser-frame-' + this.activeTab);
-                if (frame) {
-                    frame.src = frame.src;
-                    this.logActivity('refresh', 'Manual refresh triggered');
-                }
-            },
-
-            logActivity(type, detail) {
-                fetch('http://127.0.0.1:8000/student/log-behavior', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
-                    },
-                    body: JSON.stringify({ 
-                        type: type, 
-                        detail: detail,
-                        lab_session_id: "{{ $class->id }}" 
-                    })
-                }).catch(err => console.error('Log Error:', err));
-            }
-        }
-    }
-    </script>
 
     <script>
     if (window.electronAPI) {
@@ -929,6 +860,43 @@
             }
         }
     }
+    </script>
+
+    <script>
+        public function submitTask(Request $request, $taskId)
+        {
+            $task = Task::findOrFail($taskId);
+            $userId = auth()->id();
+
+            // Basic validation
+            $request->validate([
+                'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240',
+            ]);
+
+            if ($request->hasFile('submission')) {
+                $file = $request->file('submission');
+                $filename = $userId . '_' . time() . '_' . $file->getClientOriginalName();
+                
+                // Save to public path
+                $path = 'submissions/task_' . $taskId;
+                $file->move(public_path($path), $filename);
+                $fullPath = $path . '/' . $filename;
+
+                // 🟢 Create or Update the submission record
+                \App\Models\Submission::updateOrCreate(
+                    ['task_id' => $taskId, 'user_id' => $userId],
+                    [
+                        'file_path' => $fullPath,
+                        'original_filename' => $file->getClientOriginalName(),
+                        'submitted_at' => now(),
+                    ]
+                );
+
+                return response()->json(['status' => 'success']);
+            }
+
+            return response()->json(['status' => 'error'], 400);
+        }
     </script>
 
     <script>

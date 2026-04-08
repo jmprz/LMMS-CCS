@@ -28,11 +28,12 @@ class StudentClassController extends Controller
 
         $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
 
-        // 🟢 NEW: Get tasks the student has submitted but are not yet graded
-        $pendingTasks = \App\Models\Task::whereHas('submissions', function($q) {
-            $q->where('user_id', auth()->id())->whereNull('grade');
+        // 🟢 FIXED: Fetch tasks that the student has submitted but are not yet graded
+        $pendingTasks = \App\Models\Task::whereHas('submissions', function($q) use ($user) {
+            $q->where('user_id', $user->id)->whereNull('grade');
         })->with('labSession.faculty')->latest()->get();
         
+        // Pass 'pendingTasks' to the view
         return view('student.dashboard', compact('joinedClasses', 'activeSessions', 'pendingTasks'));
     }
 
@@ -147,9 +148,10 @@ class StudentClassController extends Controller
             ] // <--- This was the missing bracket!
         );
 
-        return back()->with('success', 'Task submitted successfully!');
-
-            return back()->with('success', 'Task submitted successfully!');
+        return response()->json([
+            'status' => 'success', 
+            'message' => 'Task submitted successfully!'
+        ]);
         }
     }
 
