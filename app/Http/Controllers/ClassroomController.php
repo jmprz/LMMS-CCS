@@ -30,12 +30,15 @@ class ClassroomController extends Controller
     }
 
     // Do the same for the professor view if they also need to see student lists
-   $sessions = LabSession::with([
-    'faculty:id,name', 
-    'students' => function($query) {
-        $query->select('users.id', 'users.name', 'users.school_id'); // Adjust columns as needed
-    }
-])
+  $sessions = LabSession::where('faculty_id', $user->id) // <--- CRITICAL FILTER
+    ->with([
+        'faculty:id,name', 
+        'students' => function($query) {
+            $query->select('users.id', 'users.name', 'users.school_id'); 
+        }
+    ])
+
+
 ->withCount('students')
 ->latest()
 ->get();
