@@ -44,16 +44,6 @@
                     You have <span class="text-green-600" x-text="activeClasses.length"></span> active lab sessions right now.
                 </p>
             </div>
-
-            <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm w-full lg:w-auto">
-                <form action="{{ route('student.join') }}" method="POST"> @csrf
-                    <input type="text" name="class_code" placeholder="Enter Class Code" 
-                        class="border-gray-200 rounded-xl focus:ring-black text-sm w-full lg:w-48" required>
-                    <button type="submit" class="bg-black text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800 transition text-sm">
-                        Join
-                    </button>
-                </form>
-            </div>
         </div>
 
         <div x-show="activeClasses.length > 0" x-transition:enter="transition ease-out duration-300" class="mb-12">

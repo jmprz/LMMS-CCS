@@ -174,84 +174,148 @@
     filterDay: 'All',
     sortOrder: 'asc',
     allSessions: @js($sessions),
-    professors: @js($professors),
+    allStudents: @js($allStudents ?? []),
+    professors: @js($professors ?? []),
+    studentSearch: '',
+    studentFilterProgram: '',
+    studentFilterYear: '',
+    studentFilterSection: '',   
+    selectedStudents: [],
 
     // MODAL STATE
+    showStudentsModal: false, // Fixed typo from 'how' to 'show'
+    viewingSession: { students: [] },
 
-    howStudentsModal: false,
-    viewingSession: { students: [] }, // Initialize with empty students array
-
+    // Combined openStudents logic
     openStudents(session) {
-    if (session.students) {
-        // Sort students by name A-Z before displaying
-        session.students.sort((a, b) => a.name.localeCompare(b.name));
-    }
         this.viewingSession = session;
+        this.studentFilterProgram = session.program;
+        this.studentFilterYear = String(session.year_level);
+        this.studentFilterSection = session.section;
+        this.studentSearch = ''; 
+        this.selectedStudents = []; // Clear selection for new session
         this.showStudentsModal = true;
     },
 
-    
+    get filteredAvailableStudents() {
+        return this.allStudents.filter(s => {
+            const alreadyEnrolled = this.viewingSession.students?.some(es => es.id === s.id);
+            if (alreadyEnrolled) return false;
+
+            const matchesSearch = s.name.toLowerCase().includes(this.studentSearch.toLowerCase()) || 
+                                 s.school_id.toLowerCase().includes(this.studentSearch.toLowerCase());
+            
+            const matchesProgram = !this.studentFilterProgram || s.program === this.studentFilterProgram;
+            const matchesYear = !this.studentFilterYear || String(s.year_level) === this.studentFilterYear;
+            const matchesSection = !this.studentFilterSection || s.section === this.studentFilterSection;
+
+            return matchesSearch && matchesProgram && matchesYear && matchesSection;
+        });
+    },
+
+    toggleSelectAll() {
+        if (this.selectedStudents.length === this.filteredAvailableStudents.length) {
+            this.selectedStudents = [];
+        } else {
+            this.selectedStudents = this.filteredAvailableStudents.map(s => s.id);
+        }
+    },
+
+    async enrollSelected() {
+        if (this.selectedStudents.length === 0) return;
+
+        try {
+            const response = await fetch(`/admin/classroom/${this.viewingSession.id}/enroll`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').content
+                },
+                body: JSON.stringify({ student_ids: this.selectedStudents })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.viewingSession.students = data.updated_students;
+                
+                const sessionIndex = this.allSessions.findIndex(s => s.id === this.viewingSession.id);
+                if (sessionIndex !== -1) {
+                    this.allSessions[sessionIndex].students = data.updated_students;
+                    this.allSessions[sessionIndex].students_count = data.updated_students.length;
+                }
+                this.selectedStudents = []; 
+            }
+        } catch (error) {
+            console.error('Enrollment failed', error);
+        }
+    },
+
+    async unenrollStudent(studentId) {
+        if (!confirm('Are you sure you want to unenroll this student?')) return;
+
+        try {
+            const response = await fetch(`/admin/classroom/${this.viewingSession.id}/unenroll/${studentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').content
+                }
+            });
+
+            if (response.ok) {
+                this.viewingSession.students = this.viewingSession.students.filter(s => s.id !== studentId);
+                
+                const sessionIndex = this.allSessions.findIndex(s => s.id === this.viewingSession.id);
+                if (sessionIndex !== -1) {
+                    this.allSessions[sessionIndex].students = this.viewingSession.students;
+                    this.allSessions[sessionIndex].students_count = this.viewingSession.students.length;
+                }
+            }
+        } catch (error) {
+            console.error('Unenrollment failed', error);
+        }
+    },
+
     showEditModal: false,
     editingSession: {},
 
-   openEdit(session) {
-    // 1. Create a deep copy
-    this.editingSession = { ...session };
+    openEdit(session) {
+        this.editingSession = { ...session };
+        if (this.editingSession.faculty_id) {
+            this.editingSession.faculty_id = String(this.editingSession.faculty_id);
+        }
 
-    // 2. FORCE data types (Important for x-model)
-    // Ensure faculty_id is a string if your option values are strings
-    if (this.editingSession.faculty_id) {
-        this.editingSession.faculty_id = String(this.editingSession.faculty_id);
-    }
-
-    // 3. Handle Time formatting (Keep your existing logic)
-    if (session.schedule_time && session.schedule_time.includes('-')) {
-        const parts = session.schedule_time.split('-');
-        
-        const formatTo24h = (timeStr) => {
-            if (!timeStr) return '';
-            const [time, modifier] = timeStr.trim().split(' ');
-            let [hours, minutes] = time.split(':');
-            
-            // Fix for 12:xx PM and 12:xx AM
-            let hoursInt = parseInt(hours, 10);
-            if (modifier === 'PM' && hoursInt < 12) hoursInt += 12;
-            if (modifier === 'AM' && hoursInt === 12) hoursInt = 0;
-            
-            return `${String(hoursInt).padStart(2, '0')}:${minutes.substring(0, 2)}`;
-        };
-
-        this.editingSession.start_time = formatTo24h(parts[0]);
-        this.editingSession.end_time = formatTo24h(parts[1]);
-    }
-
-    this.showEditModal = true;
-},
+        if (session.schedule_time && session.schedule_time.includes('-')) {
+            const parts = session.schedule_time.split('-');
+            const formatTo24h = (timeStr) => {
+                if (!timeStr) return '';
+                const [time, modifier] = timeStr.trim().split(' ');
+                let [hours, minutes] = time.split(':');
+                let hoursInt = parseInt(hours, 10);
+                if (modifier === 'PM' && hoursInt < 12) hoursInt += 12;
+                if (modifier === 'AM' && hoursInt === 12) hoursInt = 0;
+                return `${String(hoursInt).padStart(2, '0')}:${minutes.substring(0, 2)}`;
+            };
+            this.editingSession.start_time = formatTo24h(parts[0]);
+            this.editingSession.end_time = formatTo24h(parts[1]);
+        }
+        this.showEditModal = true;
+    },
 
     get filteredSessions() {
-        // 1. First, apply the filters
         let filtered = this.allSessions.filter(s => {
             const matchesSearch = s.subject_name.toLowerCase().includes(this.search.toLowerCase()) || 
                                  s.class_code.toLowerCase().includes(this.search.toLowerCase()) ||
                                  (s.faculty && s.faculty.name.toLowerCase().includes(this.search.toLowerCase()));
-            
             const matchesProgram = this.filterProgram === 'All' || s.program === this.filterProgram;
             const matchesYear = this.filterYear === 'All' || String(s.year_level) === this.filterYear;
             const matchesDay = this.filterDay === 'All' || s.schedule_day === this.filterDay;
-            
             return matchesSearch && matchesProgram && matchesYear && matchesDay;
         });
 
-        // 2. Then, sort by Subject Name
         return filtered.sort((a, b) => {
             let nameA = a.subject_name.toLowerCase();
             let nameB = b.subject_name.toLowerCase();
-
-            if (this.sortOrder === 'asc') {
-                return nameA < nameB ? -1 : (nameA > nameB ? 1 : 0);
-            } else {
-                return nameA > nameB ? -1 : (nameA < nameB ? 1 : 0);
-            }
+            return this.sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
         });
     }
 }">
@@ -538,77 +602,127 @@
                         </div>
                     </template>
                     <template x-if="showStudentsModal">
-                        <div class="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-                            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                                @click="showStudentsModal = false"></div>
+    <div class="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showStudentsModal = false"></div>
 
-                            <div
-                                class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-8 relative z-10 animate-in fade-in zoom-in duration-200">
-                                <div class="flex justify-between items-center mb-6">
-                                    <div>
-                                        <h3 class="text-xl font-bold text-gray-800"
-                                            x-text="viewingSession.subject_name"></h3>
-                                        <p class="text-sm text-gray-500"
-                                            x-text="'Enrolled Students (' + (viewingSession.students ? viewingSession.students.length : 0) + ')'">
-                                        </p>
-                                    </div>
-                                    <button @click="showStudentsModal = false"
-                                        class="text-gray-500 hover:text-black transition">
-                                        <i class="ri-close-circle-fill text-2xl"></i>
-                                    </button>
-                                </div>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-8 relative z-10 animate-in fade-in zoom-in duration-200">
+            
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800" x-text="viewingSession.subject_name"></h3>
+                    <p class="text-sm text-gray-500">Manage Enrollment for <span class="font-bold text-black" x-text="viewingSession.class_code"></span></p>
+                </div>
+                <button @click="showStudentsModal = false" class="text-gray-500 hover:text-black transition">
+                    <i class="ri-close-circle-fill text-2xl"></i>
+                </button>
+            </div>
 
-                                <div class="max-h-[400px] overflow-y-auto pr-2">
-                                    <table class="w-full text-left">
-                                        <thead class="sticky top-0 bg-white border-b border-gray-100">
-                                            <tr>
-                                                <th class="py-2 text-xs font-black text-gray-400 uppercase">Student Name
-                                                </th>
-                                                <th class="py-2 text-xs font-black text-gray-400 uppercase">Student ID
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-50">
-                                            <template x-for="student in viewingSession.students" :key="student.id">
-                                                <tr class="hover:bg-gray-50 transition-colors">
-                                                    <td class="py-3 px-2">
-                                                        <div class="flex items-center">
-                                                            <div
-                                                                class="h-8 w-8 rounded-full bg-[#383838] text-white flex items-center justify-center text-xs font-bold mr-3">
-                                                                <span
-                                                                    x-text="student.name.split(' ').map(n => n[0]).filter((_, i, a) => i === 0 || i === a.length - 1).join('').toUpperCase()"></span>
-                                                            </div>
-                                                            <span class="text-sm font-semibold text-gray-700"
-                                                                x-text="student.name"></span>
-                                                        </div>
-                                                    </td>
-                                                    <td class="py-3 px-2 text-sm text-gray-500 font-mono"
-                                                        x-text="student.school_id || 'No ID'"></td>
-                                                </tr>
-                                            </template>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <div>
+                    <h4 class="text-sm font-black text-gray-400 uppercase mb-4 tracking-widest">Currently Enrolled (<span x-text="viewingSession.students ? viewingSession.students.length : 0"></span>)</h4>
+                    <div class="max-h-[400px] overflow-y-auto border rounded-lg p-2">
+                        <table class="w-full text-left">
+                            <tbody class="divide-y divide-gray-50">
+                                <template x-for="student in viewingSession.students" :key="student.id">
+                                    <tr class="group hover:bg-gray-50 transition-colors">
+                                        <td class="py-2 px-2">
+                                            <div class="flex items-center">
+                                                <span class="text-sm font-semibold text-gray-700" x-text="student.name"></span>
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 font-mono" x-text="student.school_id"></div>
+                                        </td>
+                                        <td class="text-right">
+                                            <button @click="unenrollStudent(student.id)" class="text-red-400 hover:text-red-600 p-2 transition">
+                                                <i class="ri-user-unfollow-line text-lg"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                                            <template
-                                                x-if="!viewingSession.students || viewingSession.students.length === 0">
-                                                <tr>
-                                                    <td colspan="2"
-                                                        class="py-8 text-center text-gray-400 italic text-sm">
-                                                        No students enrolled in this session yet.
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-sm font-black text-gray-800 uppercase tracking-widest">Add Students</h4>
+                        <button type="button" 
+                                @click="toggleSelectAll"
+                                class="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-tighter"
+                                x-show="filteredAvailableStudents.length > 0">
+                            <span x-text="selectedStudents.length === filteredAvailableStudents.length ? 'Deselect All' : 'Select All Filtered'"></span>
+                        </button>
+                    </div>
 
-                                <div class="mt-6">
-                                    <button @click="showStudentsModal = false"
-                                        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-lg transition uppercase tracking-widest text-xs">
-                                        Close List
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="space-y-3 mb-4">
+                        <input type="text" x-model="studentSearch" placeholder="Search name or ID..." 
+                               class="w-full text-sm border-gray-300 rounded-lg focus:ring-black">
+                        
+                        <div class="grid grid-cols-3 gap-2">
+                            <select x-model="studentFilterProgram" class="text-[10px] border-gray-300 rounded-md p-1">
+                                <option value="">All Programs</option>
+                                <option value="BSCS">BSCS</option>
+                                <option value="BSIT">BSIT</option>
+                            </select>
+                            <select x-model="studentFilterYear" class="text-[10px] border-gray-300 rounded-md p-1">
+                                <option value="">All Years</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                            <select x-model="studentFilterSection" class="text-[10px] border-gray-300 rounded-md p-1">
+                                <option value="">All Sections</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                            </select>
                         </div>
-                    </template>
+                    </div>
+
+                    <form @submit.prevent="enrollSelected()">
+                        <div class="max-h-[250px] overflow-y-auto bg-white border rounded-lg mb-4">
+                            <table class="w-full text-left">
+                                <tbody class="divide-y divide-gray-50">
+                                    <template x-for="student in filteredAvailableStudents" :key="student.id">
+                                        <tr class="hover:bg-blue-50 transition-colors" 
+                                            :class="selectedStudents.includes(student.id) ? 'bg-blue-50/50' : ''">
+                                            <td class="p-2">
+                                                <input type="checkbox" 
+                                                       :value="student.id" 
+                                                       x-model="selectedStudents"
+                                                       class="rounded text-black focus:ring-black cursor-pointer">
+                                            </td>
+                                            <td class="py-2 text-sm cursor-pointer" @click="selectedStudents.includes(student.id) ? selectedStudents = selectedStudents.filter(id => id !== student.id) : selectedStudents.push(student.id)">
+                                                <div class="font-bold text-gray-700" x-text="student.name"></div>
+                                                <div class="text-[10px] text-gray-400" x-text="student.program + ' ' + student.year_level + student.section"></div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="submit" 
+                                :disabled="selectedStudents.length === 0"
+                                :class="selectedStudents.length === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-black hover:bg-gray-800'"
+                                class="w-full text-white font-bold py-2 rounded-lg text-xs uppercase tracking-widest transition">
+                            Enroll <span x-text="selectedStudents.length"></span> Selected Students
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <button @click="showStudentsModal = false"
+                    class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-lg transition uppercase tracking-widest text-xs">
+                    Close Management
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
                 </div>
             </div>
         </main>

@@ -9,41 +9,76 @@ use Illuminate\Support\Facades\Auth;
 
 class ClassroomController extends Controller
 {
-  public function index()
+public function index()
 {
     $user = Auth::user();
 
+    // 1. Initialize ALL variables with defaults at the top
+    $sessions = collect();
+    $professors = collect();
+    $allStudents = collect(); 
+
+    // 2. Fill variables based on role
     if ($user->role === 'admin') {
-        $sessions = LabSession::with([
-            'faculty:id,name', 
-            'students:id,name,school_id' // <--- Add this line to get the student list
-        ])
-        ->withCount('students') // Keeps your counter badge working
-        ->latest()
-        ->get();
+        $sessions = LabSession::with(['faculty:id,name', 'students:id,name,school_id'])
+            ->withCount('students')
+            ->latest()
+            ->get();
         
         $professors = \App\Models\User::where('role', 'professor')
             ->select('id', 'name')
             ->get();
 
-        return view('admin.classroom.index', compact('sessions', 'professors'));
+        // Get the students
+        $allStudents = \App\Models\User::where('role', 'student')
+            ->select('id', 'name', 'school_id', 'program', 'year_level', 'section')
+            ->orderBy('name', 'asc') // Sorts A to Z by name
+            ->get();
+
+        return view('admin.classroom.index', compact('sessions', 'professors', 'allStudents'));
     }
 
-    // Do the same for the professor view if they also need to see student lists
-  $sessions = LabSession::where('faculty_id', $user->id) // <--- CRITICAL FILTER
-    ->with([
-        'faculty:id,name', 
-        'students' => function($query) {
-            $query->select('users.id', 'users.name', 'users.school_id'); 
-        }
-    ])
+    // 3. Logic for Professors (if they use a different view)
+    if ($user->role === 'professor') {
+        $sessions = LabSession::where('faculty_id', $user->id)
+            ->with(['faculty:id,name', 'students:id,name,school_id'])
+            ->withCount('students')
+            ->latest()
+            ->get();
 
+        // Note: We still pass $allStudents (empty) to avoid errors if the 
+        // professor view shares the same Alpine layout.
 
-->withCount('students')
-->latest()
-->get();
+        $allStudents = $allStudents ?? collect(); 
+        $professors = $professors ?? collect();
 
-    return view('professor.classroom.index', compact('sessions'));
+        return view('professor.classroom.index', compact('sessions', 'allStudents'));
+    }
+
+    abort(403);
+}
+
+public function enroll(Request $request, $id)
+{
+    $session = LabSession::findOrFail($id);
+    $studentIds = $request->input('student_ids', []);
+
+    // Sync without detaching so we don't remove existing students
+    $session->students()->syncWithoutDetaching($studentIds);
+
+    // Return the fresh list of students to the frontend
+    return response()->json([
+        'message' => 'Enrolled successfully',
+        'updated_students' => $session->students()->select('users.id', 'users.name', 'users.school_id')->get()
+    ]);
+}
+
+public function unenroll($sessionId, $studentId)
+{
+    $session = LabSession::findOrFail($sessionId);
+    $session->students()->detach($studentId);
+
+    return response()->json(['message' => 'Unenrolled successfully']);
 }
     // app/Http/Controllers/ClassroomController.php
 public function show($id)
