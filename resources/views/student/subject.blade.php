@@ -117,6 +117,7 @@
                                         name="submission" 
                                         required 
                                         class="hidden" 
+                                        accept=".pdf,.zip,.doc,.docx,.png,.jpg,.php,.py,.dart,.js,.java,.cpp,.c,.css,.html,.txt"
                                         @change="fileName = $event.target.files[0] ? $event.target.files[0].name : ''">
                                 </div>
                             </label>
@@ -555,7 +556,7 @@
                                                     <span class="text-[10px] font-bold text-green-600 uppercase tracking-widest" x-show="fileName">Ready to submit</span>
                                                 </div>
                                             </div>
-                                            <input type="file" name="submission" required class="hidden" @change="fileName = $event.target.files[0] ? $event.target.files[0].name : ''">
+                                            <input type="file" name="submission" required class="hidden" accept=".pdf,.zip,.doc,.docx,.png,.jpg,.php,.py,.dart,.js,.java,.cpp,.c,.css,.html,.txt" @change="fileName = $event.target.files[0] ? $event.target.files[0].name : ''">
                                         </div>
                                     </label>
 

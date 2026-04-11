@@ -11,6 +11,7 @@ use App\Models\Task;
 use App\Models\ActivityLog;
 use App\Models\Quiz;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class StudentClassController extends Controller
 {
@@ -111,49 +112,71 @@ class StudentClassController extends Controller
         ]);
     }
 
-    public function submitTask(Request $request, $taskId)
-    {
-        $task = Task::findOrFail($taskId);
+   public function submitTask(Request $request, $taskId)
+{
+    // Use now() helper to avoid Carbon namespace issues
+    $task = Task::with('labSession')->findOrFail($taskId);
+    $user = auth()->user();
 
-        if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
-            return back()->with('error', 'The deadline for this task has passed. You can no longer submit or update files.');
+    if ($task->deadline && now()->gt(Carbon::parse($task->deadline))) {
+        return response()->json(['status' => 'error', 'message' => 'The deadline has passed.'], 403);
+    }
+
+    $request->validate([
+        'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:10240',
+    ]);
+
+    if ($request->hasFile('submission')) {
+        $file = $request->file('submission');
+
+        // 1. Format Subject - Added default fallback
+        $subjectCode = strtoupper($task->labSession->class_code ?? 'GENERAL');
+
+        // 2. Format Section
+        $section = strtoupper(($user->year_level ?? '') . ($user->section ?? 'NA'));
+
+        // 3. Format Student Name (LASTNAME_FIRSTNAME)
+        // Trim removes accidental spaces at the start or end
+        $nameParts = explode(' ', trim($user->name));
+        if (count($nameParts) > 1) {
+            $lastName = array_pop($nameParts); 
+            $firstName = implode('_', $nameParts); 
+            $formattedName = strtoupper($lastName . '_' . $firstName);
+        } else {
+            $formattedName = strtoupper($user->name);
         }
 
-        $request->validate([
-            'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg|max:10240',
-        ]);
+        // 4. Build the Path
+        $folderPath = "submissions/{$subjectCode}/{$section}/{$formattedName}";
+        $filename = time() . '_' . $file->getClientOriginalName();
+        
+        // Laravel's move() automatically creates folders if they don't exist
+        $file->move(public_path($folderPath), $filename);
+        $fullPath = $folderPath . '/' . $filename;
 
-        if ($request->hasFile('submission')) {
-            $file = $request->file('submission');
-            $filename = auth()->id() . '_' . time() . '_' . $file->getClientOriginalName();
-            
-            $file->move(public_path('submissions/task_' . $taskId), $filename);
+        // 5. Cleanup Old Files
+        $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', $user->id)->first();
+        if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
+            @unlink(public_path($oldSubmission->file_path)); // @ suppresses errors if file is missing
+        }
 
-            $path = 'submissions/task_' . $taskId . '/' . $filename;
-
-            $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', auth()->id())->first();
-            if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
-                unlink(public_path($oldSubmission->file_path));
-            }
-
-            $durationSeconds = abs(now()->diffInSeconds($task->created_at));
-
-            Submission::updateOrCreate(
-            ['task_id' => $taskId, 'user_id' => auth()->id()],
+        // 6. Save to Database
+        Submission::updateOrCreate(
+            ['task_id' => $taskId, 'user_id' => $user->id],
             [
-                'file_path' => $path,
+                'file_path' => $fullPath,
                 'original_filename' => $file->getClientOriginalName(),
-                'duration_seconds' => $durationSeconds,
+                'duration_seconds' => abs(now()->diffInSeconds($task->created_at)),
                 'submitted_at' => now(),
-            ] // <--- This was the missing bracket!
+            ]
         );
 
         return response()->json([
             'status' => 'success', 
-            'message' => 'Task submitted successfully!'
+            'message' => 'Uploaded to ' . $formattedName
         ]);
-        }
     }
+}
 
     public function deleteTask($taskId)
     {

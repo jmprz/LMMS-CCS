@@ -15,27 +15,62 @@
 
     <div id="dashboard-root" 
          class="p-4 md:p-8 max-w-7xl mx-auto" 
-         x-data="{ 
-            classes: @js($joinedClasses->map(fn($item) => [
-                'id' => $item->id,
-                'name' => $item->subject_name,
-                'code' => $item->class_code,
-                'instructor' => $item->faculty->name,
-                'day' => $item->schedule_day,
-                'time' => $item->schedule_time,
-                'attendance' => $item->total_attended_days ?? 0,
-                'isOpen' => (bool)$item->is_active,
-                'route' => route('student.subject', $item->id)
-            ])),
-            // Filters classes that are currently LIVE
-            get activeClasses() {
-                return this.classes.filter(c => c.isOpen);
-            },
-            // Filters classes that are currently CLOSED
-            get offlineClasses() {
-                return this.classes.filter(c => !c.isOpen);
-            }
-         }">
+       x-data="{ 
+    classes: @js($joinedClasses->map(fn($item) => [
+        'id' => $item->id,
+        'name' => $item->subject_name,
+        'code' => $item->class_code,
+        'instructor' => $item->faculty->name,
+        'day' => $item->schedule_day,
+        'time' => $item->schedule_time,
+        'attendance' => $item->total_attended_days ?? 0,
+        'isOpen' => (bool)$item->is_active,
+        'route' => route('student.subject', $item->id)
+    ])),
+
+    // Helper to check if the schedule matches current time/day
+    isScheduleActive(cls) {
+        const now = new Date();
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const currentDay = days[now.getDay()];
+        
+        // 1. Check Day Match
+        if (cls.day !== currentDay) return false;
+
+        // 2. Check Time Match (Parses '03:00 PM - 06:00 PM')
+        try {
+            const [startStr, endStr] = cls.time.split(' - ');
+            
+            const parseTime = (timeStr) => {
+                const [time, modifier] = timeStr.split(' ');
+                let [hours, minutes] = time.split(':');
+                if (modifier === 'PM' && hours < 12) hours = parseInt(hours) + 12;
+                if (modifier === 'AM' && hours == 12) hours = 0;
+                const d = new Date();
+                d.setHours(hours, minutes, 0);
+                return d;
+            };
+
+            const startTime = parseTime(startStr);
+            const endTime = parseTime(endStr);
+
+            return now >= startTime && now <= endTime;
+        } catch (e) {
+            return false;
+        }
+    },
+
+    // Updated Getters
+    get activeClasses() {
+        // Only show if BOTH the professor opened it AND the time is correct
+        return this.classes.filter(c => c.isOpen && this.isScheduleActive(c));
+    },
+
+    get offlineClasses() {
+        // Everything else goes here
+        return this.classes.filter(c => !c.isOpen || !this.isScheduleActive(c));
+    }
+}">
 
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
             <div>
@@ -233,20 +268,30 @@
     </div>
 
     <script>
-        // Use a 5-second interval for better performance, checks for live sessions automatically
-        setInterval(() => {
-            fetch("{{ route('student.refresh-class-statuses') }}")
-                .then(res => res.json())
-                .then(data => {
-                    const alpine = Alpine.$data(document.getElementById('dashboard-root'));
-                    alpine.classes.forEach(cls => {
-                        if (data[cls.id] !== undefined) {
-                            cls.isOpen = data[cls.id];
-                        }
-                    });
+    // Use a 5-second interval for better performance, checks for live sessions automatically
+    setInterval(() => {
+        fetch("{{ route('student.refresh-class-statuses') }}")
+            .then(res => res.json())
+            .then(data => {
+                const root = document.getElementById('dashboard-root');
+                if (!root) return; // Safety check
+                
+                const alpine = Alpine.$data(root);
+                
+                // 1. Update the status of each class
+                alpine.classes.forEach(cls => {
+                    if (data[cls.id] !== undefined) {
+                        cls.isOpen = data[cls.id];
+                    }
                 });
-        }, 5000);
-    </script>
+
+                // 2. TRIGGER RE-RENDER (Move this inside here!)
+                // This forces Alpine to re-run the 'isScheduleActive' time check
+                alpine.classes = [...alpine.classes]; 
+            })
+            .catch(err => console.error("Error refreshing sessions:", err));
+    }, 5000);
+</script>
 
         <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
