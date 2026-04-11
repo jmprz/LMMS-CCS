@@ -62,11 +62,21 @@
 
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-sm font-bold text-gray-700">Subject Code</label>
-                                        <input type="text" name="subject_name" placeholder="e.g., SOFTENG1"
+                                        <label class="block text-sm font-bold text-gray-700">Subject Title</label>
+                                        <input type="text" name="subject_name"
+                                            placeholder="e.g., Software Engineering 1"
                                             class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
                                             required>
                                     </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700">Class Code</label>
+                                        <input type="text" name="class_code" placeholder="e.g., SOFTENG1"
+                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                            required>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700">School Year</label>
                                         <select name="school_year"
@@ -79,13 +89,23 @@
                                             <option value="2028-2029">2028-2029</option>
                                         </select>
                                     </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700">Semester</label>
+                                        <select name="semester"
+                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                            required>
+                                            <option value="1st Semester">1st Sem</option>
+                                            <option value="2nd Semester">2nd Sem</option>
+                                        </select>
+                                    </div>
                                 </div>
 
-                                <div class="grid grid-cols-4 gap-4">
+                                <div class="grid grid-cols-3 gap-4">
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700">Program</label>
                                         <select name="program"
-                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
+                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                            required>
                                             <option value="BSCS">BSCS</option>
                                             <option value="BSIT">BSIT</option>
                                         </select>
@@ -93,7 +113,8 @@
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700">Year Level</label>
                                         <select name="year_level"
-                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
+                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                            required>
                                             <option value="1">1st Year</option>
                                             <option value="2">2nd Year</option>
                                             <option value="3">3rd Year</option>
@@ -103,18 +124,11 @@
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700">Section</label>
                                         <select name="section"
-                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
+                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                            required>
                                             <option value="A">A</option>
                                             <option value="B">B</option>
                                             <option value="C">C</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-bold text-gray-700">Semester</label>
-                                        <select name="semester"
-                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
-                                            <option value="1st Semester">1st Sem</option>
-                                            <option value="2nd Semester">2nd Sem</option>
                                         </select>
                                     </div>
                                 </div>
@@ -123,7 +137,8 @@
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700">Schedule Day</label>
                                         <select name="schedule_day"
-                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
+                                            class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                            required>
                                             @foreach(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as $day)
                                                 <option value="{{ $day }}">{{ $day }}</option>
                                             @endforeach
@@ -145,7 +160,7 @@
 
                                 <button type="submit"
                                     class="w-full bg-[#383838] hover:bg-black text-white font-bold py-3 px-4 rounded-lg shadow transition uppercase tracking-widest text-sm">
-                                    Generate Code & Create Session
+                                    Save Session
                                 </button>
                             </div>
                         </form>
@@ -179,9 +194,17 @@
     showEditModal: false,
     editingSession: {},
 
-    openEdit(session) {
+   openEdit(session) {
+    // 1. Create a deep copy
     this.editingSession = { ...session };
 
+    // 2. FORCE data types (Important for x-model)
+    // Ensure faculty_id is a string if your option values are strings
+    if (this.editingSession.faculty_id) {
+        this.editingSession.faculty_id = String(this.editingSession.faculty_id);
+    }
+
+    // 3. Handle Time formatting (Keep your existing logic)
     if (session.schedule_time && session.schedule_time.includes('-')) {
         const parts = session.schedule_time.split('-');
         
@@ -189,9 +212,13 @@
             if (!timeStr) return '';
             const [time, modifier] = timeStr.trim().split(' ');
             let [hours, minutes] = time.split(':');
-            if (hours === '12') hours = '00';
-            if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-            return `${String(hours).padStart(2, '0')}:${minutes.substring(0, 2)}`;
+            
+            // Fix for 12:xx PM and 12:xx AM
+            let hoursInt = parseInt(hours, 10);
+            if (modifier === 'PM' && hoursInt < 12) hoursInt += 12;
+            if (modifier === 'AM' && hoursInt === 12) hoursInt = 0;
+            
+            return `${String(hoursInt).padStart(2, '0')}:${minutes.substring(0, 2)}`;
         };
 
         this.editingSession.start_time = formatTo24h(parts[0]);
@@ -388,7 +415,9 @@
                                                 required>
                                                 <option value="" disabled>Select a Professor</option>
                                                 <template x-for="prof in professors" :key="prof.id">
-                                                    <option :value="prof.id" x-text="prof.name"></option>
+                                                    <option :value="String(prof.id)"
+                                                        :selected="String(prof.id) === String(editingSession.faculty_id)"
+                                                        x-text="prof.name"></option>
                                                 </template>
                                             </select>
                                         </div>
@@ -396,12 +425,21 @@
                                         <div class="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-sm font-bold text-gray-700">Subject
-                                                    Code</label>
+                                                    Title</label>
                                                 <input type="text" name="subject_name"
                                                     x-model="editingSession.subject_name"
                                                     class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
                                                     required>
                                             </div>
+                                            <div>
+                                                <label class="block text-sm font-bold text-gray-700">Class Code</label>
+                                                <input type="text" name="class_code" x-model="editingSession.class_code"
+                                                    class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                                    required>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-sm font-bold text-gray-700">School Year</label>
                                                 <select name="school_year" x-model="editingSession.school_year"
@@ -413,9 +451,18 @@
                                                     <option value="2028-2029">2028-2029</option>
                                                 </select>
                                             </div>
+                                            <div>
+                                                <label class="block text-sm font-bold text-gray-700">Semester</label>
+                                                <select name="semester" x-model="editingSession.semester"
+                                                    class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
+                                                    required>
+                                                    <option value="1st Semester">1st Sem</option>
+                                                    <option value="2nd Semester">2nd Sem</option>
+                                                </select>
+                                            </div>
                                         </div>
 
-                                        <div class="grid grid-cols-4 gap-4">
+                                        <div class="grid grid-cols-3 gap-4">
                                             <div>
                                                 <label class="block text-sm font-bold text-gray-700">Program</label>
                                                 <select name="program" x-model="editingSession.program"
@@ -443,14 +490,6 @@
                                                     <option value="C">C</option>
                                                 </select>
                                             </div>
-                                            <div>
-                                                <label class="block text-sm font-bold text-gray-700">Semester</label>
-                                                <select name="semester" x-model="editingSession.semester"
-                                                    class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
-                                                    <option value="1st Semester">1st Sem</option>
-                                                    <option value="2nd Semester">2nd Sem</option>
-                                                </select>
-                                            </div>
                                         </div>
 
                                         <div class="grid grid-cols-2 gap-4">
@@ -460,8 +499,11 @@
                                                 <select name="schedule_day" x-model="editingSession.schedule_day"
                                                     class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
                                                     <template
-                                                        x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']">
-                                                        <option :value="day" x-text="day"></option>
+                                                        x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']"
+                                                        :key="day">
+                                                        <option :value="day"
+                                                            :selected="day === editingSession.schedule_day"
+                                                            x-text="day"></option>
                                                     </template>
                                                 </select>
                                             </div>

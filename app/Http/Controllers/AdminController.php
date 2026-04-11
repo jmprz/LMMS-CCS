@@ -110,7 +110,8 @@ public function getActiveStatus()
  public function generateCode(Request $request) 
 {
     $request->validate([
-        'faculty_id'    => 'required|exists:users,id', // Admin must choose a prof
+        'class_code'    => 'required|string|max:20|unique:lab_sessions,class_code', // Manual input validation
+        'faculty_id'    => 'required|exists:users,id',
         'subject_name'  => 'required|string|max:255',
         'semester'      => 'required|string',
         'school_year'   => 'required|string',
@@ -122,11 +123,11 @@ public function getActiveStatus()
         'section'       => 'required',
     ]);
     
-    $code = strtoupper(Str::random(6));
+    
     $formattedTime = date("g:i A", strtotime($request->start_time)) . ' - ' . date("g:i A", strtotime($request->end_time));
 
     LabSession::create([
-        'class_code'    => $code,
+        'class_code'    => strtoupper(trim($request->class_code)), // Use the input, forced to UPPERCASE
         'subject_name'  => $request->subject_name,
         'semester'      => $request->semester,
         'school_year'   => $request->school_year,
@@ -135,11 +136,11 @@ public function getActiveStatus()
         'program'       => $request->program,
         'year_level'    => $request->year_level, 
         'section'       => $request->section,    
-        'faculty_id'    => $request->faculty_id, // Assigned from Admin choice
+        'faculty_id'    => $request->faculty_id,
         'is_active'     => true,
     ]);
 
-    return back()->with('success', 'Academic session created successfully!');
+    return back()->with('success', 'Academic session created successfully with code: ' . strtoupper($request->class_code));
 }
 
 public function statusCheck(Request $request)
