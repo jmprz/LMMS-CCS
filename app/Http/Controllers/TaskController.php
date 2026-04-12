@@ -25,6 +25,7 @@ class TaskController extends Controller
             ->first();
 
         $submittedAt = now();
+        return $this->hasMany(Submission::class);
 
         // 1. Calculate duration in seconds for your thesis model
         $durationSeconds = $activity->started_at->diffInSeconds($submittedAt);

@@ -139,7 +139,7 @@
                                         <select name="schedule_day"
                                             class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black"
                                             required>
-                                            @foreach(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as $day)
+                                            @foreach(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
                                                 <option value="{{ $day }}">{{ $day }}</option>
                                             @endforeach
                                         </select>
@@ -563,7 +563,7 @@
                                                 <select name="schedule_day" x-model="editingSession.schedule_day"
                                                     class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-black focus:border-black">
                                                     <template
-                                                        x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']"
+                                                        x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']"
                                                         :key="day">
                                                         <option :value="day"
                                                             :selected="day === editingSession.schedule_day"
