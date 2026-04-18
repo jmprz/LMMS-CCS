@@ -10,6 +10,7 @@ use App\Models\LabSession;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Submission;
+use App\Models\ActivityLog;
 
 class AdminController extends Controller
 {
@@ -172,6 +173,69 @@ public function gradeSubmission(Request $request, $id)
     ]);
 
     return back()->with('success', 'Grade and Feedback saved!');
+}
+
+public function userIndex()
+{
+    $user = auth()->user();
+
+    // --- ADMIN VIEW ---
+    if ($user->role === 'admin') {
+        // Fetch everyone with their attendance records for the timeline
+        $users = User::with('attendances.labSession')
+            ->orderBy('role', 'desc')
+            ->orderBy('last_name', 'asc') // Better sorting for school records
+            ->get();
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    // --- PROFESSOR VIEW ---
+    if ($user->role === 'professor') {
+        // Professor only sees students from their lab sessions
+        $users = User::with('attendances')
+            ->whereHas('joinedClasses', function($query) use ($user) {
+                $query->where('faculty_id', $user->id); 
+            })
+            ->where('role', 'student')
+            ->distinct()
+            ->orderBy('last_name', 'asc')
+            ->get();
+
+        return view('professor.classroom.show', compact('users'));
+    }
+
+    return redirect()->route('dashboard');
+}
+/**
+ * Fetches JSON for the Activity Log Modal
+ */
+public function getUserLogs(User $user)
+{
+    $viewer = auth()->user();
+    
+    $query = ActivityLog::where('user_id', $user->id);
+
+    // Security: Professors can only see behavior logs for their own lab sessions
+    if ($viewer->role === 'professor') {
+        $query->whereHas('labSession', function($q) use ($viewer) {
+            $q->where('faculty_id', $viewer->id);
+        });
+    }
+
+    $logs = $query->orderBy('created_at', 'desc')->limit(50)->get();
+
+    return response()->json($logs);
+}
+
+public function destroyUser(User $user)
+{
+    if (auth()->user()->role !== 'admin') {
+        return back()->with('error', 'Unauthorized action.');
+    }
+
+    $user->delete();
+    return back()->with('success', 'User account removed successfully.');
 }
 
 }

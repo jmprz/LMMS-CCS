@@ -17,6 +17,11 @@ public function index()
     $sessions = collect();
     $professors = collect();
     $allStudents = collect(); 
+    
+    $allStudents = \App\Models\User::where('role', 'student')
+    ->select('id', 'first_name', 'last_name', 'middle_name', 'school_id', 'program', 'year_level', 'section')
+    ->orderBy('last_name', 'asc') // Changed from 'name' to 'last_name'
+    ->get();
 
     // 2. Fill variables based on role
     if ($user->role === 'admin') {
@@ -82,38 +87,39 @@ public function unenroll($sessionId, $studentId)
 }
     // app/Http/Controllers/ClassroomController.php
 public function show($id)
-    {
-        // 1. Fetch the lab session with only the necessary data for this specific class
-        $session = LabSession::with([
-            'students', 
-            'tasks.submissions.user', 
-            'quizzes.attempts.user', 
-            'materials', 
-            'faculty'
-        ])->findOrFail($id);
+{
+    // 1. Fetch the lab session and sort students by last_name alphabetically
+    $session = LabSession::with([
+        'students' => function ($query) {
+            $query->orderBy('last_name', 'asc'); // This handles the alphabetical sorting
+        }, 
+        'tasks.submissions.user', 
+        'quizzes.attempts.user', 
+        'materials', 
+        'faculty'
+    ])->findOrFail($id);
 
-        // 2. SECURITY CHECK: Ensure only the assigned Professor or an Admin can enter
-        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
-            abort(403, 'Unauthorized access to this classroom.');
-        }
-
-        // 3. FIXED: Only grab students who are actually enrolled in THIS specific session
-        // This stops all students in the database from appearing in your grid.
-        $activeStudents = $session->students; 
-
-        $tasks = $session->tasks;
-
-        // 4. Determine which view to show based on the user's role
-        $view = Auth::user()->role === 'admin' ? 'admin.classroom.show' : 'professor.classroom.show';
-
-        return view($view, [
-            'session' => $session,
-            'class' => $session, 
-            'activeStudents' => $activeStudents,
-            'tasks' => $tasks,
-            'quizzes' => $session->quizzes ?? collect()
-        ]);
+    // 2. SECURITY CHECK
+    if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+        abort(403, 'Unauthorized access to this classroom.');
     }
+
+    // 3. Get the sorted students
+    $activeStudents = $session->students; 
+
+    $tasks = $session->tasks;
+
+    // 4. Determine view
+    $view = Auth::user()->role === 'admin' ? 'admin.classroom.show' : 'professor.classroom.show';
+
+    return view($view, [
+        'session' => $session,
+        'class' => $session, 
+        'activeStudents' => $activeStudents,
+        'tasks' => $tasks,
+        'quizzes' => $session->quizzes ?? collect()
+    ]);
+}
 
 // Edit - Show the form
 public function update(Request $request, $id)

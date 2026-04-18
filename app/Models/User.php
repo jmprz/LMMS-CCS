@@ -63,4 +63,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    // app/Models/User.php
+
+public function attendances()
+{
+    // A user can have many attendance records
+    return $this->hasMany(\App\Models\Attendance::class);
+}
 }

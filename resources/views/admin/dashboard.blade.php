@@ -12,6 +12,10 @@
                     class="flex items-center py-3 px-4 rounded-lg {{ request()->routeIs('admin.classroom') ? 'bg-black text-white font-bold' : 'text-gray-600 hover:bg-gray-100' }} transition">
                     <i class="ri-graduation-cap-line mr-3 text-lg"></i> Classroom
                 </a>
+                <a href="{{ route('admin.users.index') }}"
+                    class="flex items-center py-3 px-4 rounded-lg {{ request()->routeIs('admin.users') ? 'bg-black text-white font-bold' : 'text-gray-600 hover:bg-gray-100' }} transition">
+                    <i class="ri-user-line mr-3 text-lg"></i> User Management
+                </a>
                 <a href="#" class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
                     <i class="ri-message-3-line mr-3 text-lg"></i> Message
                 </a>

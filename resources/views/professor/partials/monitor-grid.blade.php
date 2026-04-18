@@ -7,7 +7,14 @@
                  data-student-id="{{ $student->id }}">
                 
                 <div class="flex items-center justify-between mb-3">
-                    <span class="font-bold text-sm text-gray-800">{{ $student->name }}</span>
+                    <span class="font-bold text-sm text-gray-800">
+                          {{-- Formal Format: LAST NAME, FIRST NAME M. --}}
+                                                        {{ strtoupper($student->last_name) }},
+                                                        {{ $student->first_name }}
+                                                        @if($student->middle_name)
+                                                            {{ strtoupper(substr($student->middle_name, 0, 1)) }}.
+                                                        @endif
+                    </span>
                     <div class="w-3 h-3 rounded-full {{ ($student->pivot && $student->pivot->is_present) ? 'bg-green-500 animate-pulse' : 'bg-gray-300' }}" 
                          id="status-dot-{{ $student->id }}"></div>
                 </div>

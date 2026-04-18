@@ -123,6 +123,10 @@ Route::middleware(['professor'])->prefix('professor')->name('professor.')->group
         Route::post('/generate-code', [AdminController::class, 'generateCode'])->name('generate-code');
         Route::post('/classroom/{id}/enroll', [ClassroomController::class, 'enroll'])->name('classroom.enroll');
         Route::delete('/classroom/{session_id}/unenroll/{student_id}', [ClassroomController::class, 'unenroll']) ->name('classroom.unenroll');
+        
+        Route::get('/users', [AdminController::class, 'userIndex'])->name('users.index');
+    Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+    Route::get('/users/{user}/activity-logs', [AdminController::class, 'getUserLogs']);
         });
 
     // 5. PROFILE ROUTES
