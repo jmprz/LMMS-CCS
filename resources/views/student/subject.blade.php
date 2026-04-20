@@ -397,18 +397,149 @@
             }
         }
 
-        // Browser functionality
         function browserManager() {
             return {
                 browserUrl: 'https://www.google.com/search?igu=1',
                 urlInput: '',
-                navigateTo() {
+                currentTaskId: null,
+                loadingUrl: false,
+                
+                async navigateTo() {
                     let url = this.urlInput.trim();
-                    this.browserUrl = url.startsWith('http') ? url : 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
+                    
+                    // If not a full URL, treat as Google search
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
+                    }
+                    
+                    this.loadingUrl = true;
+                    
+                    try {
+                        // Check if URL is allowed
+                        const response = await fetch('/student/browser/check-url', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            body: JSON.stringify({
+                                url: url,
+                                lab_session_id: classId,
+                                task_id: this.currentTaskId
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.allowed) {
+                            // URL is allowed - load it
+                            this.browserUrl = url;
+                            this.urlInput = '';
+                        } else {
+                            // URL is blocked - show blocked page
+                            this.showBlockedPage(data.reason || 'This website is not allowed');
+                        }
+                    } catch (error) {
+                        console.error('URL check failed:', error);
+                        alert('Error checking URL permission');
+                    } finally {
+                        this.loadingUrl = false;
+                    }
                 },
-                refresh() { 
+                
+                showBlockedPage(reason) {
+                    const blockedHtml = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <style>
+                                body {
+                                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    min-height: 100vh;
+                                    margin: 0;
+                                    padding: 20px;
+                                }
+                                .container {
+                                    background: white;
+                                    border-radius: 20px;
+                                    padding: 60px 40px;
+                                    text-align: center;
+                                    max-width: 500px;
+                                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                                }
+                                .icon { font-size: 80px; margin-bottom: 20px; }
+                                h1 { font-size: 28px; font-weight: 900; color: #1a1a1a; margin-bottom: 15px; }
+                                p { font-size: 16px; color: #666; line-height: 1.6; margin-bottom: 20px; }
+                                .message {
+                                    background: #fff3cd;
+                                    border: 2px solid #ffc107;
+                                    border-radius: 12px;
+                                    padding: 20px;
+                                    margin-bottom: 30px;
+                                }
+                                .message strong { color: #856404; font-weight: 700; }
+                                .suggestions {
+                                    margin-top: 30px;
+                                    padding-top: 30px;
+                                    border-top: 1px solid #eee;
+                                }
+                                .suggestion-item {
+                                    background: #f8f9fa;
+                                    padding: 8px 16px;
+                                    border-radius: 20px;
+                                    font-size: 13px;
+                                    color: #667eea;
+                                    font-weight: 600;
+                                    display: inline-block;
+                                    margin: 5px;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <div class="icon">🚫</div>
+                                <h1>Access Blocked</h1>
+                                
+                                <div class="message">
+                                    <strong>${reason}</strong>
+                                </div>
+                                
+                                <p>
+                                    This website is not on the approved whitelist for this class. 
+                                    Your professor controls which sites you can access during lab sessions.
+                                </p>
+                                
+                                <p style="font-size: 14px; color: #999;">
+                                    ⚠️ This attempt has been logged.
+                                </p>
+                                
+                                <div class="suggestions">
+                                    <h3 style="font-size: 14px; color: #999; text-transform: uppercase; margin-bottom: 15px;">Try These Instead:</h3>
+                                    <span class="suggestion-item">Google</span>
+                                    <span class="suggestion-item">Wikipedia</span>
+                                    <span class="suggestion-item">W3Schools</span>
+                                    <span class="suggestion-item">Stack Overflow</span>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    
+                    // Create blob URL for blocked page
+                    const blob = new Blob([blockedHtml], { type: 'text/html' });
+                    this.browserUrl = URL.createObjectURL(blob);
+                },
+                
+                refresh() {
                     const frame = document.getElementById('lockdown-frame');
-                    if(frame) frame.src += '';
+                    if (frame) {
+                        frame.src = this.browserUrl;
+                    }
                 }
             }
         }

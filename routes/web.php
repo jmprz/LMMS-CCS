@@ -59,6 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/quizzes/{quiz}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');
         Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
         Route::get('/refresh-statuses', [StudentClassController::class, 'refreshClassStatuses'])->name('refresh-class-statuses');
+        Route::post('/browser/check-url', [App\Http\Controllers\BrowserProxyController::class, 'checkUrl'])->name('browser.check');
     });
 
     // 3. PROFESSOR ROUTES
@@ -108,7 +109,12 @@ Route::middleware(['professor'])->prefix('professor')->name('professor.')->group
     Route::post('/sessions/{id}/toggle', [ClassroomController::class, 'toggleSession'])->name('sessions.toggle');
     Route::post('/sessions/{id}/broadcast', [ClassroomController::class, 'broadcast'])->name('sessions.broadcast');
     Route::post('/sessions/{id}/end', [AdminController::class, 'endSession'])->name('sessions.end');
-});
+    Route::get('/classroom/{id}/allowed-sites', [App\Http\Controllers\AllowedSiteController::class, 'index'])->name('allowed-sites.index');
+    Route::post('/allowed-sites', [App\Http\Controllers\AllowedSiteController::class, 'store'])->name('allowed-sites.store');
+    Route::delete('/allowed-sites/{id}', [App\Http\Controllers\AllowedSiteController::class, 'destroy'])->name('allowed-sites.destroy');
+    Route::get('/classroom/{id}/blocked-attempts', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedAttempts'])->name('blocked-attempts.index');
+    Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
+    });
 
     // 4. ADMIN ROUTES
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
