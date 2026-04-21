@@ -29,8 +29,8 @@ class BrowserProxyController extends Controller
         // Check if URL is allowed
         $allowed = AllowedSite::isUrlAllowed($url, $labSessionId, $taskId);
 
-        if (!$allowed) {
-            // Log blocked attempt
+        // Only log if in a lab session (not from dashboard)
+        if (!$allowed && $labSessionId) {
             BlockedAttempt::logAttempt($userId, $labSessionId, $url, 'not_whitelisted');
         }
 

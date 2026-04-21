@@ -172,22 +172,22 @@
     @endif
         
         <!-- Graded Tasks Section -->
-<div x-data="{ 
-    gradedTasks: [],
-    
-    init() {
-        this.fetchGradedTasks();
-        setInterval(() => this.fetchGradedTasks(), 5000);
-    },
-    
-    fetchGradedTasks() {
-        fetch('{{ route('student.graded-tasks') }}')
-            .then(res => res.json())
-            .then(data => {
-                this.gradedTasks = data;
-            });
-    }
-}" class="mb-12">
+        <div x-data="{ 
+            gradedTasks: [],
+            
+            init() {
+                this.fetchGradedTasks();
+                setInterval(() => this.fetchGradedTasks(), 5000);
+            },
+            
+            fetchGradedTasks() {
+                fetch('{{ route('student.graded-tasks') }}')
+                    .then(res => res.json())
+                    .then(data => {
+                        this.gradedTasks = data;
+                    });
+            }
+        }" class="mb-12">
     
     <div x-show="gradedTasks.length > 0" x-transition class="mb-12">
         <div class="flex items-center gap-2 mb-6">
@@ -264,8 +264,8 @@
                 </table>
             </div>
         </div>
-
     </div>
+
 
     <script>
     // Use a 5-second interval for better performance, checks for live sessions automatically

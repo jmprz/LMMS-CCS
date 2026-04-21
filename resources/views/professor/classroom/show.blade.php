@@ -67,6 +67,9 @@
                         <button @click="activeTab = 'settings'"
                             :class="activeTab === 'settings' ? 'border-b-2 border-black font-bold' : 'text-gray-500'"
                             class="px-6 py-3 transition">Settings</button>
+                            <button @click="activeTab = 'browser-security'"
+                            :class="activeTab === 'browser-security' ? 'border-b-2 border-black text-black' : 'text-gray-400 hover:text-gray-600'" 
+                            class="px-8 py-4 font-black text-[10px] uppercase tracking-widest transition"></button>
                     </div>
 
                     <div class="mt-6">
@@ -723,6 +726,357 @@
                             </div>
                         </form>
                     </div>
+
+                    <!-- BROWSER SECURITY TAB -->
+                    <div x-show="activeTab === 'browser-security'" x-data="browserSecurityManager()">
+                        <!-- Header -->
+                        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                            <h2 class="text-2xl font-black text-gray-900 mb-2">🔒 Browser Security Settings</h2>
+                            <p class="text-sm text-gray-500">Control which websites students can access during lab sessions</p>
+                        </div>
+
+                        <!-- Add New Site Form -->
+                        <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl border-2 border-green-200 p-6 mb-6">
+                            <h3 class="text-lg font-black text-gray-900 mb-4">➕ Add Allowed Website</h3>
+                            
+                            <form @submit.prevent="addSite()" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Domain *</label>
+                                        <input type="text" 
+                                            x-model="newSite.domain" 
+                                            placeholder="e.g., youtube.com or github.com" 
+                                            class="w-full border-gray-300 rounded-lg text-sm"
+                                            required>
+                                        <p class="text-xs text-gray-500 mt-1">Don't include http:// or www.</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Name *</label>
+                                        <input type="text" 
+                                            x-model="newSite.name" 
+                                            placeholder="e.g., YouTube or GitHub" 
+                                            class="w-full border-gray-300 rounded-lg text-sm"
+                                            required>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Scope</label>
+                                        <select x-model="newSite.scope" class="w-full border-gray-300 rounded-lg text-sm">
+                                            <option value="global">✅ Global (All tasks in this class)</option>
+                                            <option value="task">📋 Specific Task Only</option>
+                                        </select>
+                                    </div>
+
+                                    <div x-show="newSite.scope === 'task'">
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Select Task</label>
+                                        <select x-model="newSite.task_id" class="w-full border-gray-300 rounded-lg text-sm">
+                                            <option value="">Choose a task...</option>
+                                            <template x-for="task in tasks" :key="task.id">
+                                                <option :value="task.id" x-text="task.title"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Description (Optional)</label>
+                                    <input type="text" 
+                                        x-model="newSite.description" 
+                                        placeholder="Why students need this site" 
+                                        class="w-full border-gray-300 rounded-lg text-sm">
+                                </div>
+
+                                <button type="submit" 
+                                        :disabled="adding"
+                                        :class="adding ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'"
+                                        class="px-6 py-3 text-white font-black rounded-xl text-sm transition">
+                                    <span x-show="!adding">✅ Add Website to Whitelist</span>
+                                    <span x-show="adding">Adding...</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Pre-Approved Educational Sites -->
+                        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200 p-6 mb-6">
+                            <h3 class="text-lg font-black text-gray-900 mb-3">
+                                <i class="ri-shield-check-line text-blue-600 mr-2"></i>
+                                ✨ Pre-Approved Educational Sites (Always Allowed)
+                            </h3>
+                            <p class="text-sm text-gray-600 mb-4">These sites are automatically allowed and cannot be removed</p>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                <template x-for="site in preApprovedSites" :key="site.id">
+                                    <div class="bg-white border border-blue-200 rounded-lg p-3 text-center hover:shadow-md transition">
+                                        <p class="text-xs font-black text-gray-900" x-text="site.name"></p>
+                                        <p class="text-[10px] text-gray-500" x-text="site.domain"></p>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <div x-show="preApprovedSites.length === 0" class="text-center py-4 text-gray-400">
+                                <p class="text-sm">Loading pre-approved sites...</p>
+                            </div>
+                        </div>
+
+                        <!-- Your Custom Allowed Sites -->
+                        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                            <h3 class="text-lg font-black text-gray-900 mb-4">📝 Your Custom Allowed Sites</h3>
+                            
+                            <div x-show="sessionSites.length === 0" class="text-center py-10 text-gray-400">
+                                <i class="ri-global-line text-5xl mb-3"></i>
+                                <p class="font-bold">No custom sites added yet</p>
+                                <p class="text-sm">Use the form above to add websites</p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <template x-for="site in sessionSites" :key="site.id">
+                                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-green-500 transition">
+                                        <div class="flex-1">
+                                            <h4 class="font-bold text-gray-900" x-text="site.name"></h4>
+                                            <p class="text-xs text-gray-500" x-text="site.domain"></p>
+                                            <p x-show="site.description" class="text-xs text-gray-400 mt-1" x-text="site.description"></p>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[10px] font-black bg-green-100 text-green-700 px-3 py-1 rounded-full uppercase">
+                                                ✅ ALLOWED
+                                            </span>
+                                            <button @click="deleteSite(site.id)" 
+                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                                                <i class="ri-delete-bin-line text-xl"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Task-Specific Sites -->
+                        <div x-show="taskSites.length > 0" class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                            <h3 class="text-lg font-black text-gray-900 mb-4">📋 Task-Specific Sites</h3>
+                            
+                            <div class="space-y-3">
+                                <template x-for="site in taskSites" :key="site.id">
+                                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-purple-500 transition">
+                                        <div class="flex-1">
+                                            <h4 class="font-bold text-gray-900" x-text="site.name"></h4>
+                                            <p class="text-xs text-gray-500" x-text="site.domain"></p>
+                                            <p class="text-xs text-purple-600 font-bold mt-1">
+                                                <i class="ri-task-line mr-1"></i>
+                                                <span x-text="site.task?.title || 'Unknown Task'"></span>
+                                            </p>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[10px] font-black bg-purple-100 text-purple-700 px-3 py-1 rounded-full uppercase">
+                                                TASK ONLY
+                                            </span>
+                                            <button @click="deleteSite(site.id)" 
+                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                                                <i class="ri-delete-bin-line text-xl"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Blocked Attempts Monitoring -->
+                        <div class="bg-white rounded-2xl border-2 border-red-200 p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-black text-gray-900">🚫 Blocked Attempts Log</h3>
+                                <button @click="refreshBlockedAttempts()" class="text-sm text-gray-600 hover:text-black font-bold">
+                                    <i class="ri-refresh-line mr-1"></i>Refresh
+                                </button>
+                            </div>
+
+                            <!-- Stats Cards -->
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-black text-red-600" x-text="blockedStats.total || 0"></p>
+                                    <p class="text-xs text-red-700 font-bold mt-1">Total Blocked Attempts</p>
+                                </div>
+                                <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-black text-orange-600" x-text="blockedStats.by_domain?.length || 0"></p>
+                                    <p class="text-xs text-orange-700 font-bold mt-1">Different Sites Blocked</p>
+                                </div>
+                                <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 text-center">
+                                    <p class="text-3xl font-black text-yellow-600" x-text="blockedStats.by_student?.length || 0"></p>
+                                    <p class="text-xs text-yellow-700 font-bold mt-1">Students Affected</p>
+                                </div>
+                            </div>
+
+                            <!-- Recent Attempts Table -->
+                            <div class="overflow-x-auto bg-gray-50 rounded-xl p-4">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-gray-100 border-b-2 border-gray-300">
+                                        <tr>
+                                            <th class="px-4 py-3 text-xs font-black text-gray-700 uppercase">Student</th>
+                                            <th class="px-4 py-3 text-xs font-black text-gray-700 uppercase">Blocked Website</th>
+                                            <th class="px-4 py-3 text-xs font-black text-gray-700 uppercase">Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="attempt in blockedAttempts.slice(0, 10)" :key="attempt.id">
+                                            <tr class="border-b border-gray-200 hover:bg-white">
+                                                <td class="px-4 py-3 font-bold text-gray-900" x-text="attempt.user?.name"></td>
+                                                <td class="px-4 py-3">
+                                                    <p class="text-red-600 font-bold" x-text="attempt.blocked_domain"></p>
+                                                    <p class="text-xs text-gray-400 truncate max-w-xs" x-text="attempt.blocked_url"></p>
+                                                </td>
+                                                <td class="px-4 py-3 text-gray-500 text-xs" x-text="formatTime(attempt.attempted_at)"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                                
+                                <div x-show="blockedAttempts.length === 0" class="text-center py-10 text-gray-400">
+                                    <i class="ri-shield-check-line text-5xl mb-3"></i>
+                                    <p class="font-bold">No blocked attempts yet</p>
+                                    <p class="text-sm">Students are browsing safely!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JavaScript for Browser Security Tab -->
+                    <script>
+                    function browserSecurityManager() {
+                        return {
+                            preApprovedSites: [],
+                            sessionSites: [],
+                            taskSites: [],
+                            tasks: [],
+                            blockedAttempts: [],
+                            blockedStats: {},
+                            adding: false,
+                            newSite: {
+                                domain: '',
+                                name: '',
+                                scope: 'global',
+                                task_id: '',
+                                description: '',
+                                lab_session_id: '{{ $session->id }}'
+                            },
+
+                            init() {
+                                this.loadSites();
+                                this.loadTasks();
+                                this.loadBlockedAttempts();
+                            },
+
+                            async loadSites() {
+                                try {
+                                    const res = await fetch('/professor/classroom/{{ $session->id }}/allowed-sites');
+                                    const data = await res.json();
+                                    this.preApprovedSites = data.pre_approved;
+                                    this.sessionSites = data.session_sites;
+                                    this.taskSites = data.task_sites;
+                                } catch (error) {
+                                    console.error('Error loading sites:', error);
+                                }
+                            },
+
+                            async loadTasks() {
+                                try {
+                                    const res = await fetch('/student/classroom/{{ $session->id }}/live-tasks');
+                                    this.tasks = await res.json();
+                                } catch (error) {
+                                    console.error('Error loading tasks:', error);
+                                }
+                            },
+
+                            async addSite() {
+                                if (!this.newSite.domain || !this.newSite.name) {
+                                    alert('❌ Please fill in domain and name');
+                                    return;
+                                }
+
+                                this.adding = true;
+
+                                try {
+                                    const res = await fetch('/professor/allowed-sites', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                        },
+                                        body: JSON.stringify(this.newSite)
+                                    });
+
+                                    const data = await res.json();
+
+                                    if (res.ok) {
+                                        alert('✅ Website added successfully!');
+                                        this.loadSites();
+                                        
+                                        // Reset form
+                                        this.newSite = {
+                                            domain: '',
+                                            name: '',
+                                            scope: 'global',
+                                            task_id: '',
+                                            description: '',
+                                            lab_session_id: '{{ $session->id }}'
+                                        };
+                                    } else {
+                                        alert('❌ ' + (data.error || 'Failed to add site'));
+                                    }
+                                } catch (error) {
+                                    console.error('Error adding site:', error);
+                                    alert('❌ Network error');
+                                } finally {
+                                    this.adding = false;
+                                }
+                            },
+
+                            async deleteSite(id) {
+                                if (!confirm('❌ Remove this site from the whitelist?')) return;
+
+                                try {
+                                    const res = await fetch(`/professor/allowed-sites/${id}`, {
+                                        method: 'DELETE',
+                                        headers: {
+                                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                        }
+                                    });
+
+                                    if (res.ok) {
+                                        alert('✅ Site removed from whitelist');
+                                        this.loadSites();
+                                    } else {
+                                        alert('❌ Failed to remove site');
+                                    }
+                                } catch (error) {
+                                    console.error('Error deleting site:', error);
+                                }
+                            },
+
+                            async loadBlockedAttempts() {
+                                try {
+                                    const [attemptsRes, statsRes] = await Promise.all([
+                                        fetch('/professor/classroom/{{ $session->id }}/blocked-attempts'),
+                                        fetch('/professor/classroom/{{ $session->id }}/blocked-stats')
+                                    ]);
+
+                                    this.blockedAttempts = await attemptsRes.json();
+                                    this.blockedStats = await statsRes.json();
+                                } catch (error) {
+                                    console.error('Error loading blocked attempts:', error);
+                                }
+                            },
+
+                            refreshBlockedAttempts() {
+                                this.loadBlockedAttempts();
+                            },
+
+                            formatTime(timestamp) {
+                                return new Date(timestamp).toLocaleString();
+                            }
+                        }
+                    }
+                    </script>
 
                 </div>
         </main>
