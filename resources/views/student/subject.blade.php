@@ -154,7 +154,7 @@
 
                     <div x-show="isSharing" x-cloak class="animate-fade-in">
                         <div class="flex border-b border-gray-200 mb-8">
-                            <template x-for="t in ['activities', 'quizzes', 'materials', 'classmates']">
+                            <template x-for="t in ['activities', 'quizzes', 'materials', 'classmates', 'Browser']">
                                 <button @click="activeTab = t" 
                                         :class="activeTab === t ? 'border-b-2 border-black text-black font-black' : 'text-gray-400 hover:text-gray-600 font-bold'" 
                                         class="px-8 py-4 text-[10px] uppercase tracking-widest transition" 
@@ -184,16 +184,6 @@
                                     </button>
                                 </div>
                             </template>
-
-                            <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl mt-12" x-data="browserManager()">
-                                <div class="bg-white p-4 border-b border-gray-100 flex items-center gap-3">
-                                    <span class="bg-gray-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm">
-                                        <i class="ri-google-fill mr-1 text-blue-500"></i> Google Search
-                                    </span>
-                                    <div class="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[10px] text-gray-400 italic font-medium">Secure Research Mode: Access restricted to whitelisted domains.</div>
-                                </div>
-                                <iframe :src="browserUrl" class="w-full h-[500px] border-none"></iframe>
-                            </div>
                         </div>
 
                         <div x-show="activeTab === 'materials'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -213,6 +203,21 @@
                                     <a href="{{ $material->type === 'youtube' ? $material->content : url($material->content) }}" target="_blank" class="p-2 hover:bg-gray-100 rounded-full transition-colors"><i class="ri-external-link-line text-gray-400"></i></a>
                                 </div>
                             @endforeach
+                        </div>
+                        <div x-show"="activeTab === 'classmates'" class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
+                            <i class="ri-group-line text-gray-300 text-6xl mb-4 block"></i>
+                            <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">Classmate Roster</p>
+                        </div>
+                        <div x-show="activeTab === 'Browser'" class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
+                          <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl mt-12" x-data="browserManager()">
+                                <div class="bg-white p-4 border-b border-gray-100 flex items-center gap-3">
+                                    <span class="bg-gray-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm">
+                                        <i class="ri-google-fill mr-1 text-blue-500"></i> Google Search
+                                    </span>
+                                    <div class="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[10px] text-gray-400 italic font-medium">Secure Research Mode: Access restricted to whitelisted domains.</div>
+                                </div>
+                                <iframe :src="browserUrl" class="w-full h-[500px] border-none"></iframe>
+                            </div>
                         </div>
                     </div>
                 @endif

@@ -127,20 +127,25 @@ public function update(Request $request, $id)
     $request->validate([
         'faculty_id'   => 'required|exists:users,id',
         'subject_name' => 'required|string|max:255',
+        'class_code'   => 'required|string|max:50|unique:lab_sessions,class_code,' . $id, // Ignore current ID during unique check
         'start_time'   => 'required',
         'end_time'     => 'required',
-        // ... add your other validations here
+        'schedule_day' => 'required',
+        'program'      => 'required',
+        'year_level'   => 'required',
+        'section'      => 'required',
     ]);
 
     $session = LabSession::findOrFail($id);
 
-    // Format the time exactly how generateCode does it (AM/PM)
+    // Format the time (AM/PM)
     $formattedTime = date("g:i A", strtotime($request->start_time)) . ' - ' . date("g:i A", strtotime($request->end_time));
 
     $session->update([
         'faculty_id'    => $request->faculty_id,
         'subject_name'  => $request->subject_name,
-        'schedule_time' => $formattedTime, // Updates the single column
+        'class_code'    => strtoupper($request->class_code), // Ensure it stays uppercase
+        'schedule_time' => $formattedTime,
         'semester'      => $request->semester,
         'school_year'   => $request->school_year,
         'schedule_day'  => $request->schedule_day,
