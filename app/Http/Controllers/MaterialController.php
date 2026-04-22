@@ -41,4 +41,37 @@ class MaterialController extends Controller
 
     return back()->with('success', 'Material posted successfully!');
 }
+
+public function logStart(\App\Models\Material $material)
+{
+    // We create the record and get the ID so we can update it later if needed,
+    // or just rely on the user/material/closed_at combo.
+    \DB::table('material_logs')->insert([
+        'user_id' => auth()->id(),
+        'material_id' => $material->id,
+        'opened_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return response()->json(['message' => 'Log started']);
+}
+
+public function logEnd(Request $request, \App\Models\Material $material)
+{
+    // Find the most recent log for this user/material that hasn't been closed yet
+    \DB::table('material_logs')
+        ->where('user_id', auth()->id())
+        ->where('material_id', $material->id)
+        ->whereNull('closed_at')
+        ->latest()
+        ->update([
+            'closed_at' => now(),
+            'duration_seconds' => $request->duration,
+            'updated_at' => now(),
+        ]);
+
+    return response()->json(['message' => 'Log ended', 'duration' => $request->duration]);
+}
+
 }

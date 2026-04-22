@@ -228,14 +228,35 @@ public function getUserLogs(User $user)
     return response()->json($logs);
 }
 
+public function updateUser(Request $request, User $user)
+{
+    $validated = $request->validate([
+        'first_name' => 'required|string|max:255',
+        'middle_name' => 'nullable|string|max:255',
+        'last_name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users,email,' . $user->id,
+        'role' => 'required',
+        'program' => 'nullable',
+        'year_level' => 'nullable',
+        'section' => 'nullable',
+    ]);
+
+    // Manually sync the 'name' field if your app uses it elsewhere
+    $validated['name'] = $validated['first_name'] . ' ' . $validated['last_name'];
+
+    $user->update($validated);
+
+    return back()->with('success', 'User updated successfully!');
+}
 public function destroyUser(User $user)
 {
-    if (auth()->user()->role !== 'admin') {
-        return back()->with('error', 'Unauthorized action.');
+    // Prevent admin from deleting themselves
+    if (auth()->id() === $user->id) {
+        return back()->with('error', 'You cannot delete your own account.');
     }
 
     $user->delete();
-    return back()->with('success', 'User account removed successfully.');
+    return back()->with('success', 'User deleted successfully');
 }
 
 }

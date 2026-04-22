@@ -49,6 +49,7 @@ class User extends Authenticatable
         'role',
         'program',
         'year_level',
+        'section',
     ];
 
     protected $hidden = [

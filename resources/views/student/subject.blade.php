@@ -185,25 +185,124 @@
                                 </div>
                             </template>
                         </div>
+<div x-data="{ 
+        showViewer: false, 
+        currentMaterial: { title: '', type: '', url: '', id: null },
+        startTime: null,
 
-                        <div x-show="activeTab === 'materials'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            @foreach($class->materials as $material)
-                                <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all group">
-                                    <div class="flex items-center gap-4">
-                                        <div class="p-3 bg-gray-50 rounded-2xl group-hover:bg-[#383838] transition-colors">
-                                            @if($material->type == 'pdf') <i class="ri-file-pdf-fill text-red-500 group-hover:text-white text-xl"></i>
-                                            @elseif($material->type == 'youtube') <i class="ri-youtube-fill text-red-600 group-hover:text-white text-xl"></i>
-                                            @else <i class="ri-file-ppt-2-fill text-orange-500 group-hover:text-white text-xl"></i> @endif
-                                        </div>
-                                        <div>
-                                            <h4 class="font-bold text-sm text-gray-900 truncate max-w-[150px]">{{ $material->title }}</h4>
-                                            <p class="text-[9px] uppercase font-black text-gray-400 tracking-tighter">{{ $material->type }} Document</p>
-                                        </div>
-                                    </div>
-                                    <a href="{{ $material->type === 'youtube' ? $material->content : url($material->content) }}" target="_blank" class="p-2 hover:bg-gray-100 rounded-full transition-colors"><i class="ri-external-link-line text-gray-400"></i></a>
-                                </div>
-                            @endforeach
-                        </div>
+        openMaterial(material) {
+            this.currentMaterial = material;
+            this.showViewer = true;
+            this.startTime = new Date();
+            
+            fetch(`/student/materials/${material.id}/log-start`, {
+                method: 'POST',
+                headers: { 
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            });
+        },
+
+        closeMaterial() {
+            let endTime = new Date();
+            let duration = Math.round((endTime - this.startTime) / 1000);
+            
+            fetch(`/student/materials/${this.currentMaterial.id}/log-end`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ duration: duration })
+            }).then(() => {
+                this.showViewer = false;
+                this.currentMaterial = { title: '', type: '', url: '', id: null };
+            });
+        }
+    }" class="contents">
+                   <div x-show="activeTab === 'materials'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    
+
+        @foreach($class->materials as $material)
+            <div @click="openMaterial({
+                id: {{ $material->id }},
+                title: '{{ $material->title }}',
+                type: '{{ $material->type }}',
+                url: '{{ $material->type === 'youtube' 
+                    ? (Str::contains($material->content, 'embed') ? $material->content : Str::replace('watch?v=', 'embed/', $material->content)) 
+                    : url('/' . $material->content) }}'
+            })" class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all group cursor-pointer">
+                
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-gray-50 rounded-2xl group-hover:bg-[#383838] transition-colors">
+                        @if($material->type == 'pdf') 
+                            <i class="ri-file-pdf-fill text-red-500 group-hover:text-white text-xl"></i>
+                        @elseif($material->type == 'youtube') 
+                            <i class="ri-youtube-fill text-red-600 group-hover:text-white text-xl"></i>
+                        @else 
+                            <i class="ri-file-ppt-2-fill text-orange-500 group-hover:text-white text-xl"></i> 
+                        @endif
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-gray-900 truncate max-w-[150px]">{{ $material->title }}</h4>
+                        <p class="text-[9px] uppercase font-black text-gray-400 tracking-tighter">{{ $material->type }} Document</p>
+                    </div>
+                </div>
+
+                <div class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <i class="ri-eye-line text-gray-400"></i>
+                </div>
+            </div>
+        @endforeach
+
+       <div x-show="showViewer" 
+     x-cloak 
+     class="fixed inset-0 z-[9999] h-[600px] flex flex-col items-center justify-center overflow-hidden" 
+     style="background-color: rgba(0, 0, 0, 0.9); backdrop-filter: blur(8px);">
+    
+    <div class="w-full max-w-7xl p-4 flex justify-between items-center text-white">
+        <div class="flex items-center gap-3">
+            <button @click="closeMaterial()" class="p-2 hover:bg-white/10 rounded-full transition">
+                <i class="ri-close-line text-2xl"></i>
+            </button>
+            <h3 class="font-medium text-lg" x-text="currentMaterial.title"></h3>
+        </div>
+        <button @click="closeMaterial()" class="px-8 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition shadow-xl">
+            DONE
+        </button>
+    </div>
+    
+    <div class="w-full h-full max-w-7xl px-4 pb-8 flex flex-col">
+        <div class="w-full flex-grow bg-white rounded-2xl overflow-hidden shadow-2xl relative">
+            
+            <div class="absolute inset-0 flex items-center justify-center bg-gray-50 -z-10">
+                <div class="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-black"></div>
+            </div>
+
+            <template x-if="currentMaterial.type === 'pdf'">
+                <iframe :src="currentMaterial.url" class="w-full h-full border-none block"></iframe>
+            </template>
+
+            <template x-if="currentMaterial.type === 'youtube'">
+                <div class="w-full h-full flex items-center justify-center bg-black">
+                    <iframe :src="currentMaterial.url" 
+                            class="w-full aspect-video border-none" 
+                            allow="autoplay; encrypted-media" 
+                            allowfullscreen></iframe>
+                </div>
+            </template>
+
+            <template x-if="currentMaterial.type === 'pptx'">
+                <iframe :src="'https://view.officeapps.live.com/op/view.aspx?src=' + encodeURIComponent(currentMaterial.url)" 
+                        class="w-full h-full border-none"></iframe>
+            </template>
+        </div>
+    </div>
+</div>
+    </div>
+</div>
                         <div x-show"="activeTab === 'classmates'" class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
                             <i class="ri-group-line text-gray-300 text-6xl mb-4 block"></i>
                             <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">Classmate Roster</p>

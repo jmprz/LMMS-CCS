@@ -29,197 +29,335 @@
         <main class="flex-1 overflow-y-auto h-full">
             <div class="p-8 mt-[80px]">
                 <h1 class="text-2xl font-bold text-gray-800">User Management</h1>
-                <div class="mt-4" x-data="userManagement({{ $users->toJson() }})">
-                    <div
-                        class="mb-6 grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
-                        <div class="relative">
-                            <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="text" x-model="search" placeholder="Search name..."
-                                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none transition">
-                        </div>
-
-                        <select x-model="filterRole"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-black focus:border-black">
-                            <option value="">All Roles</option>
-                            <option value="student">Student</option>
-                            <option value="professor">Professor</option>
-                            <option value="admin">Admin</option>
-                        </select>
-
-                        <select x-model="filterProgram" :disabled="filterRole !== 'student' && filterRole !== ''"
-                            :class="filterRole !== 'student' && filterRole !== '' ? 'opacity-50 cursor-not-allowed' : ''"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition focus:ring-black focus:border-black">
-                            <option value="">All Programs</option>
-                            <option value="BSCS">BSCS</option>
-                            <option value="BSIT">BSIT</option>
-                        </select>
-
-                        <select x-model="filterYear" :disabled="filterRole === 'professor' || filterRole === 'admin'"
-                            :class="filterRole === 'professor' || filterRole === 'admin' ? 'opacity-50 cursor-not-allowed' : ''"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition focus:ring-black focus:border-black">
-                            <option value="">All Years</option>
-                            <option value="1">1st Year</option>
-                            <option value="2">2nd Year</option>
-                            <option value="3">3rd Year</option>
-                            <option value="4">4th Year</option>
-                        </select>
-
-                        <select x-model="filterSection" :disabled="filterRole !== 'student' && filterRole !== ''"
-                            :class="filterRole !== 'student' && filterRole !== '' ? 'opacity-50 cursor-not-allowed' : ''"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition">
-                            <option value="">All Sections</option>
-                            <option value="A">Section A</option>
-                            <option value="B">Section B</option>
-                            <option value="C">Section C</option>
-                        </select>
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 border-b border-gray-100">
-                                <tr class="text-gray-400 text-[11px] uppercase tracking-wider">
-                                    <th class="px-6 py-4 font-semibold">User</th>
-                                    <th x-show="filterRole === 'student' || filterRole === ''"
-                                        class="px-6 py-4 font-semibold">Program/Year/Section</th>
-                                    <th class="px-6 py-4 font-semibold">Role</th>
-                                    <th class="px-6 py-4 font-semibold text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-50">
-                                <template x-for="user in filteredUsers" :key="user.id">
-                                    <tr class="hover:bg-gray-50/50 transition">
-                                        <td class="px-6 py-4">
-                                            <span
-                                                x-text="`${user.last_name}, ${user.first_name} ${user.middle_name ? user.middle_name.charAt(0) + '.' : ''}`"></span>
-                                            <div class="text-[10px] text-gray-400" x-text="user.school_id"></div>
-                                        </td>
-
-                                        <td x-show="filterRole === 'student' || filterRole === ''" class="px-6 py-4">
-                                            <div class="text-xs text-gray-600">
-                                                <span x-text="user.program || 'N/A'"></span> -
-                                                <span x-text="user.year_level || 'N/A'"></span><span
-                                                    x-text="user.section || ''"></span>
-                                            </div>
-                                        </td>
-
-                                        <td class="px-6 py-4">
-                                            <span
-                                                class="px-2 py-1 bg-gray-100 font-mono font-bold rounded text-[10px] font-bold uppercase"
-                                                x-text="user.role"></span>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="flex justify-end gap-2">
-                                                <button @click="viewActivity(user.id, user.name)"
-                                                    class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
-                                                    <i class="ri-history-line"></i>
-                                                </button>
-                                                <button
-                                                    class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition"><i
-                                                        class="ri-edit-line"></i></button>
-
-                                                <form :action="'/admin/users/' + user.id" method="POST"
-                                                    onsubmit="return confirm('Are you sure?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition"><i
-                                                            class="ri-delete-bin-line"></i></button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </template>
-                                <template x-if="filteredUsers.length === 0">
-                                    <tr>
-                                        <td colspan="4" class="px-6 py-10 text-center text-gray-400 italic text-sm">No
-                                            users found matching your filters.</td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div x-show="logModalOpen"
-                        class="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm"
-                        x-transition.opacity x-cloak>
-
-                        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] m-4"
-                            @click.away="logModalOpen = false">
-                            <div class="p-6 border-b flex justify-between items-center bg-white rounded-t-2xl">
-                                <div>
-                                    <h3 class="text-xl font-bold text-gray-800">Activity Timeline</h3>
-                                    <p class="text-sm text-gray-500">History for <span class="text-black font-bold"
-                                            x-text="selectedUserName"></span></p>
-                                </div>
-                                <button @click="logModalOpen = false"
-                                    class="text-gray-400 hover:text-gray-600 p-2 transition">
-                                    <i class="ri-close-line text-2xl"></i>
-                                </button>
+                <div x-data="{ 
+    showEditModal: false, 
+    editUserData: { 
+        id: '', 
+        first_name: '', 
+        middle_name: '', 
+        last_name: '', 
+        school_id: '',
+        email: '',
+        role: '',
+        program: '',
+        year_level: '',
+        section: ''
+    },
+    openEditModal(user) {
+        this.editUserData = { ...user };
+        this.showEditModal = true;
+    }
+}"
+x-cloak>
+                    <div class="mt-4" x-data="userManagement({{ $users->toJson() }})">
+                        <div
+                            class="mb-6 grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
+                            <div class="relative">
+                                <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" x-model="search" placeholder="Search name..."
+                                    class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none transition">
                             </div>
 
-                            <div class="p-6 overflow-y-auto bg-gray-50/50 flex-1">
-                                <template x-if="loading">
-                                    <div class="flex flex-col items-center justify-center py-20 gap-3">
-                                        <i class="ri-loader-4-line animate-spin text-4xl text-gray-500"></i>
-                                        <p class="text-gray-400 text-sm font-medium">Syncing timeline...</p>
-                                    </div>
-                                </template>
+                            <select x-model="filterRole"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-black focus:border-black">
+                                <option value="">All Roles</option>
+                                <option value="student">Student</option>
+                                <option value="professor">Professor</option>
+                                <option value="admin">Admin</option>
+                            </select>
 
-                                <div class="space-y-8 relative">
-                                    <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+                            <select x-model="filterProgram" :disabled="filterRole !== 'student' && filterRole !== ''"
+                                :class="filterRole !== 'student' && filterRole !== '' ? 'opacity-50 cursor-not-allowed' : ''"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition focus:ring-black focus:border-black">
+                                <option value="">All Programs</option>
+                                <option value="BSCS">BSCS</option>
+                                <option value="BSIT">BSIT</option>
+                            </select>
 
-                                    <template x-for="(group, date) in groupedLogs" :key="date">
-                                        <div class="relative">
-                                            <div class="sticky top-0 z-20 mb-6">
+                            <select x-model="filterYear"
+                                :disabled="filterRole === 'professor' || filterRole === 'admin'"
+                                :class="filterRole === 'professor' || filterRole === 'admin' ? 'opacity-50 cursor-not-allowed' : ''"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition focus:ring-black focus:border-black">
+                                <option value="">All Years</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+
+                            <select x-model="filterSection" :disabled="filterRole !== 'student' && filterRole !== ''"
+                                :class="filterRole !== 'student' && filterRole !== '' ? 'opacity-50 cursor-not-allowed' : ''"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition">
+                                <option value="">All Sections</option>
+                                <option value="A">Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <table class="w-full text-left">
+                                <thead class="bg-gray-50 border-b border-gray-100">
+                                    <tr class="text-gray-400 text-[11px] uppercase tracking-wider">
+                                        <th class="px-6 py-4 font-semibold">User</th>
+                                        <th x-show="filterRole === 'student' || filterRole === ''"
+                                            class="px-6 py-4 font-semibold">Program/Year/Section</th>
+                                        <th class="px-6 py-4 font-semibold">Role</th>
+                                        <th class="px-6 py-4 font-semibold text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    <template x-for="user in filteredUsers" :key="user.id">
+                                        <tr class="hover:bg-gray-50/50 transition">
+                                            <td class="px-6 py-4">
                                                 <span
-                                                    class="bg-white border border-gray-200 text-gray-600 text-[11px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-sm"
-                                                    x-text="formatDateHeader(date)"></span>
+                                                    x-text="`${user.last_name}, ${user.first_name} ${user.middle_name ? user.middle_name.charAt(0) + '.' : ''}`"></span>
+                                                <div class="text-[10px] text-gray-400" x-text="user.school_id"></div>
+                                            </td>
+
+                                            <td x-show="filterRole === 'student' || filterRole === ''"
+                                                class="px-6 py-4">
+                                                <div class="text-xs text-gray-600">
+                                                    <span x-text="user.program || 'N/A'"></span> -
+                                                    <span x-text="user.year_level || 'N/A'"></span><span
+                                                        x-text="user.section || ''"></span>
+                                                </div>
+                                            </td>
+
+                                            <td class="px-6 py-4">
+                                                <span
+                                                    class="px-2 py-1 bg-gray-100 font-mono font-bold rounded text-[10px] font-bold uppercase"
+                                                    x-text="user.role"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <div class="flex justify-end gap-2">
+                                                    <button @click="viewActivity(user.id, user.name)"
+                                                        class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                                                        <i class="ri-history-line"></i>
+                                                    </button>
+                                                    <button @click="openEditModal(user)"
+                                                        class="p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition">
+                                                        <i class="ri-edit-line"></i>
+                                                    </button>
+                                                    <form :action="'/admin/users/' + user.id" method="POST"
+                                                        onsubmit="return confirm('Are you sure?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                            class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition"><i
+                                                                class="ri-delete-bin-line"></i></button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="filteredUsers.length === 0">
+                                        <tr>
+                                            <td colspan="4" class="px-6 py-10 text-center text-gray-400 italic text-sm">
+                                                No
+                                                users found matching your filters.</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div x-show="showEditModal" class="fixed inset-0 z-[100] overflow-y-auto" x-cloak>
+
+                            <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"></div>
+
+                            <div class="flex min-h-full items-center justify-center p-4">
+                                <div class="relative w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-8 shadow-2xl transition-all"
+                                    @click.away="showEditModal = false">
+
+                                    <div class="flex items-center justify-between mb-6">
+                                        <div>
+                                            <h3 class="text-xl font-bold text-gray-900">Edit User Account</h3>
+                                            <p class="text-sm text-gray-500">Update information for ID: <span
+                                                    x-text="editUserData.school_id" class="font-mono font-bold"></span>
+                                            </p>
+                                        </div>
+                                        <button @click="showEditModal = false"
+                                            class="text-gray-400 hover:text-gray-600">
+                                            <i class="ri-close-line text-2xl"></i>
+                                        </button>
+                                    </div>
+
+                                    <form :action="'/admin/users/' + editUserData.id" method="POST">
+                                        @csrf
+                                        @method('PUT')
+
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-gray-400 mb-1">First
+                                                    Name</label>
+                                                <input type="text" name="first_name" x-model="editUserData.first_name"
+                                                    required
+                                                    class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                                             </div>
-
-                                            <div class="space-y-4 ml-4">
-                                                <template x-for="log in group" :key="log.id">
-                                                    <div
-                                                        class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-4 hover:border-gray-300 transition-all relative group">
-                                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 z-10"
-                                                            :class="getIconClass(log.log_type)">
-                                                            <i :class="getIcon(log.log_type)" class="text-lg"></i>
-                                                        </div>
-
-                                                        <div class="flex-1 min-w-0">
-                                                            <div class="flex justify-between items-start gap-2">
-                                                                <div>
-                                                                    <p class="text-sm font-bold text-gray-800 leading-tight"
-                                                                        x-text="log.content"></p>
-                                                                    <p class="text-[11px] mt-1 text-gray-500"
-                                                                        x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 'Navigation Log'">
-                                                                    </p>
-                                                                </div>
-                                                                <span
-                                                                    class="text-[10px] font-mono text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded"
-                                                                    x-text="formatTime(log.created_at)"></span>
-                                                            </div>
-
-                                                            <div
-                                                                class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-gray-400">
-                                                                <template x-if="log.log_type !== 'attendance'">
-                                                                    <span class="flex items-center gap-1">
-                                                                        <i class="ri-time-line"></i>
-                                                                        Duration: <strong class="text-gray-600"
-                                                                            x-text="log.duration_seconds + 's'"></strong>
-                                                                    </span>
-                                                                </template>
-
-                                                                <span class="flex items-center gap-1">
-                                                                    <i class="ri-book-open-line"></i>
-                                                                    Class: <strong class="text-gray-600"
-                                                                        x-text="log.class_name || 'General Session'"></strong>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </template>
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-gray-400 mb-1">Middle
+                                                    Name</label>
+                                                <input type="text" name="middle_name" x-model="editUserData.middle_name"
+                                                    class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            </div>
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-gray-400 mb-1">Last
+                                                    Name</label>
+                                                <input type="text" name="last_name" x-model="editUserData.last_name"
+                                                    required
+                                                    class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                                             </div>
                                         </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-gray-400 mb-1">Email
+                                                    Address</label>
+                                                <input type="email" name="email" x-model="editUserData.email" required
+                                                    class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            </div>
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-gray-400 mb-1">System
+                                                    Role</label>
+                                                <select name="role" x-model="editUserData.role" required
+                                                    class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                                    <option value="student">STUDENT</option>
+                                                    <option value="professor">PROFESSOR</option>
+                                                    <option value="admin">ADMIN</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="editUserData.role === 'student'"
+                                            x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 transform -translate-y-2"
+                                            class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-xl mb-6">
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-blue-400 mb-1">Program</label>
+                                                <input type="text" name="program" x-model="editUserData.program"
+                                                    placeholder="e.g. BSCS"
+                                                    class="w-full px-4 py-2 bg-white border border-blue-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            </div>
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-blue-400 mb-1">Year
+                                                    Level</label>
+                                                <input type="number" name="year_level" x-model="editUserData.year_level"
+                                                    placeholder="e.g. 3"
+                                                    class="w-full px-4 py-2 bg-white border border-blue-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            </div>
+                                            <div>
+                                                <label
+                                                    class="block text-[11px] font-bold uppercase text-blue-400 mb-1">Section</label>
+                                                <input type="text" name="section" x-model="editUserData.section"
+                                                    placeholder="e.g. A"
+                                                    class="w-full px-4 py-2 bg-white border border-blue-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                            </div>
+                                        </div>
+
+                                        <div class="flex justify-end gap-3 mt-8">
+                                            <button type="button" @click="showEditModal = false"
+                                                class="px-6 py-2.5 rounded-xl text-gray-600 font-semibold hover:bg-gray-100 transition">
+                                                Cancel
+                                            </button>
+                                            <button type="submit"
+                                                class="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 transition">
+                                                Update User Account
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div x-show="logModalOpen"
+                            class="fixed inset-0 z-[10000] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm"
+                            x-transition.opacity x-cloak>
+
+                            <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] m-4"
+                                @click.away="logModalOpen = false">
+                                <div class="p-6 border-b flex justify-between items-center bg-white rounded-t-2xl">
+                                    <div>
+                                        <h3 class="text-xl font-bold text-gray-800">Activity Timeline</h3>
+                                        <p class="text-sm text-gray-500">History for <span class="text-black font-bold"
+                                                x-text="selectedUserName"></span></p>
+                                    </div>
+                                    <button @click="logModalOpen = false"
+                                        class="text-gray-400 hover:text-gray-600 p-2 transition">
+                                        <i class="ri-close-line text-2xl"></i>
+                                    </button>
+                                </div>
+
+                                <div class="p-6 overflow-y-auto bg-gray-50/50 flex-1">
+                                    <template x-if="loading">
+                                        <div class="flex flex-col items-center justify-center py-20 gap-3">
+                                            <i class="ri-loader-4-line animate-spin text-4xl text-gray-500"></i>
+                                            <p class="text-gray-400 text-sm font-medium">Syncing timeline...</p>
+                                        </div>
                                     </template>
+
+                                    <div class="space-y-8 relative">
+                                        <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+
+                                        <template x-for="(group, date) in groupedLogs" :key="date">
+                                            <div class="relative">
+                                                <div class="sticky top-0 z-20 mb-6">
+                                                    <span
+                                                        class="bg-white border border-gray-200 text-gray-600 text-[11px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-sm"
+                                                        x-text="formatDateHeader(date)"></span>
+                                                </div>
+
+                                                <div class="space-y-4 ml-4">
+                                                    <template x-for="log in group" :key="log.id">
+                                                        <div
+                                                            class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-4 hover:border-gray-300 transition-all relative group">
+                                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 z-10"
+                                                                :class="getIconClass(log.log_type)">
+                                                                <i :class="getIcon(log.log_type)" class="text-lg"></i>
+                                                            </div>
+
+                                                            <div class="flex-1 min-w-0">
+                                                                <div class="flex justify-between items-start gap-2">
+                                                                    <div>
+                                                                        <p class="text-sm font-bold text-gray-800 leading-tight"
+                                                                            x-text="log.content"></p>
+                                                                        <p class="text-[11px] mt-1 text-gray-500"
+                                                                            x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 'Navigation Log'">
+                                                                        </p>
+                                                                    </div>
+                                                                    <span
+                                                                        class="text-[10px] font-mono text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded"
+                                                                        x-text="formatTime(log.created_at)"></span>
+                                                                </div>
+
+                                                                <div
+                                                                    class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-gray-400">
+                                                                    <template x-if="log.log_type !== 'attendance'">
+                                                                        <span class="flex items-center gap-1">
+                                                                            <i class="ri-time-line"></i>
+                                                                            Duration: <strong class="text-gray-600"
+                                                                                x-text="log.duration_seconds + 's'"></strong>
+                                                                        </span>
+                                                                    </template>
+
+                                                                    <span class="flex items-center gap-1">
+                                                                        <i class="ri-book-open-line"></i>
+                                                                        Class: <strong class="text-gray-600"
+                                                                            x-text="log.class_name || 'General Session'"></strong>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -228,7 +366,7 @@
             </div>
         </main>
     </div>
-    
+
     <script>
         function userManagement(initialUsers) {
             return {
