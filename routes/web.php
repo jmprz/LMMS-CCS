@@ -118,6 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/allowed-sites/{id}', [App\Http\Controllers\AllowedSiteController::class, 'destroy'])->name('allowed-sites.destroy');
         Route::get('/classroom/{id}/blocked-attempts', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedAttempts'])->name('blocked-attempts.index');
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
+        Route::get('/classroom/{class}/students', [ClassroomController::class, 'getStudents'])->name('classroom.students');
     });
 
     // 4. ADMIN ROUTES

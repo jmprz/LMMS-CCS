@@ -200,4 +200,28 @@ public function destroy(LabSession $classroom)
             'is_broadcasting' => $class->is_broadcasting
         ]);
     }
+
+    public function getStudents($classId)
+{
+    $session = LabSession::findOrFail($classId);
+    
+    // Security: only the assigned professor or admin can view
+    if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+        abort(403, 'Unauthorized');
+    }
+
+    $students = $session->students()
+        ->orderBy('last_name')
+        ->get(['users.id', 'users.first_name', 'users.last_name'])
+        ->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->last_name . ', ' . $student->first_name,
+                'status' => 'offline', // will be updated client‑side when streaming
+            ];
+        });
+
+    return response()->json($students);
+}
+
 }
