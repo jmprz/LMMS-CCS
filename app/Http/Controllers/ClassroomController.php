@@ -216,7 +216,10 @@ public function destroy(LabSession $classroom)
         ]);
     }
 
-    public function getStudents($classId)
+    /**
+ * Return JSON list of enrolled students for the live monitor.
+ */
+public function getStudents($classId)
 {
     $session = LabSession::findOrFail($classId);
     
