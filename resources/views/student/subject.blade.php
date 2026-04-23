@@ -299,23 +299,69 @@
                         class="w-full h-full border-none"></iframe>
             </template>
         </div>
-    </div>
-</div>
+        </div>
+        </div>
     </div>
 </div>
                         <div x-show"="activeTab === 'classmates'" class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
                             <i class="ri-group-line text-gray-300 text-6xl mb-4 block"></i>
                             <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">Classmate Roster</p>
                         </div>
-                        <div x-show="activeTab === 'Browser'" class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
-                          <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl mt-12" x-data="browserManager()">
-                                <div class="bg-white p-4 border-b border-gray-100 flex items-center gap-3">
-                                    <span class="bg-gray-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm">
-                                        <i class="ri-google-fill mr-1 text-blue-500"></i> Google Search
-                                    </span>
-                                    <div class="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[10px] text-gray-400 italic font-medium">Secure Research Mode: Access restricted to whitelisted domains.</div>
-                                </div>
-                                <iframe :src="browserUrl" class="w-full h-[500px] border-none"></iframe>
+
+                        <div x-show="activeTab === 'Browser'" class="animate-fade-in" x-data="browserManager()">
+    <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl">
+        <!-- Browser Controls -->
+        <div class="p-4 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+                <!-- Back Button -->
+                <button @click="browserBack()" 
+                        class="p-2 hover:bg-gray-100 rounded-lg transition"
+                        title="Go Back">
+                    <i class="ri-arrow-left-line text-xl"></i>
+                </button>
+                
+                <!-- Forward Button -->
+                <button @click="browserForward()" 
+                        class="p-2 hover:bg-gray-100 rounded-lg transition"
+                        title="Go Forward">
+                    <i class="ri-arrow-right-line text-xl"></i>
+                </button>
+                
+                <!-- Refresh Button -->
+                <button @click="browserRefresh()" 
+                        :class="refreshing ? 'animate-spin' : ''"
+                        class="p-2 hover:bg-gray-100 rounded-lg transition"
+                        title="Refresh Page">
+                    <i class="ri-refresh-line text-xl"></i>
+                </button>
+                
+                <!-- URL Input -->
+                <div class="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
+                    <i class="ri-global-line text-gray-400"></i>
+                    <input type="text" 
+                           x-model="urlInput"
+                           @keyup.enter="navigateTo()"
+                           placeholder="Search Google or enter educational URL..."
+                           class="flex-1 bg-transparent border-0 focus:ring-0 text-sm p-0">
+                </div>
+
+                <!-- Go Button -->
+                <button @click="navigateTo()" 
+                        :disabled="loadingUrl"
+                        :class="loadingUrl ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'"
+                        class="px-6 py-2 text-white rounded-xl font-bold transition text-xs">
+                    <span x-show="!loadingUrl">Go</span>
+                    <span x-show="loadingUrl">...</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Browser Iframe -->
+        <iframe id="dashboard-browser-frame" :src="browserUrl" 
+                class="w-full h-[600px] border-none bg-white"></iframe>
+    </div>
+</div>
+
                             </div>
                         </div>
                     </div>
@@ -435,13 +481,36 @@
 
         async function enterClassroom() {
             try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                const stream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true, 
+                    audio: false 
+                });
+                
                 window.dispatchEvent(new CustomEvent('screen-shared'));
-                studentPeer.call(profPeerId, stream);
+                
+                // Call professor with metadata
+                const call = studentPeer.call(profPeerId, stream, {
+                    metadata: {
+                        studentId: {{ auth()->id() }},
+                        studentName: '{{ auth()->user()->name }}'
+                    }
+                });
 
-                fetch("{{ route('student.mark-present', $class->id) }}", { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }});
-                stream.getVideoTracks()[0].onended = () => { window.dispatchEvent(new CustomEvent('screen-stopped')); location.reload(); };
-            } catch (err) { console.error("Capture Failed", err); }
+                fetch("{{ route('student.mark-present', $class->id) }}", { 
+                    method: 'POST', 
+                    headers: { 
+                        'X-CSRF-TOKEN': csrfToken, 
+                        'Content-Type': 'application/json' 
+                    }
+                });
+                
+                stream.getVideoTracks()[0].onended = () => { 
+                    window.dispatchEvent(new CustomEvent('screen-stopped')); 
+                    location.reload(); 
+                };
+            } catch (err) { 
+                console.error("Capture Failed", err); 
+            }
         }
 
         // Lockdown Workspace logic
@@ -500,154 +569,147 @@
                 }
             }
         }
-
-        function browserManager() {
-            return {
-                browserUrl: 'https://www.google.com/search?igu=1',
-                urlInput: '',
-                currentTaskId: null,
-                loadingUrl: false,
-                
-                async navigateTo() {
-                    let url = this.urlInput.trim();
-                    
-                    // If not a full URL, treat as Google search
-                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                        url = 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
-                    }
-                    
-                    this.loadingUrl = true;
-                    
-                    try {
-                        // Check if URL is allowed
-                        const response = await fetch('/student/browser/check-url', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken
-                            },
-                            body: JSON.stringify({
-                                url: url,
-                                lab_session_id: classId,
-                                task_id: this.currentTaskId
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.allowed) {
-                            // URL is allowed - load it
-                            this.browserUrl = url;
-                            this.urlInput = '';
-                        } else {
-                            // URL is blocked - show blocked page
-                            this.showBlockedPage(data.reason || 'This website is not allowed');
-                        }
-                    } catch (error) {
-                        console.error('URL check failed:', error);
-                        alert('Error checking URL permission');
-                    } finally {
-                        this.loadingUrl = false;
-                    }
-                },
-                
-                showBlockedPage(reason) {
-                    const blockedHtml = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <style>
-                                body {
-                                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    min-height: 100vh;
-                                    margin: 0;
-                                    padding: 20px;
-                                }
-                                .container {
-                                    background: white;
-                                    border-radius: 20px;
-                                    padding: 60px 40px;
-                                    text-align: center;
-                                    max-width: 500px;
-                                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                                }
-                                .icon { font-size: 80px; margin-bottom: 20px; }
-                                h1 { font-size: 28px; font-weight: 900; color: #1a1a1a; margin-bottom: 15px; }
-                                p { font-size: 16px; color: #666; line-height: 1.6; margin-bottom: 20px; }
-                                .message {
-                                    background: #fff3cd;
-                                    border: 2px solid #ffc107;
-                                    border-radius: 12px;
-                                    padding: 20px;
-                                    margin-bottom: 30px;
-                                }
-                                .message strong { color: #856404; font-weight: 700; }
-                                .suggestions {
-                                    margin-top: 30px;
-                                    padding-top: 30px;
-                                    border-top: 1px solid #eee;
-                                }
-                                .suggestion-item {
-                                    background: #f8f9fa;
-                                    padding: 8px 16px;
-                                    border-radius: 20px;
-                                    font-size: 13px;
-                                    color: #667eea;
-                                    font-weight: 600;
-                                    display: inline-block;
-                                    margin: 5px;
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="icon">🚫</div>
-                                <h1>Access Blocked</h1>
-                                
-                                <div class="message">
-                                    <strong>${reason}</strong>
-                                </div>
-                                
-                                <p>
-                                    This website is not on the approved whitelist for this class. 
-                                    Your professor controls which sites you can access during lab sessions.
-                                </p>
-                                
-                                <p style="font-size: 14px; color: #999;">
-                                    ⚠️ This attempt has been logged.
-                                </p>
-                                
-                                <div class="suggestions">
-                                    <h3 style="font-size: 14px; color: #999; text-transform: uppercase; margin-bottom: 15px;">Try These Instead:</h3>
-                                    <span class="suggestion-item">Google</span>
-                                    <span class="suggestion-item">Wikipedia</span>
-                                    <span class="suggestion-item">W3Schools</span>
-                                    <span class="suggestion-item">Stack Overflow</span>
-                                </div>
-                            </div>
-                        </body>
-                        </html>
-                    `;
-                    
-                    // Create blob URL for blocked page
-                    const blob = new Blob([blockedHtml], { type: 'text/html' });
-                    this.browserUrl = URL.createObjectURL(blob);
-                },
-                
-                refresh() {
-                    const frame = document.getElementById('lockdown-frame');
-                    if (frame) {
-                        frame.src = this.browserUrl;
-                    }
-                }
-            }
-        }
     </script>
+
+    <script>
+    function browserManager() {
+    return {
+        // Initial state
+        browserUrl: 'https://www.google.com/search?igu=1',
+        urlInput: '',
+        loadingUrl: false,
+        refreshing: false,
+        
+        // Manual history tracking (bypasses cross-origin restrictions)
+        historyStack: ['https://www.google.com/search?igu=1'],
+        historyIndex: 0,
+
+        /**
+         * Navigate to the URL entered in the input field.
+         * @param {boolean} preserveHistory - Whether to add this navigation to the history stack.
+         */
+        navigateTo(preserveHistory = true) {
+            let url = this.urlInput.trim();
+            if (!url) return;
+            
+            // Convert search queries / partial URLs
+            if (!url.startsWith('http') && (url.includes(' ') || !url.includes('.'))) {
+                url = 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
+            } else if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+            
+            // Force Google IGU for embeddability
+            if (url.includes('google.com') && !url.includes('igu=1')) {
+                url += (url.includes('?') ? '&' : '?') + 'igu=1';
+            }
+
+            this.loadingUrl = true;
+            
+            if (preserveHistory) {
+                // Remove any forward entries before pushing new URL
+                this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+                this.historyStack.push(url);
+                this.historyIndex = this.historyStack.length - 1;
+            }
+            
+            this.browserUrl = url;
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) frame.src = url;
+            
+            this.urlInput = ''; // Clear input after navigation
+            this.loadingUrl = false;
+        },
+        
+        /**
+         * Go back one step in the manual history.
+         */
+        browserBack() {
+            if (this.historyIndex > 0) {
+                this.historyIndex--;
+                this.loadUrlFromHistory(this.historyStack[this.historyIndex]);
+            }
+        },
+        
+        /**
+         * Go forward one step in the manual history.
+         */
+        browserForward() {
+            if (this.historyIndex < this.historyStack.length - 1) {
+                this.historyIndex++;
+                this.loadUrlFromHistory(this.historyStack[this.historyIndex]);
+            }
+        },
+        
+        /**
+         * Load a URL from the history stack without adding a new entry.
+         */
+        loadUrlFromHistory(url) {
+            this.loadingUrl = true;
+            this.browserUrl = url;
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) frame.src = url;
+            this.loadingUrl = false;
+        },
+        
+        /**
+         * Refresh the current page.
+         */
+        browserRefresh() {
+            this.refreshing = true;
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) {
+                const currentUrl = frame.src;
+                frame.src = 'about:blank';
+                setTimeout(() => {
+                    frame.src = currentUrl;
+                    this.refreshing = false;
+                }, 100);
+            }
+        },
+        
+        /**
+         * Quick navigation helper (e.g., from bookmarks).
+         */
+        quickNav(url) {
+            this.urlInput = url;
+            this.navigateTo();
+        },
+        
+        /**
+         * Display a blocked page message (unchanged).
+         */
+        showBlockedPage(reason) {
+            const blockedHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: sans-serif; background: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+                        .container { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; }
+                        .icon { font-size: 50px; }
+                        .message { color: #856404; background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffeeba; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="icon">🚫</div>
+                        <h1>Access Blocked</h1>
+                        <div class="message"><strong>${reason}</strong></div>
+                        <p>This website is not on the approved whitelist.</p>
+                    </div>
+                </body>
+                </html>
+            `;
+            const blob = new Blob([blockedHtml], { type: 'text/html' });
+            this.browserUrl = URL.createObjectURL(blob);
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) frame.src = this.browserUrl;
+        }
+    };
+}
+</script>
 
     <style>
         @keyframes fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
