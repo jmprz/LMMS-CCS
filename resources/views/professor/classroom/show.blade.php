@@ -53,7 +53,7 @@
                 </div>
 
 
-                <div x-data="{ activeTab: 'monitoring' }" class="mt-8">
+                <div class="mt-8" x-data="{ activeTab: 'monitoring' }">
                     <div class="flex space-x-1 border-b border-gray-200">
                         <button @click="activeTab = 'monitoring'"
                             :class="activeTab === 'monitoring' ? 'border-b-2 border-black font-bold' : 'text-gray-500'"
@@ -206,119 +206,18 @@
                             </div>
 
                             @if($session->is_active)
-                <div x-data="liveMonitor({{ $class->id }})" x-init="init()"
-                    class="bg-white p-6 rounded-xl shadow border border-gray-100">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="font-bold text-lg text-gray-800">Live Laboratory Monitor</h2>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full">LIVE</span>
-                            <button @click="refresh()" :disabled="loadingRoster"
-                                    class="p-2 hover:bg-gray-100 rounded-lg transition"
-                                    title="Refresh student list">
-                                <i class="ri-refresh-line text-xl" :class="{ 'animate-spin': loadingRoster }"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-96">
-                        {{-- Left: Student Roster --}}
-                        <div class="border border-gray-200 rounded-lg overflow-y-auto p-3 bg-gray-50">
-                            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                                Students (<span x-text="roster.length"></span>)
-                            </h3>
-                            <template x-if="loadingRoster">
-                                <div class="text-center py-8 text-gray-400">Loading roster...</div>
-                            </template>
-                            <template x-if="!loadingRoster && roster.length === 0">
-                                <div class="text-center py-8 text-gray-400">No students enrolled</div>
-                            </template>
-                            <ul class="space-y-1">
-                                <template x-for="student in roster" :key="student.id">
-                                    <li class="flex items-center justify-between p-2 bg-white rounded-md border border-gray-100">
-                                        <div class="flex items-center gap-2">
-                                            <span :class="student.status === 'online' ? 'text-green-600' : 'text-gray-400'">
-                                                <i class="ri-user-fill"></i>
-                                            </span>
-                                            <span class="text-sm font-medium" x-text="student.name"></span>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-1 rounded-full"
-                                            :class="student.status === 'online' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
-                                            x-text="student.status || 'offline'"></span>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
-
-                        {{-- Right: Student Grid (All Students with Status) --}}
-<div class="border border-gray-200 rounded-lg overflow-y-auto p-3 bg-gray-50"
-     x-data="{ fullscreenStream: null }">
-    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-        Student Screens (<span x-text="roster.length"></span>)
-    </h3>
-
-    {{-- Grid of all students --}}
-    <div class="grid grid-cols-2 gap-3 auto-rows-fr">
-        <template x-for="student in roster" :key="student.id">
-            <div class="bg-white rounded-lg border border-gray-200 p-2 flex flex-col">
-                <div class="flex items-center justify-between mb-1 px-1">
-                    <span class="text-xs font-bold truncate" x-text="student.name"></span>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full"
-                          :class="student.status === 'online' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
-                          x-text="student.status || 'offline'"></span>
-                </div>
-
-                {{-- Active Stream: Video with maximize button --}}
-                <template x-if="streams[student.id]">
-                    <div class="relative w-full aspect-square bg-black rounded-md overflow-hidden group">
-                        <video :id="'video-' + student.id" autoplay playsinline muted
-                               class="absolute inset-0 w-full h-full object-contain"></video>
-                        {{-- Maximize button overlay --}}
-                        <button @click="fullscreenStream = student.id"
-                                class="absolute top-2 right-2 bg-black/60 hover:bg-black text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition z-10"
-                                title="Maximize screen">
-                            <i class="ri-fullscreen-line text-lg"></i>
-                        </button>
-                    </div>
-                </template>
-
-                {{-- Offline Placeholder --}}
-                <template x-if="!streams[student.id]">
-                    <div class="relative w-full aspect-square bg-gray-100 rounded-md flex items-center justify-center border-2 border-dashed border-gray-300">
-                        <div class="text-center">
-                            <i class="ri-user-off-line text-3xl text-gray-400"></i>
-                            <p class="text-[10px] text-gray-400 font-bold mt-1">OFFLINE</p>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </template>
-    </div>
-
-    {{-- Empty state (if no students enrolled) --}}
-    <template x-if="roster.length === 0">
-        <div class="text-center py-8 text-gray-400">No students enrolled</div>
-    </template>
-
-    {{-- Fullscreen Modal --}}
-    <template x-if="fullscreenStream">
-        <div class="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4"
-             @click.self="fullscreenStream = null"
-             @keydown.escape.window="fullscreenStream = null">
-            <button @click="fullscreenStream = null"
-                    class="absolute top-6 right-6 text-white hover:text-gray-300 z-10 p-2">
-                <i class="ri-close-line text-4xl"></i>
+    <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-lg text-gray-800">Live Laboratory Monitor</h2>
+            <button id="refresh-monitor-btn" 
+                    class="p-2 hover:bg-gray-100 rounded-lg transition"
+                    title="Refresh student list">
+                <i class="ri-refresh-line text-xl"></i>
             </button>
-            <div class="w-full h-full flex items-center justify-center">
-                <video :id="'fullscreen-video-' + fullscreenStream" autoplay playsinline muted
-                       class="max-w-full max-h-full object-contain"></video>
-            </div>
         </div>
-    </template>
-</div>
-                        </div>
-                    </div>
-                </div>
-            @else
+        @include('professor.partials.monitor-grid', ['activeStudents' => $activeStudents])
+    </div>
+@else
                 <div class="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed">
                     <p class="text-gray-500 font-bold">Session is currently offline. Click "Start Session" to allow students to join.</p>
                 </div>
@@ -1048,13 +947,18 @@
                                 },
 
                                 async loadTasks() {
-                                    try {
-                                        const res = await fetch('/student/classroom/{{ $session->id }}/live-tasks');
+                                try {
+                                    const res = await fetch('{{ route("professor.classroom.tasks", $session->id) }}');
+                                    if (res.ok) {
                                         this.tasks = await res.json();
-                                    } catch (error) {
-                                        console.error('Error loading tasks:', error);
+                                    } else {
+                                        this.tasks = [];
                                     }
-                                },
+                                } catch (error) {
+                                    console.warn('Could not load tasks for site whitelist.');
+                                    this.tasks = [];
+                                }
+                            },
 
                                 async addSite() {
                                     if (!this.newSite.domain || !this.newSite.name) {
@@ -1195,137 +1099,7 @@
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-        {{-- LIVE MONITOR ALPINE COMPONENT --}}
-<script>
-        document.addEventListener('alpine:init', () => {
-    Alpine.data('liveMonitor', (classId) => ({
-        streams: {},
-        roster: [],
-        loadingRoster: false,
-
-        get activeStreamsCount() {
-            return Object.keys(this.streams).length;
-        },
-
-        async init() {
-            console.log('🟢 liveMonitor init with classId:', classId);
-            // Store global reference for PeerJS handler
-            window.liveMonitorInstance = this;
-            if (!classId) return;
-            await this.fetchRoster();
-            setInterval(() => this.fetchRoster(), 30000);
-        },
-
-        addStream(studentId, name, call, stream) {
-            console.log(`➕ addStream called for ${studentId} (${name})`);
-            if (this.streams[studentId]) {
-                this.streams[studentId].call.close();
-            }
-            // Store stream data - this triggers Alpine reactivity
-            this.streams[studentId] = { 
-                name, 
-                call, 
-                stream,
-                id: studentId 
-            };
-            this.$nextTick(() => {
-            const video = document.getElementById(`video-${studentId}`);
-            if (video) {
-                video.srcObject = stream;
-                video.play().catch(e => console.warn('Play error:', e));
-            }
-            // Also update fullscreen video if modal is open for this student
-            const fsVideo = document.getElementById(`fullscreen-video-${studentId}`);
-            if (fsVideo) {
-                fsVideo.srcObject = stream;
-                fsVideo.play().catch(e => console.warn('Fullscreen play error:', e));
-            }
-        });
-            
-            this.updateStudentStatus(studentId, 'online');
-
-            // Ensure student appears in roster
-            const existing = this.roster.find(s => s.id == studentId);
-            if (!existing) {
-                this.roster.push({
-                    id: studentId,
-                    name: name,
-                    status: 'online'
-                });
-            }
-
-            // Attach video after DOM update
-            this.$nextTick(() => {
-                const video = document.getElementById(`video-${studentId}`);
-                if (video) {
-                    video.srcObject = stream;
-                    video.play().catch(e => console.warn('Play error:', e));
-                } else {
-                    console.warn(`Video element not found for ${studentId}, retrying...`);
-                    // Retry a few times
-                    let attempts = 0;
-                    const interval = setInterval(() => {
-                        const vid = document.getElementById(`video-${studentId}`);
-                        if (vid) {
-                            vid.srcObject = stream;
-                            vid.play().catch(e => console.warn('Play error:', e));
-                            clearInterval(interval);
-                        } else if (++attempts > 10) {
-                            clearInterval(interval);
-                            console.error(`Failed to find video element for ${studentId}`);
-                        }
-                    }, 200);
-                }
-            });
-        },
-
-        removeStream(studentId) {
-            console.log(`➖ removeStream for ${studentId}`);
-            if (this.streams[studentId]) {
-                this.streams[studentId].call.close();
-                delete this.streams[studentId];
-            }
-            this.updateStudentStatus(studentId, 'offline');
-        },
-
-        updateStudentStatus(studentId, status) {
-            const student = this.roster.find(s => s.id == studentId);
-            if (student) student.status = status;
-        },
-
-        async fetchRoster() {
-            this.loadingRoster = true;
-            try {
-                const response = await fetch(`/professor/classroom/${classId}/students`);
-                if (!response.ok) throw new Error('Failed to fetch roster');
-                const data = await response.json();
-                this.roster = data.map(s => ({
-                    ...s,
-                    status: this.streams[s.id] ? 'online' : (s.status || 'offline')
-                }));
-                // Add any streaming students missing from roster
-                Object.entries(this.streams).forEach(([id, streamData]) => {
-                    if (!this.roster.find(s => s.id == id)) {
-                        this.roster.push({ id, name: streamData.name, status: 'online' });
-                    }
-                });
-            } catch (error) {
-                console.warn('Roster fetch failed, using streams only');
-                this.roster = Object.entries(this.streams).map(([id, streamData]) => ({
-                    id, name: streamData.name, status: 'online'
-                }));
-            } finally {
-                this.loadingRoster = false;
-            }
-        },
-
-        refresh() {
-            console.log('🔄 Manual refresh triggered');
-            this.fetchRoster();
-        }
-    }));
-});
-</script>
+        
 
     <script type="module">
         let receiverPeer = null;   // Phone 1: For receiving student screens

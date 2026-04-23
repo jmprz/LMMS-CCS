@@ -184,6 +184,21 @@ public function destroy(LabSession $classroom)
             'is_active' => $class->is_active
         ]);
     }
+    public function getStudentsStatus($id)
+    {
+        $session = LabSession::with('students')->findOrFail($id);
+        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403);
+        }
+        $students = $session->students()->get()->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->last_name . ', ' . $student->first_name,
+                'is_present' => (bool) $student->pivot->is_present,
+            ];
+        });
+        return response()->json($students);
+    }
 
     // 🟢 2. Handles the "Share My Screen / Stop Broadcasting" Button
     public function broadcast(Request $request, $id)

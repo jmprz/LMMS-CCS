@@ -68,10 +68,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // 3. PROFESSOR ROUTES
     Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
-
+        Route::get('/classroom/{id}/tasks', [ClassroomController::class, 'getTasks'])->name('professor.classroom.tasks');
         // Professor Dashboard
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-
+        Route::get('/classroom/{id}/students-status', [ClassroomController::class, 'getStudentsStatus'])->name('professor.classroom.students-status');
         // Classroom Routes
         Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
         Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
