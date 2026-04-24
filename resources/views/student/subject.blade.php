@@ -185,6 +185,49 @@
                                 </div>
                             </template>
                         </div>
+
+                          <div x-show="activeTab === 'quizzes'" class="space-y-6">
+    @if(isset($class->quizzes) && $class->quizzes->count() > 0)
+        <div class="grid grid-cols-1 gap-4">
+            @foreach($class->quizzes as $quiz)
+                @php
+                    // Check if the current student has an attempt for this quiz
+                    $hasAttempt = $quiz->attempts()->where('user_id', auth()->id())->exists();
+                @endphp
+                
+                <div class="bg-white p-6 rounded-2xl border {{ $hasAttempt ? 'border-green-200 bg-green-50/30' : 'border-gray-200' }} flex justify-between items-center group transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 {{ $hasAttempt ? 'bg-green-100 text-green-600' : 'bg-amber-50 text-amber-600' }} rounded-xl flex items-center justify-center">
+                            <i class="{{ $hasAttempt ? 'ri-checkbox-circle-line' : 'ri-questionnaire-line' }} text-2xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-900">{{ $quiz->title }}</h4>
+                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                {{ $quiz->questions_count }} Questions • {{ $quiz->duration }} Minutes
+                            </p>
+                        </div>
+                    </div>
+
+                    @if($hasAttempt)
+                        <span class="px-6 py-3 bg-green-100 text-green-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                            <i class="ri-check-line"></i> Completed
+                        </span>
+                    @else
+                        <a href="{{ route('student.quizzes.attempt', $quiz->id) }}" 
+                           class="bg-[#383838] text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition">
+                            Start Quiz
+                        </a>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @else
+        <div class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
+            <i class="ri-survey-line text-gray-300 text-6xl mb-4 block"></i>
+            <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">No quizzes have been posted yet</p>
+        </div>
+    @endif
+</div>
 <div x-data="{ 
         showViewer: false, 
         currentMaterial: { title: '', type: '', url: '', id: null },
@@ -370,85 +413,125 @@
         </main>
     </div>
 
-    <div id="task-modal" 
-         class="hidden fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-         x-data="taskModal()"
-         @click.self="closeModal()">
-        
-        <div class="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in" @click.stop>
-            <div class="border-b border-gray-100 p-8 flex justify-between items-start">
-                <div>
-                    <h2 class="text-3xl font-black text-gray-900 tracking-tight" x-text="currentTask?.title"></h2>
-                    <p class="text-sm text-gray-500 mt-2 font-medium" x-text="currentTask?.description"></p>
+     <div id="task-modal" 
+     class="hidden fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+     x-data="taskModal()"
+     @click.self="closeModal()">
+    
+    <div class="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in" @click.stop>
+        <div class="border-b border-gray-100 p-8 flex justify-between items-start">
+            <div>
+                <h2 class="text-3xl font-black text-gray-900 tracking-tight" x-text="currentTask?.title"></h2>
+                <p class="text-sm text-gray-500 mt-2 font-medium" x-text="currentTask?.description"></p>
+            </div>
+            <button @click="closeModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:text-black transition">
+                <i class="ri-close-line text-xl"></i>
+            </button>
+        </div>
+
+        <div class="p-8 space-y-8">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Max Weight</span>
+                    <span class="text-lg font-black text-purple-600" x-text="currentTask?.points + ' PTS'"></span>
                 </div>
-                <button @click="closeModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:text-black transition">
-                    <i class="ri-close-line text-xl"></i>
-                </button>
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Due Date</span>
+                    <span class="text-sm font-bold text-gray-800" x-text="formatDeadline(currentTask?.deadline)"></span>
+                </div>
             </div>
 
-            <div class="p-8 space-y-8">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Max Weight</span>
-                        <span class="text-lg font-black text-purple-600" x-text="currentTask?.points + ' PTS'"></span>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Due Date</span>
-                        <span class="text-sm font-bold text-gray-800" x-text="formatDeadline(currentTask?.deadline)"></span>
-                    </div>
-                </div>
-
-                <div x-show="currentTask?.current_user_submission" class="space-y-4">
-                    <h3 class="font-black text-xs text-gray-400 uppercase tracking-widest ml-1">Your Submission</h3>
-                    
-                    <div class="bg-white p-6 rounded-[30px] border-2 border-gray-100 shadow-sm">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400"><i class="ri-file-3-line text-2xl"></i></div>
-                                <div>
-                                    <p class="font-bold text-gray-900 text-sm" x-text="currentTask?.current_user_submission?.original_filename"></p>
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Received: <span x-text="formatDate(currentTask?.current_user_submission?.submitted_at)"></span></p>
-                                </div>
+            <div x-show="currentTask?.current_user_submission" class="space-y-4">
+                <h3 class="font-black text-xs text-gray-400 uppercase tracking-widest ml-1">Your Submission</h3>
+                
+                <div class="bg-white p-6 rounded-[30px] border-2 border-gray-100 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400">
+                                <i class="ri-file-3-line text-2xl"></i>
                             </div>
-                            <a :href="'/' + currentTask?.current_user_submission?.file_path" target="_blank" class="p-3 bg-gray-50 rounded-xl text-gray-400 hover:text-black transition-colors"><i class="ri-download-2-line"></i></a>
-                        </div>
-
-                        <div x-show="currentTask?.current_user_submission?.grade !== null" class="p-6 bg-gradient-to-br from-blue-600 to-[#383838] rounded-3xl text-white shadow-xl shadow-blue-100 mb-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-[10px] font-black uppercase tracking-widest opacity-80">Official Grade</span>
-                                <span class="text-3xl font-black" x-text="currentTask?.current_user_submission?.grade + ' / ' + currentTask?.points"></span>
-                            </div>
-                            <div x-show="currentTask?.current_user_submission?.feedback" class="pt-4 border-t border-white/20">
-                                <p class="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">Professor Feedback</p>
-                                <p class="text-sm italic font-medium leading-relaxed" x-text="currentTask?.current_user_submission?.feedback"></p>
+                            <div>
+                                <p class="font-bold text-gray-900 text-sm" x-text="currentTask?.current_user_submission?.original_filename"></p>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                                    Received: <span x-text="formatDate(currentTask?.current_user_submission?.submitted_at)"></span>
+                                </p>
                             </div>
                         </div>
+                        <a :href="'/' + currentTask?.current_user_submission?.file_path" target="_blank" class="p-3 bg-gray-50 rounded-xl text-gray-400 hover:text-black transition-colors">
+                            <i class="ri-download-2-line"></i>
+                        </a>
+                    </div>
 
-                        <div x-show="currentTask?.current_user_submission?.grade === null">
-                            <button @click="showResubmitForm = !showResubmitForm" class="w-full py-4 bg-[#383838] text-white font-black rounded-2xl hover:bg-black transition text-xs uppercase tracking-widest shadow-lg shadow-gray-200">
-                                <i class="ri-edit-2-line mr-2"></i> Update Submission
+                    <div x-show="currentTask?.current_user_submission?.grade !== null" class="p-6 bg-gradient-to-br from-blue-600 to-[#383838] rounded-3xl text-white shadow-xl shadow-blue-100 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-black uppercase tracking-widest opacity-80">Official Grade</span>
+                            <span class="text-3xl font-black" x-text="currentTask?.current_user_submission?.grade + ' / ' + currentTask?.points"></span>
+                        </div>
+                        <div x-show="currentTask?.current_user_submission?.feedback" class="pt-4 border-t border-white/20">
+                            <p class="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">Professor Feedback</p>
+                            <p class="text-sm italic font-medium leading-relaxed" x-text="currentTask?.current_user_submission?.feedback"></p>
+                        </div>
+                    </div>
+
+                    <div x-show="currentTask?.current_user_submission?.grade === null">
+                        <button @click="showResubmitForm = !showResubmitForm" class="w-full py-4 bg-[#383838] text-white font-black rounded-2xl hover:bg-black transition text-xs uppercase tracking-widest shadow-lg shadow-gray-200">
+                            <i class="ri-edit-2-line mr-2"></i> Update Submission
+                        </button>
+
+                        <form x-show="showResubmitForm" @submit.prevent="resubmitTask($event)" class="mt-6 p-6 bg-amber-50 rounded-[30px] border-2 border-dashed border-amber-200 animate-fade-in" enctype="multipart/form-data">
+                            <p class="text-xs text-amber-800 font-bold mb-4 flex items-center gap-2"><i class="ri-error-warning-fill"></i> Previous work will be overwritten.</p>
+                            <input type="file" name="submission" required class="block w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-600 file:text-white mb-4">
+                            <button type="submit" :disabled="resubmitting" class="w-full py-3 bg-green-600 text-white font-black rounded-xl hover:bg-green-700 transition text-[10px] uppercase tracking-widest">
+                                <span x-show="!resubmitting">Confirm Update</span>
+                                <span x-show="resubmitting">Syncing Server...</span>
                             </button>
-
-                            <form x-show="showResubmitForm" @submit.prevent="resubmitTask()" class="mt-6 p-6 bg-amber-50 rounded-[30px] border-2 border-dashed border-amber-200 animate-fade-in" enctype="multipart/form-data">
-                                <p class="text-xs text-amber-800 font-bold mb-4 flex items-center gap-2"><i class="ri-error-warning-fill"></i> Previous work will be overwritten.</p>
-                                <input type="file" name="submission" required class="block w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-600 file:text-white mb-4">
-                                <button type="submit" :disabled="resubmitting" class="w-full py-3 bg-green-600 text-white font-black rounded-xl hover:bg-green-700 transition text-[10px] uppercase tracking-widest">
-                                    <span x-show="!resubmitting">Confirm Update</span>
-                                    <span x-show="resubmitting">Syncing Server...</span>
-                                </button>
-                            </form>
-                        </div>
+                        </form>
                     </div>
                 </div>
+            </div>
 
-                <div x-show="!currentTask?.current_user_submission" class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[30px] p-12 text-center">
-                    <i class="ri-folder-info-line text-5xl text-gray-300 mb-4 block"></i>
-                    <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">No Submission Detected</p>
-                    <p class="text-xs text-gray-400 mt-2 font-medium">Please enter the classroom to complete this laboratory task.</p>
-                </div>
+            <div x-show="!currentTask?.current_user_submission" class="space-y-4">
+                <h3 class="font-black text-xs text-gray-400 uppercase tracking-widest ml-1">New Submission</h3>
+                
+                <form @submit.prevent="resubmitTask($event)" 
+                      enctype="multipart/form-data"
+                      x-data="{ fileName: '' }"
+                      class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[30px] p-8 text-center transition-all hover:border-blue-400 group">
+                    
+                    <label class="block cursor-pointer">
+                        <div class="space-y-4">
+                            <div class="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center mx-auto text-gray-400 group-hover:text-blue-500 transition-colors">
+                                <i class="ri-upload-cloud-2-line text-3xl"></i>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm font-bold text-gray-700" x-text="fileName ? fileName : 'Click to browse files'"></p>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                                    <span x-show="!fileName">Select your laboratory work</span>
+                                    <span x-show="fileName" class="text-green-600">Ready to upload</span>
+                                </p>
+                            </div>
+                        </div>
+                        <input type="file" name="submission" required class="hidden" @change="fileName = $event.target.files[0].name">
+                    </label>
+
+                    <button type="submit" 
+                            :disabled="resubmitting"
+                            class="mt-8 w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition text-xs uppercase tracking-widest shadow-xl shadow-blue-100 flex items-center justify-center gap-3">
+                        <span x-show="!resubmitting">Submit Work</span>
+                        <template x-if="resubmitting">
+                            <div class="flex items-center gap-2">
+                                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Sending...
+                            </div>
+                        </template>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
+</div>
+
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>

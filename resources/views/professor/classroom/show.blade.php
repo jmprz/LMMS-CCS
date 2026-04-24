@@ -948,7 +948,7 @@
 
                                 async loadTasks() {
                                 try {
-                                    const res = await fetch('{{ route("professor.classroom.tasks", $session->id) }}');
+                                    const res = await fetch('{{ route("professor.tasks.store", $session->id) }}');
                                     if (res.ok) {
                                         this.tasks = await res.json();
                                     } else {
