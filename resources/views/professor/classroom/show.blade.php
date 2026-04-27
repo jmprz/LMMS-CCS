@@ -948,15 +948,12 @@
 
                                 async loadTasks() {
                                 try {
-                                    const res = await fetch('{{ route("professor.classroom.tasks", $session->id) }}');
-                                    if (res.ok) {
-                                        this.tasks = await res.json();
-                                    } else {
-                                        this.tasks = [];
-                                    }
+                                    const res = await fetch('/professor/classroom/{{ $session->id }}/tasks');
+                                    const data = await res.json();
+                                    this.tasks = Array.isArray(data) ? data : [];
                                 } catch (error) {
-                                    console.warn('Could not load tasks for site whitelist.');
-                                    this.tasks = [];
+                                    console.error('Error loading tasks:', error);
+                                    this.tasks = []; // Prevent undefined errors
                                 }
                             },
 

@@ -62,13 +62,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
         Route::get('/refresh-statuses', [StudentClassController::class, 'refreshClassStatuses'])->name('refresh-class-statuses');
         Route::post('/browser/check-url', [App\Http\Controllers\BrowserProxyController::class, 'checkUrl'])->name('browser.check');
-    Route::post('/materials/{material}/log-start', [MaterialController::class, 'logStart'])->name('materials.log-start');
-    Route::post('/materials/{material}/log-end', [MaterialController::class, 'logEnd'])->name('materials.log-end');
-        });
+        Route::post('/materials/{material}/log-start', [MaterialController::class, 'logStart'])->name('materials.log-start');
+        Route::post('/materials/{material}/log-end', [MaterialController::class, 'logEnd'])->name('materials.log-end');
+            });
 
-    // 3. PROFESSOR ROUTES
-    Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
-        Route::get('/classroom/{id}/tasks', [ClassroomController::class, 'getTasks'])->name('professor.classroom.tasks');
+        // 3. PROFESSOR ROUTES
+        Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
+        Route::get('/classroom/{id}/tasks', [ClassroomController::class, 'getTasks'])->name('classroom.tasks');
         // Professor Dashboard
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
         Route::get('/classroom/{id}/students-status', [ClassroomController::class, 'getStudentsStatus'])->name('professor.classroom.students-status');
@@ -118,6 +118,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/allowed-sites/{id}', [App\Http\Controllers\AllowedSiteController::class, 'destroy'])->name('allowed-sites.destroy');
         Route::get('/classroom/{id}/blocked-attempts', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedAttempts'])->name('blocked-attempts.index');
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
+        Route::get('/classroom/{id}/active-students', function ($id) {
+        $session = \App\Models\LabSession::findOrFail($id);
+        
+        // Get students who are currently present (screen sharing)
+        $activeStudents = $session->students()
+            ->wherePivot('is_present', true)
+            ->wherePivot('updated_at', '>=', now()->subMinutes(2))
+            ->pluck('user_id')
+            ->toArray();
+        
+        return response()->json([
+            'activeStudents' => $activeStudents
+        ]);
+    })->name('classroom.active-students');
         Route::get('/classroom/{class}/students', [ClassroomController::class, 'getStudents'])->name('classroom.students');
     });
 

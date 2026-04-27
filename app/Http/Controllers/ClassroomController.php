@@ -242,4 +242,13 @@ public function getStudents($classId)
     return response()->json($students);
 }
 
+public function getTasks($id)
+{
+    $tasks = \App\Models\Task::where('subject_id', $id)
+        ->latest()
+        ->get(['id', 'title', 'description', 'deadline', 'points']);
+    
+    return response()->json($tasks);
+}
+
 }
