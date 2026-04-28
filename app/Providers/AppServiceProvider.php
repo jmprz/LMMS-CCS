@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
 {
     // Only force HTTPS if you are in production OR if you are using a tunnel 
     // that you know is serving HTTPS.
-    if ($this->app->environment('production')) {
+    if (app()->environment('production') || env('FORCE_HTTPS', false)) {
         URL::forceScheme('https');
     }
 }
