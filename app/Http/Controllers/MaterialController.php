@@ -39,6 +39,13 @@ class MaterialController extends Controller
         'content' => $contentPath,
     ]);
 
+    if ($request->ajax() || $request->wantsJson()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Material posted successfully!'
+        ]);
+    }
+
     return back()->with('success', 'Material posted successfully!');
 }
 

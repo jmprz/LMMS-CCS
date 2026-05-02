@@ -7,19 +7,19 @@ use App\Models\AssessmentResult;
 use App\Models\StudentActivity;
 use App\Models\Task;
 use App\Models\Submission;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
     public function index()
-{
-    // Eager load the labSession relationship so you can display session names/titles
-    $tasks = \App\Models\Task::with('labSession')->get();
-    
-    return view('admin.tasks.index', compact('tasks'));
-}
+    {
+        // Eager load the labSession relationship so you can display session names/titles
+        $tasks = \App\Models\Task::with('labSession')->get();
 
-   public function submitTask(Request $request, $taskId)
+        return view('admin.tasks.index', compact('tasks'));
+    }
+
+    public function submitTask(Request $request, $taskId)
     {
         $userId = Auth::id();
         $task = Task::findOrFail($taskId);
@@ -70,13 +70,13 @@ class TaskController extends Controller
         // Note: For lab tasks, accuracy might be 100% on submission 
         // or calculated later by the professor.
         $totalPoints = $task->points ?? 100;
-        
+
         AssessmentResult::updateOrCreate(
             ['user_id' => $userId, 'task_id' => $taskId],
             [
                 'score' => 0, // Placeholder until graded by professor
-                'answer_accuracy' => 0, 
-                'response_time_ms' => $durationSeconds * 1000 
+                'answer_accuracy' => 0,
+                'response_time_ms' => $durationSeconds * 1000
             ]
         );
 
@@ -108,6 +108,10 @@ class TaskController extends Controller
             'subject_id',
             'points'
         ]));
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->back()->with('success', 'Task created successfully!');
     }
