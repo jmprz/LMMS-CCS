@@ -65,6 +65,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/materials/{material}/log-start', [MaterialController::class, 'logStart'])->name('materials.log-start');
         Route::post('/materials/{material}/log-end', [MaterialController::class, 'logEnd'])->name('materials.log-end');
             });
+   Route::get('/student/classroom/{id}/live-quizzes', function ($id) {
+    return App\Models\Quiz::where('subject_id', $id)
+        // ONLY show quizzes where the start time has passed
+        ->where('published_at', '<=', now()) 
+        ->with(['attempts' => function ($query) {
+            $query->where('user_id', auth()->id());
+        }])
+        ->latest()
+        ->get()
+        ->map(function ($quiz) {
+            $attempt = $quiz->attempts->first();
+            return [
+                'id' => $quiz->id,
+                'title' => $quiz->title,
+                'expires_at' => $quiz->expires_at,
+                'questions_count' => $quiz->questions_count,
+                'total_points' => $quiz->total_points ?? $quiz->questions_count,
+                'has_attempt' => (bool)$attempt,
+                'user_score' => $attempt ? $attempt->score : null
+            ];
+        });
+});
+Route::get('/student/classroom/{id}/live-materials', function ($id) {
+    return App\Models\Material::where('subject_id', $id)
+        ->latest()
+        ->get();
+});
 
         // 3. PROFESSOR ROUTES
         Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {

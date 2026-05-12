@@ -365,7 +365,7 @@
     }
 }" class="contents">
 
-    <div x-show="activeTab === 'materials'" class="space-y-6">
+    <div x-show="activeTab === 'materials'" x-data="classroomMaterials()" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             @foreach($class->materials as $material)
                 @if($material->type !== 'pptx')
@@ -799,37 +799,53 @@
     }
 }
 
+@php
+    $initialQuizzes = $class->quizzes()
+        ->where('published_at', '<=', now()) // Filter out future quizzes
+        ->get()
+        ->map(function($quiz) {
+            $attempt = $quiz->attempts()->where('user_id', auth()->id())->first();
+            return [
+                'id' => $quiz->id,
+                'title' => $quiz->title,
+                'expires_at' => $quiz->expires_at,
+                'questions_count' => $quiz->questions_count,
+                'total_points' => $quiz->total_points ?? $quiz->questions_count,
+                'has_attempt' => (bool)$attempt,
+                'user_score' => $attempt ? $attempt->score : null
+            ];
+        });
+@endphp
+
+const initialQuizData = @json($initialQuizzes);
+
 function classroomQuizzes() {
     return {
-        quizzes: @json($class->quizzes), // Initialize with PHP data or fetch via API
+        // Gamitin ang variable na inihanda sa itaas
+        quizzes: @json($initialQuizzes),
         filter: 'all',
-
+        init() {
+            setInterval(() => this.fetchQuizzes(), 5000);
+        },
+        fetchQuizzes() {
+            fetch(`/student/classroom/${classId}/live-quizzes`)
+                .then(res => res.json())
+                .then(data => { this.quizzes = data; })
+                .catch(err => console.error('Error:', err));
+        },
         get filteredQuizzes() {
-            if (this.filter === 'completed') {
-                return this.quizzes.filter(q => q.has_attempt);
-            }
-            if (this.filter === 'pending') {
-                return this.quizzes.filter(q => !q.has_attempt);
-            }
+            if (this.filter === 'completed') return this.quizzes.filter(q => q.has_attempt);
+            if (this.filter === 'pending') return this.quizzes.filter(q => !q.has_attempt);
             return this.quizzes;
         },
-
-        formatDeadline(dateString) { 
+        formatDeadline(dateString) {
             if (!dateString) return 'No Deadline';
             const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'No Deadline';
-            
-            return date.toLocaleDateString([], { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
+            return isNaN(date.getTime()) ? 'No Deadline' : date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
         },
-
         handleQuizClick(quiz) {
             if (quiz.has_attempt) {
                 alert('You have already completed this quiz.');
-                // Or redirect to results: window.location.href = `/student/quizzes/${quiz.id}/results`;
             } else {
                 if (confirm('Start this quiz? Timer will begin immediately.')) {
                     window.location.href = `/student/quizzes/${quiz.id}/attempt`;
@@ -839,6 +855,19 @@ function classroomQuizzes() {
     }
 }
 
+function classroomMaterials() {
+    return {
+        materials: @json($class->materials),
+        init() {
+            setInterval(() => this.fetchMaterials(), 5000);
+        },
+        fetchMaterials() {
+            fetch(`/student/classroom/${classId}/live-materials`)
+                .then(res => res.json())
+                .then(data => { this.materials = data; });
+        }
+    }
+}
       function taskModal() {
     return {
         currentTask: null,
