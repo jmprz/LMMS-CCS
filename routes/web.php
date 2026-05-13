@@ -64,37 +64,61 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/browser/check-url', [App\Http\Controllers\BrowserProxyController::class, 'checkUrl'])->name('browser.check');
         Route::post('/materials/{material}/log-start', [MaterialController::class, 'logStart'])->name('materials.log-start');
         Route::post('/materials/{material}/log-end', [MaterialController::class, 'logEnd'])->name('materials.log-end');
+    });
+    Route::get('/student/classroom/{id}/live-quizzes', function ($id) {
+        return App\Models\Quiz::where('subject_id', $id)
+            // ONLY show quizzes where the start time has passed
+            ->where('published_at', '<=', now())
+            ->with([
+                'attempts' => function ($query) {
+                    $query->where('user_id', auth()->id());
+                }
+            ])
+            ->latest()
+            ->get()
+            ->map(function ($quiz) {
+                $attempt = $quiz->attempts->first();
+                return [
+                    'id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'expires_at' => $quiz->expires_at,
+                    'questions_count' => $quiz->questions_count,
+                    'total_points' => $quiz->total_points ?? $quiz->questions_count,
+                    'has_attempt' => (bool) $attempt,
+                    'user_score' => $attempt ? $attempt->score : null
+                ];
             });
-   Route::get('/student/classroom/{id}/live-quizzes', function ($id) {
-    return App\Models\Quiz::where('subject_id', $id)
-        // ONLY show quizzes where the start time has passed
-        ->where('published_at', '<=', now()) 
-        ->with(['attempts' => function ($query) {
-            $query->where('user_id', auth()->id());
-        }])
-        ->latest()
-        ->get()
-        ->map(function ($quiz) {
-            $attempt = $quiz->attempts->first();
-            return [
-                'id' => $quiz->id,
-                'title' => $quiz->title,
-                'expires_at' => $quiz->expires_at,
-                'questions_count' => $quiz->questions_count,
-                'total_points' => $quiz->total_points ?? $quiz->questions_count,
-                'has_attempt' => (bool)$attempt,
-                'user_score' => $attempt ? $attempt->score : null
-            ];
-        });
-});
-Route::get('/student/classroom/{id}/live-materials', function ($id) {
-    return App\Models\Material::where('subject_id', $id)
-        ->latest()
-        ->get();
-});
+    });
+    Route::get('/student/classroom/{id}/live-materials', function ($id) {
+        // 1. Find the Class/Subject first to avoid guessing the foreign key column
+        // (Note: If your model is named Subject instead of Classroom, change Classroom:: to Subject::)
+        $class = \App\Models\LabSession::findOrFail($id);
 
-        // 3. PROFESSOR ROUTES
-        Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
+        // 2. Use the exact same relationship your view uses
+        return $class->materials()
+            ->latest()
+            ->get()
+            ->map(function ($m) {
+                $url = $m->content;
+                if ($m->type === 'youtube') {
+                    $url = \Illuminate\Support\Str::contains($url, 'embed')
+                        ? $url
+                        : \Illuminate\Support\Str::replace('watch?v=', 'embed/', $url);
+                } else {
+                    $url = url('/' . $url);
+                }
+
+                return [
+                    'id' => $m->id,
+                    'title' => $m->title,
+                    'type' => $m->type,
+                    'url' => $url
+                ];
+            });
+    });
+
+    // 3. PROFESSOR ROUTES
+    Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
         Route::get('/classroom/{id}/tasks', [ClassroomController::class, 'getTasks'])->name('classroom.tasks');
         // Professor Dashboard
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
@@ -146,19 +170,19 @@ Route::get('/student/classroom/{id}/live-materials', function ($id) {
         Route::get('/classroom/{id}/blocked-attempts', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedAttempts'])->name('blocked-attempts.index');
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
         Route::get('/classroom/{id}/active-students', function ($id) {
-        $session = \App\Models\LabSession::findOrFail($id);
-        
-        // Get students who are currently present (screen sharing)
-        $activeStudents = $session->students()
-            ->wherePivot('is_present', true)
-            ->wherePivot('updated_at', '>=', now()->subMinutes(2))
-            ->pluck('user_id')
-            ->toArray();
-        
-        return response()->json([
-            'activeStudents' => $activeStudents
-        ]);
-    })->name('classroom.active-students');
+            $session = \App\Models\LabSession::findOrFail($id);
+
+            // Get students who are currently present (screen sharing)
+            $activeStudents = $session->students()
+                ->wherePivot('is_present', true)
+                ->wherePivot('updated_at', '>=', now()->subMinutes(2))
+                ->pluck('user_id')
+                ->toArray();
+
+            return response()->json([
+                'activeStudents' => $activeStudents
+            ]);
+        })->name('classroom.active-students');
         Route::get('/classroom/{class}/students', [ClassroomController::class, 'getStudents'])->name('classroom.students');
     });
 

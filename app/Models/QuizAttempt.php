@@ -22,5 +22,10 @@ class QuizAttempt extends Model
     public function quiz() {
         return $this->belongsTo(Quiz::class);
     }
+
+public function details()
+{
+    return $this->hasMany(QuizAttemptDetail::class);
+}
     
 }

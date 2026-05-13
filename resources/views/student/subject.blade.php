@@ -222,7 +222,7 @@
                 <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Score:</span>
                 <div class="flex items-baseline gap-1">
                     <span class="text-2xl font-black text-[#383838]" 
-                            x-text="task.current_user_submission?.grade !== null ? task.current_user_submission.grade : '--'"></span>
+                            x-text="task.current_user_submission?.grade ?? '--'"></span>
                     <span class="text-xs font-bold text-gray-300" x-text="'/ ' + task.points"></span>
                 </div>
             </div>
@@ -303,19 +303,22 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-between pt-3">
-            <template x-if="quiz.has_attempt">
-                <span class="flex items-center gap-1 text-[9px] font-black text-black uppercase tracking-tighter">
-                    <i class="ri-checkbox-circle-fill text-base text-[#383838]"></i> Completed
-                </span>
-            </template>
-            <template x-if="!quiz.has_attempt">
-                <span class="flex items-center gap-1 text-[9px] font-black text-gray-300 uppercase tracking-tighter">
-                    <i class="ri-play-circle-line text-base"></i> Ready
-                </span>
-            </template>
-            <i class="ri-arrow-right-line text-gray-300 group-hover:text-[#383838] group-hover:translate-x-1 transition-all"></i>
-        </div>
+      <div class="flex items-center justify-between pt-3">
+    <template x-if="quiz.has_attempt">
+        <span class="flex items-center gap-1 text-[9px] font-black text-black uppercase tracking-tighter">
+            <i class="ri-checkbox-circle-fill text-base text-[#383838]"></i> Completed
+        </span>
+    </template>
+
+    <template x-if="!quiz.has_attempt">
+        <button @click.stop="$dispatch('open-quiz', { id: quiz.id })" 
+                class="bg-[#383838] text-white text-[10px] font-black px-4 py-1.5 rounded-lg hover:bg-black transition-all">
+            TAKE QUIZ
+        </button>
+    </template>
+    
+    <i class="ri-arrow-right-line text-gray-300 group-hover:text-[#383838] group-hover:translate-x-1 transition-all"></i>
+</div>
     </div>
 </template>
     </div>
@@ -365,38 +368,29 @@
     }
 }" class="contents">
 
-    <div x-show="activeTab === 'materials'" x-data="classroomMaterials()" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            @foreach($class->materials as $material)
-                @if($material->type !== 'pptx')
-                <div @click="openMaterial({
-                        id: {{ $material->id }},
-                        title: '{{ $material->title }}',
-                        type: '{{ $material->type }}',
-                        url: '{{ $material->type === 'youtube'
-                            ? (Str::contains($material->content, 'embed') ? $material->content : Str::replace('watch?v=', 'embed/', $material->content))
-                            : url('/' . $material->content) }}'
-                    })" 
+  <div x-show="activeTab === 'materials'" x-data="classroomMaterials()" class="space-y-6 animate-fade-in">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <template x-for="material in materials" :key="material.id">
+            <template x-if="material.type !== 'pptx'">
+                <div @click="openMaterial(material)" 
                     class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in min-h-[180px]">
                     
                     <div class="space-y-4">
                         <div class="flex items-start gap-3">
                             <div class="mt-1 w-8 h-8 shrink-0 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors">
-                                @if($material->type == 'pdf')
-                                    <i class="ri-file-pdf-line text-sm"></i>
-                                @elseif($material->type == 'youtube')
-                                    <i class="ri-video-line text-sm"></i>
-                                @else
-                                    <i class="ri-file-line text-sm"></i>
-                                @endif
+                                <i :class="{
+                                    'ri-file-pdf-line': material.type === 'pdf',
+                                    'ri-video-line': material.type === 'youtube',
+                                    'ri-file-line': material.type !== 'pdf' && material.type !== 'youtube'
+                                }" class="text-sm"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h4 class="font-black text-[#383838] text-base tracking-tight leading-tight group-hover:text-black transition-colors truncate" title="{{ $material->title }}">
-                                    {{ $material->title }}
+                                <h4 class="font-black text-[#383838] text-base tracking-tight leading-tight group-hover:text-black transition-colors truncate" 
+                                    :title="material.title" x-text="material.title">
                                 </h4>
                                 <div class="mt-1 flex items-center gap-1.5">
-                                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wide">
-                                        {{ $material->type }} Reference
+                                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wide" x-text="material.type + ' Reference'">
                                     </span>
                                 </div>
                             </div>
@@ -404,8 +398,7 @@
 
                         <div class="py-3 border-y border-gray-50">
                             <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Source Type</span>
-                            <span class="text-xs font-black text-[#383838] uppercase">
-                                {{ $material->type == 'youtube' ? 'Video Lecture' : 'Reading Material' }}
+                            <span class="text-xs font-black text-[#383838] uppercase" x-text="material.type === 'youtube' ? 'Video Lecture' : 'Reading Material'">
                             </span>
                         </div>
                     </div>
@@ -417,9 +410,8 @@
                         <i class="ri-arrow-right-line text-gray-300 group-hover:text-[#383838] group-hover:translate-x-1 transition-all"></i>
                     </div>
                 </div>
-                @endif
-            @endforeach
-        </div>
+            </template>
+        </template>
     </div>
 
     <div x-show="showViewer" 
@@ -431,8 +423,7 @@
         
         <div class="w-full h-16 px-6 flex justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/5 shrink-0">
             <div class="flex items-center gap-4 overflow-hidden">
-                <button @click="closeMaterial()" 
-                        class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition">
+                <button @click="closeMaterial()" class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition">
                     <i class="ri-arrow-left-line text-xl"></i>
                 </button>
                 <div class="flex flex-col">
@@ -442,8 +433,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <button @click="closeMaterial()" 
-                        class="px-8 py-2.5 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-gray-200 transition shadow-xl">
+                <button @click="closeMaterial()" class="px-8 py-2.5 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-gray-200 transition shadow-xl">
                     Finish Reading
                 </button>
             </div>
@@ -462,16 +452,13 @@
 
             <template x-if="currentMaterial.type === 'youtube'">
                 <div class="w-full h-full flex items-center justify-center bg-black">
-                    <iframe :src="currentMaterial.url" 
-                            class="w-full h-full border-none" 
-                            allow="autoplay; encrypted-media" 
-                            allowfullscreen></iframe>
+                    <iframe :src="currentMaterial.url" class="w-full h-full border-none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                 </div>
             </template>
         </div>
     </div>
 </div>
-                                    <div x-show"="activeTab === 'classmates'"
+                                    <div x-show="activeTab === 'classmates'"
                                         class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
                                         <i class="ri-group-line text-gray-300 text-6xl mb-4 block"></i>
                                         <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">Classmate Roster</p>
@@ -668,6 +655,55 @@
     </div>
 </div>
 
+<div x-data="{ 
+        showQuizModal: false, 
+        quizUrl: '', 
+        isLocked: false,
+        open(id) {
+            this.quizUrl = `/student/quizzes/${id}/attempt`;
+            this.showQuizModal = true;
+            this.isLocked = false; // Reset lock state on open
+        }
+     }"
+     x-show="showQuizModal" 
+     x-cloak
+     @open-quiz.window="open($event.detail.id)"
+     @message.window="
+     console.log('Message received:', $event.data);
+        if ($event.data === 'lock-modal') isLocked = true;
+        if ($event.data === 'unlock-modal') isLocked = false;
+        if ($event.data === 'close-modal') {
+            showQuizModal = false;
+            isLocked = false;
+        }
+     "
+     class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    
+    <div class="bg-white w-full max-w-6xl h-[92vh] rounded-[2rem] overflow-hidden shadow-2xl flex flex-col relative">
+        
+        <div class="flex justify-between items-center p-6 border-b bg-white">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" x-show="isLocked"></div>
+                <h3 class="font-black text-gray-900 tracking-tight">QUIZ WORKSPACE</h3>
+            </div>
+
+            <button x-show="!isLocked" 
+                    @click="showQuizModal = false" 
+                    class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all uppercase tracking-widest">
+                Cancel / Close
+            </button>
+            
+            <span x-show="isLocked" class="text-[10px] font-black text-red-500 uppercase tracking-widest">
+                <i class="ri-lock-fill mr-1"></i> Quiz in Progress (Locked)
+            </span>
+        </div>
+
+        <div class="flex-grow bg-gray-50">
+            <iframe :src="quizUrl" class="w-full h-full border-none shadow-inner"></iframe>
+        </div>
+    </div>
+</div>
+
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
@@ -855,19 +891,95 @@ function classroomQuizzes() {
     }
 }
 
+@php
+    $initialMaterials = $class->materials->map(function($m) {
+        $url = $m->content;
+        if ($m->type === 'youtube') {
+            $url = \Illuminate\Support\Str::contains($url, 'embed') 
+                ? $url 
+                : \Illuminate\Support\Str::replace('watch?v=', 'embed/', $url);
+        } else {
+            $url = url('/' . $url);
+        }
+        return [
+            'id' => $m->id,
+            'title' => $m->title,
+            'type' => $m->type,
+            'url' => $url
+        ];
+    });
+@endphp
+
 function classroomMaterials() {
     return {
-        materials: @json($class->materials),
+        // Feed the pre-processed PHP array into Alpine
+        materials: @json($initialMaterials),
+        showViewer: false,
+        currentMaterial: { title: '', type: '', url: '', id: null },
+        startTime: null,
+
         init() {
+            // Live refresh every 5 seconds (Just like Quizzes and Tasks)
             setInterval(() => this.fetchMaterials(), 5000);
         },
+
         fetchMaterials() {
             fetch(`/student/classroom/${classId}/live-materials`)
                 .then(res => res.json())
-                .then(data => { this.materials = data; });
+                .then(data => {
+                    // Update the array. x-for will automatically draw new cards if this changes.
+                    this.materials = data;
+                })
+                .catch(err => console.error('Error fetching materials:', err));
+        },
+
+        openMaterial(material) {
+            this.currentMaterial = material;
+            this.showViewer = true;
+            this.startTime = new Date();
+
+            // Log Start Activity
+            fetch(`/student/materials/${material.id}/log-start`, {
+                method: 'POST',
+                headers: { 
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                }
+            });
+        },
+
+        closeMaterial() {
+            let endTime = new Date();
+            let duration = Math.round((endTime - this.startTime) / 1000);
+
+            // Log End Activity
+            fetch(`/student/materials/${this.currentMaterial.id}/log-end`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ duration: duration })
+            }).then(() => {
+                this.showViewer = false;
+                this.currentMaterial = { title: '', type: '', url: '', id: null };
+            });
+        }
+    };
+}
+
+function quizModal() {
+    return {
+        showQuizModal: false,
+        quizUrl: '',
+        open(quizId) {
+            this.quizUrl = `/student/quizzes/${quizId}/attempt?embed=true`;
+            this.showQuizModal = true;
         }
     }
 }
+
       function taskModal() {
     return {
         currentTask: null,

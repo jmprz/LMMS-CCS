@@ -37,9 +37,9 @@ class QuizController extends Controller
             // 2. Create the Quiz
             $quiz = Quiz::create([
                 'title' => $request->title,
-                'subject_id' => $request->lab_session_id, 
+                'subject_id' => $request->lab_session_id,
                 'time_limit' => $request->time_limit,
-                'published_at' => $request->published_at ?? now(), 
+                'published_at' => $request->published_at ?? now(),
                 'expires_at' => $request->expires_at,
             ]);
 
@@ -61,16 +61,14 @@ class QuizController extends Controller
                             'is_correct' => $index == $qData['correct_option'],
                         ]);
                     }
-                } 
-                elseif ($qData['type'] === 'select_all') {
+                } elseif ($qData['type'] === 'select_all') {
                     foreach ($qData['options'] as $index => $oText) {
                         $question->options()->create([
                             'option_text' => $oText,
                             'is_correct' => in_array($index, $qData['correct_options'] ?? []),
                         ]);
                     }
-                } 
-                elseif ($qData['type'] === 'identification') {
+                } elseif ($qData['type'] === 'identification') {
                     $question->options()->create([
                         'option_text' => $qData['answer'],
                         'is_correct' => true,
@@ -79,80 +77,100 @@ class QuizController extends Controller
             }
 
             return redirect()->route('professor.classroom.show', $request->lab_session_id)
-                             ->with('success', 'Quiz created successfully!');
+                ->with('success', 'Quiz created successfully!');
         });
     }
     // app/Http/Controllers/Student/QuizController.php
 
-public function attempt($id)
-{
-    // Load the quiz with its questions
-    $quiz = Quiz::with('questions')->findOrFail($id);
+    public function attempt($id)
+    {
+        // Load the quiz with its questions
+        $quiz = Quiz::with('questions')->findOrFail($id);
 
-    return view('student.quizzes.attempt', compact('quiz'));
-}
+        return view('student.quizzes.attempt', compact('quiz'));
+    }
 
-public function submit(Request $request, $id)
-{
-    // 1. Eager load labSession so we have the ID for the redirect
-    $quiz = Quiz::with(['questions.options', 'labSession'])->findOrFail($id);
-    
-    $submittedAnswers = $request->input('answers', []);
-    $score = 0;
-    $totalQuestions = $quiz->questions->count();
+    public function submit(Request $request, $quizId)
+    {
+        try {
+            return \DB::transaction(function () use ($request, $quizId) {
+                $quiz = Quiz::with('questions.options')->findOrFail($quizId);
+                $totalQuestions = $quiz->questions->count();
+                $score = 0;
+                $details = [];
 
-    foreach ($quiz->questions as $question) {
-        $userAnswer = $submittedAnswers[$question->id] ?? null;
+                $userAnswers = collect($request->input('answers', []));
 
-        if ($question->type === 'select_all') {
-            $correctOptionTexts = $question->options->where('is_correct', true)
-                ->pluck('option_text')
-                ->map(fn($t) => strtolower(trim($t)))
-                ->toArray();
-            
-            $userAnswerArray = is_array($userAnswer) 
-                ? array_map(fn($t) => strtolower(trim($t)), $userAnswer) 
-                : [];
+                foreach ($quiz->questions as $question) {
+                    $userAnswer = $userAnswers->get($question->id);
+                    $isCorrect = false;
 
-            sort($correctOptionTexts);
-            sort($userAnswerArray);
+                    // 1. Get ALL correct option texts
+                    $correctOptions = $question->options
+                        ->where('is_correct', true)
+                        ->pluck('option_text')
+                        ->map(fn($text) => strtolower(trim($text)))
+                        ->toArray();
 
-            if ($correctOptionTexts === $userAnswerArray && !empty($userAnswerArray)) {
-                $score++;
-            }
-        } 
-        else {
-            $correctOption = $question->options->where('is_correct', true)->first();
-            
-            if ($correctOption && $userAnswer && !is_array($userAnswer)) {
-                $cleanUser = strtolower(trim($userAnswer));
-                $cleanCorrect = strtolower(trim($correctOption->option_text));
+                    // 2. Normalize user input
+                    // If it's a string, make it an array. If array, trim/lower all items.
+                    $userAnswerArray = is_array($userAnswer) ? $userAnswer : [$userAnswer];
+                    $cleanUser = array_map(fn($ans) => strtolower(trim($ans)), array_filter($userAnswerArray));
 
-                if ($cleanUser === $cleanCorrect) {
-                    $score++;
+                    // 3. Compare (Handles both single radio and multi-select checkbox)
+                    if (count($cleanUser) > 0) {
+                        sort($cleanUser);
+                        sort($correctOptions);
+
+                        if ($cleanUser === $correctOptions) {
+                            $isCorrect = true;
+                            $score++;
+                        }
+                    }
+
+                    $details[] = [
+                        'question_id' => $question->id,
+                        'is_correct' => $isCorrect
+                    ];
                 }
-            }
+
+                // 4. Create Attempt
+                $startTime = \Carbon\Carbon::parse($request->input('start_time'));
+                $timeSpent = abs(now()->diffInSeconds($startTime));
+
+                $attempt = \App\Models\QuizAttempt::create([
+                    'user_id' => auth()->id(),
+                    'quiz_id' => $quiz->id,
+                    'score' => $score,
+                    'total_questions' => $totalQuestions,
+                    'time_spent' => $timeSpent,
+                ]);
+
+                // 5. Save Details
+                foreach ($details as $detail) {
+                    \App\Models\QuizAttemptDetail::create([
+                        'quiz_attempt_id' => $attempt->id,
+                        'question_id' => $detail['question_id'],
+                        'is_correct' => $detail['is_correct'],
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'score' => $score,
+                    'total' => $totalQuestions
+                ]);
+            });
+        } catch (\Exception $e) {
+            // Return error JSON so the frontend doesn't hang on "SUBMITTING..."
+            return response()->json([
+                'success' => false,
+                'message' => 'Error processing quiz: ' . $e->getMessage()
+            ], 500);
         }
     }
 
-    // Time Calculation
-    $startTime = \Carbon\Carbon::parse($request->input('start_time'));
-    $timeSpentInSeconds = abs(now()->diffInSeconds($startTime));
-
-    \App\Models\QuizAttempt::create([
-        'user_id' => auth()->id(),
-        'quiz_id' => $quiz->id,
-        'score' => $score,
-        'total_questions' => $totalQuestions,
-        'time_spent' => $timeSpentInSeconds,
-    ]);
-
-    // 2. REDIRECT TO SUBJECT/LAB SESSION
-    return redirect()->route('student.subject', $quiz->subject_id)
-    ->with('success', "Quiz submitted! Score: $score/$totalQuestions");
-}
-
-public function destroy($id)
+    public function destroy($id)
     {
         $quiz = Quiz::findOrFail($id);
         $quiz->delete(); // This removes the quiz and related attempts if cascade is on
@@ -161,10 +179,10 @@ public function destroy($id)
     }
 
     public function show($id)
-{
-    // Eager load labSession to get the subject_name
-    $quiz = Quiz::with(['labSession', 'questions.options'])->findOrFail($id);
-    
-    return view('student.quizzes.show', compact('quiz'));
-}
+    {
+        // Eager load labSession to get the subject_name
+        $quiz = Quiz::with(['labSession', 'questions.options'])->findOrFail($id);
+
+        return view('student.quizzes.show', compact('quiz'));
+    }
 }
