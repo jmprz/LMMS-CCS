@@ -51,14 +51,13 @@ class MaterialController extends Controller
 
 public function logStart(\App\Models\Material $material)
 {
-    // We create the record and get the ID so we can update it later if needed,
-    // or just rely on the user/material/closed_at combo.
+    // 1. Keep this: Tracks precise structural analytics session windows
     \DB::table('material_logs')->insert([
-        'user_id' => auth()->id(),
+        'user_id'     => auth()->id(),
         'material_id' => $material->id,
-        'opened_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'opened_at'   => now(),
+        'created_at'  => now(),
+        'updated_at'  => now(),
     ]);
 
     return response()->json(['message' => 'Log started']);
@@ -66,19 +65,30 @@ public function logStart(\App\Models\Material $material)
 
 public function logEnd(Request $request, \App\Models\Material $material)
 {
-    // Find the most recent log for this user/material that hasn't been closed yet
+    $userId = auth()->id();
+    $duration = $request->duration ?? 0;
+
+    // 1. Core update to structural material session logs
     \DB::table('material_logs')
-        ->where('user_id', auth()->id())
+        ->where('user_id', $userId)
         ->where('material_id', $material->id)
         ->whereNull('closed_at')
         ->latest()
         ->update([
             'closed_at' => now(),
-            'duration_seconds' => $request->duration,
+            'duration_seconds' => $duration,
             'updated_at' => now(),
         ]);
 
-    return response()->json(['message' => 'Log ended', 'duration' => $request->duration]);
-}
+    // 2. ALTERNATIVE: Write to timeline modal ONLY when they finish reading
+    \App\Models\ActivityLog::create([
+        'user_id'          => $userId,
+        'log_type'         => 'material',
+        'content'          => "Student finished reading material: \"" . $material->title . "\"",
+        'lab_session_id'   => $material->lab_session_id, // Match with your session foreign key column
+        'duration_seconds' => $duration,
+    ]);
 
+    return response()->json(['message' => 'Log ended', 'duration' => $duration]);
+}
 }

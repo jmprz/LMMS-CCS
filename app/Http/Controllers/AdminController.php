@@ -19,18 +19,27 @@ public function index(Request $request)
     $user = auth()->user();
 
     // --- PROFESSOR VIEW ---
+    // --- PROFESSOR VIEW ---
     if ($user->role === 'professor') {
+        // 1. Keep this to show only live classes on the main dashboard cards/tables
         $activeSessions = LabSession::where('faculty_id', $user->id)
             ->where('is_active', true)
             ->latest()
             ->get();
 
+        // 2. NEW QUERY: Fetch ALL classes (live or not) so the sidebar stays fully populated
+        $sessions = LabSession::where('faculty_id', $user->id)
+            ->latest()
+            ->get();
+
+        // 3. Fallback logic to show the currently selected session or default to the first active one
         $selectedClassId = $request->query('session_id') ?? $activeSessions->first()?->id;
         
         $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
         $activeStudents = $class ? $class->students : collect();
 
-        return view('professor.dashboard', compact('activeStudents', 'activeSessions', 'class'));
+        // 4. Crucial: Add 'sessions' to your compact array so the view can read it!
+        return view('professor.dashboard', compact('activeStudents', 'activeSessions', 'class', 'sessions'));
     }
 
     // --- ADMIN VIEW ---
@@ -212,20 +221,55 @@ public function userIndex()
  */
 public function getUserLogs(User $user)
 {
-    $viewer = auth()->user();
-    
-    $query = ActivityLog::where('user_id', $user->id);
+    try {
+        $viewer = auth()->user();
+        $query = ActivityLog::where('user_id', $user->id);
 
-    // Security: Professors can only see behavior logs for their own lab sessions
-    if ($viewer->role === 'professor') {
-        $query->whereHas('labSession', function($q) use ($viewer) {
-            $q->where('faculty_id', $viewer->id);
+        if ($viewer->role === 'professor') {
+            $professorSessionIds = \App\Models\LabSession::where('faculty_id', $viewer->id)
+                ->pluck('id')
+                ->toArray();
+
+            $query->whereIn('lab_session_id', $professorSessionIds);
+        }
+
+        $logs = $query->orderBy('created_at', 'desc')->limit(50)->get();
+
+        $formattedLogs = $logs->map(function ($log) {
+            $sessionName = 'General Session';
+            
+            if ($log->lab_session_id) {
+                $session = \App\Models\LabSession::find($log->lab_session_id);
+                if ($session) {
+                    $sessionName = $session->subject_name;
+                }
+            }
+
+            return [
+                'id'               => $log->id,
+                'log_type'         => $log->log_type ?? 'navigation',
+                'content'          => $log->content ?? 'Interacted with workspace',
+                'class_name'       => $sessionName,
+                'duration_seconds' => $log->duration_seconds ?? 0, // 🟢 FIXED: Ensures duration passes to AlpineJS
+                'created_at'       => $log->created_at ? $log->created_at->toIso8601String() : now()->toIso8601String()
+            ];
         });
+
+        return response()->json($formattedLogs);
+
+    } catch (\Exception $e) {
+        \Log::error('Log fetch crashed: ' . $e->getMessage());
+        return response()->json([
+            [
+                'id'               => 0,
+                'log_type'         => 'navigation',
+                'content'          => 'Error loading activity timeline securely.',
+                'class_name'       => 'System',
+                'duration_seconds' => 0,
+                'created_at'       => now()->toIso8601String()
+            ]
+        ]);
     }
-
-    $logs = $query->orderBy('created_at', 'desc')->limit(50)->get();
-
-    return response()->json($logs);
 }
 
 public function updateUser(Request $request, User $user)

@@ -2,7 +2,7 @@
 @if(isset($class) && $class->is_active)
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="student-grid">
         @forelse($activeStudents as $student) 
-            <div class="border rounded-lg p-4 bg-gray-50 transition-all duration-300 shadow-sm hover:shadow-md" 
+            <div class="border rounded-lg p-4 bg-white rounded-[32px] transition-all duration-300 shadow-sm hover:shadow-md" 
                  id="student-card-{{ $student->id }}" 
                  data-student-id="{{ $student->id }}">
                 

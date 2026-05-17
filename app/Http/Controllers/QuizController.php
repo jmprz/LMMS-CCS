@@ -90,11 +90,12 @@ class QuizController extends Controller
         return view('student.quizzes.attempt', compact('quiz'));
     }
 
-    public function submit(Request $request, $quizId)
+ public function submit(Request $request, $quizId)
     {
         try {
             return \DB::transaction(function () use ($request, $quizId) {
                 $quiz = Quiz::with('questions.options')->findOrFail($quizId);
+                
                 $totalQuestions = $quiz->questions->count();
                 $score = 0;
                 $details = [];
@@ -134,9 +135,12 @@ class QuizController extends Controller
                     ];
                 }
 
-                // 4. Create Attempt
+                // 4. Create Attempt & STOPWATCH DURATION CALCULATION
                 $startTime = \Carbon\Carbon::parse($request->input('start_time'));
-                $timeSpent = abs(now()->diffInSeconds($startTime));
+                
+                // 🟢 FIXED: Convert BOTH times to UNIX raw timestamps (pure total seconds since 1970)
+                // This shields calculations against negative timezone/clock offsets entirely.
+                $timeSpent = abs(now()->getTimestamp() - $startTime->getTimestamp());
 
                 $attempt = \App\Models\QuizAttempt::create([
                     'user_id' => auth()->id(),
@@ -154,6 +158,15 @@ class QuizController extends Controller
                         'is_correct' => $detail['is_correct'],
                     ]);
                 }
+
+                // 6. 🟢 FIXED: Create Timeline Log row with the actual dynamic duration included!
+                \App\Models\ActivityLog::create([
+                    'user_id'          => auth()->id(),
+                    'log_type'         => 'quiz',
+                    'content'          => "Student completed quiz assessment: \"" . $quiz->title . "\"",
+                    'lab_session_id'   => $quiz->subject_id, // Maps to your subject_id column
+                    'duration_seconds' => $timeSpent,        // Reflects real stopwatch metrics
+                ]);
 
                 return response()->json([
                     'success' => true,

@@ -2,52 +2,217 @@
     <div class="fixed inset-0 flex bg-gray-100"
         x-data="{ showModal: false, isActive: {{ $session->is_active ? 'true' : 'false' }} }">
 
-        <aside class="w-64 border-r border-gray-300 bg-white mt-[80px] flex-shrink-0">
-            <nav class="mt-8 px-4 space-y-2">
-                <a href="{{ route('professor.dashboard') }}"
-                    class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                    <i class="ri-dashboard-line mr-3 text-lg"></i> Dashboard
-                </a>
-                <a href="{{ route('professor.classroom') }}"
-                    class="flex items-center py-3 px-4 rounded-lg {{ request()->routeIs('professor.classroom') ? 'text-gray-600 hover:bg-gray-100' : 'bg-[#383838] text-white font-bold' }} transition">
-                    <i class="ri-graduation-cap-line mr-3 text-lg"></i>
-                    Classroom
-                </a>
-                <a href="#" class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                    <i class="ri-message-3-line mr-3 text-lg"></i> Message
-                </a>
-                <a href="#" class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                    <i class="ri-history-line mr-3 text-lg"></i> Activity Log
-                </a>
-            </nav>
+        <aside
+            class="w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)]">
+
+            <div class="flex flex-col flex-grow overflow-y-auto">
+
+                <nav class="mt-8 px-4 space-y-1">
+                    <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Workspace
+                    </div>
+
+                    <a href="{{ route('professor.dashboard') }}"
+                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('professor.dashboard') ? 'bg-[#383838] text-white font-black shadow-sm' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition duration-150">
+                        <i class="ri-dashboard-line mr-3 text-lg"></i> Dashboard
+                    </a>
+                </nav>
+
+                <nav class="px-4 space-y-1 mb-6 border-t border-gray-100 pt-6">
+                    <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">My Classes
+                    </div>
+
+                    @php
+                        // Safe lookup: Use $sessions if available, fallback to $activeSessions from the dashboard
+                        $sidebarCourses = $sessions ?? $activeSessions ?? \App\Models\LabSession::where('faculty_id', auth()->id())->latest()->get();
+                    @endphp
+
+                    @forelse($sidebarCourses as $sideSession)
+                        @php
+                            // Check once if this specific route is active to keep code clean
+                            $isCurrentClass = request()->is('professor/classroom/' . $sideSession->id);
+                        @endphp
+
+                        <a href="{{ route('professor.classroom.show', $sideSession->id) }}"
+                            class="flex items-start py-3 px-4 rounded-xl text-xs transition duration-150 group {{ $isCurrentClass ? 'bg-[#383838] text-white font-black shadow-sm' : 'text-gray-600 hover:bg-gray-50' }}">
+
+                            <i
+                                class="ri-book-3-line text-lg mr-3 flex-shrink-0 mt-0.5 {{ $isCurrentClass ? 'text-white' : 'text-gray-400 group-hover:text-gray-900' }} transition"></i>
+
+                            <div class="flex flex-col min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span
+                                        class="truncate font-black text-xs tracking-tight uppercase {{ $isCurrentClass ? 'text-white' : 'text-gray-800 group-hover:text-black' }}">
+                                        {{ $sideSession->class_code }} | {{ $sideSession->program }} -
+                                        {{ $sideSession->year_level }}{{ $sideSession->section }}
+                                    </span>
+                                    @if($sideSession->is_active)
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0"></span>
+                                    @endif
+                                </div>
+                                <span
+                                    class="text-[10px] font-bold truncate mt-0.5 tracking-wide {{ $isCurrentClass ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-500' }}">
+                                    {{ $sideSession->schedule_day }} • {{ $sideSession->schedule_time }}
+                                </span>
+                            </div>
+                        </a>
+                    @empty
+                        <div class="px-4 py-3 text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider italic">No laboratory
+                                sessions</p>
+                        </div>
+                    @endforelse
+
+                    <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-4">Platform
+                        Support</div>
+
+                    <a href="#"
+                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.about') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                        <i class="ri-information-line mr-3 text-lg"></i> About System
+                    </a>
+
+                    <a href="#"
+                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.faqs') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                        <i class="ri-questionnaire-line mr-3 text-lg"></i> FAQs Hub
+                    </a>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-gray-100 bg-gray-50/50 relative" x-data="{ open: false }"
+                @click.away="open = false">
+
+                <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
+                    x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
+                    x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
+                    class="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-2xl border border-gray-200 shadow-xl p-1.5 z-50 flex flex-col gap-0.5"
+                    style="display: none;">
+
+                    <form method="POST" action="{{ route('logout') }}" class="w-full">
+                        @csrf
+                        <button type="submit"
+                            class="w-full text-left flex items-center px-3.5 py-2.5 text-xs font-black text-red-600 hover:bg-red-50 rounded-xl transition duration-150 tracking-wide">
+                            <i class="ri-logout-box-r-line mr-2.5 text-base"></i> Sign Out
+                        </button>
+                    </form>
+                </div>
+
+                <div @click="open = !open"
+                    class="flex items-center justify-between cursor-pointer group p-1 -m-1 rounded-xl hover:bg-gray-100/50 transition">
+                    <div class="flex items-center min-w-0">
+                        @php
+                            $nameTokens = explode(' ', Auth::user()->name);
+                            $firstInitial = substr($nameTokens[0], 0, 1);
+                            $lastInitial = count($nameTokens) > 1 ? substr(end($nameTokens), 0, 1) : '';
+                            $profileInitials = strtoupper($firstInitial . $lastInitial);
+                        @endphp
+                        <div
+                            class="h-8 w-8 rounded-xl bg-[#383838] group-hover:bg-black flex items-center justify-center text-white text-[10px] font-black uppercase shadow-sm mr-2.5 flex-shrink-0 transition">
+                            {{ $profileInitials }}
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="text-xs font-black text-gray-800 truncate leading-none">{{ Auth::user()->name }}
+                            </p>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-1 leading-none">
+                                Professor</p>
+                        </div>
+                    </div>
+
+                    <i class="ri-arrow-up-s-line text-gray-400 text-base transition group-hover:text-gray-700 mr-1"
+                        :class="open ? 'transform rotate-180 text-gray-700' : ''"></i>
+                </div>
+            </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto h-full">
             <div class="p-6 mt-[80px]">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6">
-                        <h1 class="text-4xl font-black text-gray-900 mb-3">{{ $session->subject_name }} |
-                            {{ $session->program }} - {{ $session->year_level }}{{ $session->section }}
-                        </h1>
+                    <div
+                        class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6 flex flex-col justify-between">
+                        <div>
+                            <h1 class="text-4xl font-black text-gray-900 mb-3">{{ $session->subject_name }} |
+                                {{ $session->program }} - {{ $session->year_level }}{{ $session->section }}
+                            </h1>
+                        </div>
 
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-2 mt-4">
                             <span
-                                class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 uppercase tracking-wider">
-                                <i class="ri-calendar-line mr-2"></i> {{ $session->schedule_day }}
+                                class="inline-flex items-center px-4 py-1.5 rounded-xl text-xs font-bold bg-gray-50 border border-gray-100 text-gray-600 uppercase tracking-wider">
+                                <i class="ri-calendar-line mr-2 text-gray-400"></i> {{ $session->schedule_day }}
                             </span>
 
                             <span
-                                class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 uppercase tracking-wider">
-                                <i class="ri-time-line mr-2"></i> {{ $session->schedule_time }}
+                                class="inline-flex items-center px-4 py-1.5 rounded-xl text-xs font-bold bg-gray-50 border border-gray-100 text-gray-600 uppercase tracking-wider">
+                                <i class="ri-time-line mr-2 text-gray-400"></i> {{ $session->schedule_time }}
+                            </span>
+                            <span
+                                class="inline-flex items-center px-4 py-1.5 rounded-xl text-xs font-bold bg-gray-50 border border-gray-100 text-gray-600 uppercase tracking-wider">
+                                <i class="ri-code-s-line mr-2 text-gray-400"></i> {{ $session->class_code }}
                             </span>
                         </div>
                     </div>
 
                     <div
-                        class="bg-white border border-gray-200 shadow-sm rounded-2xl px-6 py-6 flex items-center justify-center">
-                        <div class="text-center">
-                            <p class="text-xs font-black text-gray-600 uppercase tracking-widest mb-2">Class Code</p>
-                            <h2 class="text-3xl font-black text-black tracking-widest">{{ $session->class_code }}</h2>
+                        class="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 flex flex-col justify-center min-h-[160px]">
+
+                        <div id="broadcast-wrapper" class="w-full flex flex-col items-center justify-center text-center"
+                            x-data="{ 
+             isActive: {{ $class->is_active ? 'true' : 'false' }},
+             isBroadcasting: {{ $class->is_broadcasting ? 'true' : 'false' }} 
+         }">
+
+                            <div class="flex items-center gap-2 mb-4 justify-center">
+                                <span class="text-[10px] font-black uppercase text-gray-400 tracking-widest">Session
+                                    Control</span>
+                                <span
+                                    class="inline-flex items-center text-[10px] font-black tracking-wide px-2 py-0.5 rounded-full"
+                                    :class="isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'">
+                                    <span class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                        :class="isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'"></span>
+                                    <span x-text="isActive ? 'LIVE ACTIVE' : 'CLOSED'"></span>
+                                </span>
+                            </div>
+
+                            <div class="flex items-center justify-center gap-4 w-full">
+
+                                <button @click.prevent="toggleSession()" x-show="!isActive" title="Start Lab Session"
+                                    class="w-16 h-16 rounded-full flex items-center justify-center text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-100 transition-all duration-200 transform hover:scale-105 active:scale-95 text-2xl pl-1">
+                                    <i class="ri-play-fill"></i>
+                                </button>
+
+                                <button @click.prevent="toggleSession()" x-show="isActive" style="display: none;"
+                                    title="Stop Lab Session"
+                                    class="w-16 h-16 rounded-full flex items-center justify-center text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-100 transition-all duration-200 transform hover:scale-105 active:scale-95 text-2xl">
+                                    <i class="ri-stop-fill"></i>
+                                </button>
+
+                                <div class="h-10 w-[1px] bg-gray-200 mx-1" x-show="isActive" style="display: none;">
+                                </div>
+
+                                <div class="flex items-center gap-3" x-show="isActive" style="display: none;">
+
+                                    <button type="button" x-show="!isBroadcasting" title="Share Screen Broadcast"
+                                        @click.prevent="toggleBroadcast()"
+                                        class="w-12 h-12 rounded-full flex items-center justify-center text-gray-600 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 hover:text-blue-600 transition-all duration-200 transform hover:scale-105 text-xl">
+                                        <i class="ri-computer-line"></i>
+                                    </button>
+
+                                    <button type="button" x-show="isBroadcasting" style="display: none;"
+                                        title="Stop Screen Broadcast" @click.prevent="toggleBroadcast()"
+                                        class="w-12 h-12 rounded-full flex items-center justify-center text-white bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-100 transition-all duration-200 transform hover:scale-105 text-xl">
+                                        <i class="ri-broadcast-line animate-pulse"></i>
+                                    </button>
+
+                                    <button type="button" title="Assign Live Task"
+                                        @click.prevent="$dispatch('open-task-modal')"
+                                        class="w-12 h-12 rounded-full flex items-center justify-center text-gray-600 bg-gray-50 hover:bg-purple-50 border border-gray-200 hover:border-purple-300 hover:text-purple-600 transition-all duration-200 transform hover:scale-105 text-xl">
+                                        <i class="ri-add-line"></i>
+                                    </button>
+
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -77,53 +242,6 @@
 
                     <div class="mt-6">
                         <div x-show="activeTab === 'monitoring'">
-
-                            <div
-                                class="bg-white p-6 rounded-xl shadow border border-gray-100 mb-6 flex justify-between items-center">
-                                <div>
-                                    <h2 class="font-bold text-lg">Session Control</h2>
-                                    <p class="text-sm text-gray-500">Status:
-                                        <span
-                                            class="font-bold {{ $session->is_active ? 'text-green-600' : 'text-red-600' }}">
-                                            {{ $session->is_active ? 'LIVE' : 'OFFLINE' }}
-                                        </span>
-                                    </p>
-                                </div>
-
-                                <div id="broadcast-wrapper" class="flex items-center space-x-3" x-data="{ 
-                                         isActive: {{ $class->is_active ? 'true' : 'false' }},
-                                         isBroadcasting: {{ $class->is_broadcasting ? 'true' : 'false' }} 
-                                     }">
-
-                                    <button @click.prevent="toggleSession()" x-show="!isActive"
-                                        class="px-6 py-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all flex items-center">
-                                        <i class="ri-play-circle-line mr-1"></i> Start Lab Session
-                                    </button>
-
-                                    <button @click.prevent="toggleSession()" x-show="isActive" style="display: none;"
-                                        class="px-6 py-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-all flex items-center">
-                                        <i class="ri-stop-circle-line mr-1"></i> Stop Lab Session
-                                    </button>
-
-                                    <button type="button" x-show="isActive && !isBroadcasting" style="display: none;"
-                                        @click.prevent="toggleBroadcast()"
-                                        class="px-6 py-2 rounded-lg text-white font-bold bg-blue-600 hover:bg-blue-700 transition-all shadow-sm flex items-center">
-                                        <i class="ri-computer-line mr-1"></i> Share My Screen
-                                    </button>
-
-                                    <button type="button" x-show="isActive && isBroadcasting" style="display: none;"
-                                        @click.prevent="toggleBroadcast()"
-                                        class="px-6 py-2 rounded-lg text-white font-bold bg-orange-600 hover:bg-orange-700 transition-all shadow-sm flex items-center">
-                                        <i class="ri-broadcast-line animate-pulse mr-1"></i> Stop Broadcasting
-                                    </button>
-
-                                    <button type="button" x-show="isActive && isBroadcasting" style="display: none;"
-                                        @click.prevent="$dispatch('open-task-modal')"
-                                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-all shadow-sm">
-                                        <i class="ri-add-line mr-1"></i> Give Task
-                                    </button>
-                                </div>
-                            </div>
                             <div x-data="{ 
                                      showTaskModal: false,
                                      taskTitle: '',
@@ -212,16 +330,19 @@
                             </div>
 
                             @if($session->is_active)
-                                <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h2 class="font-bold text-lg text-gray-800">Live Laboratory Monitor</h2>
-                                        <button id="refresh-monitor-btn" class="p-2 hover:bg-gray-100 rounded-lg transition"
-                                            title="Refresh student list">
-                                            <i class="ri-refresh-line text-xl"></i>
-                                        </button>
+                                <div class="flex justify-between items-center mb-8 ms-4 me-4">
+                                    <div>
+                                        <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">LIVE
+                                            MONITORING</h2>
+                                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Manage
+                                            student's screen</p>
                                     </div>
-                                    @include('professor.partials.monitor-grid', ['activeStudents' => $activeStudents])
+                                    <button id="refresh-monitor-btn" class="p-2 hover:bg-gray-100 rounded-lg transition"
+                                        title="Refresh student list">
+                                        <i class="ri-refresh-line text-xl"></i>
+                                    </button>
                                 </div>
+                                @include('professor.partials.monitor-grid', ['activeStudents' => $activeStudents])
                             @else
                                 <div class="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed">
                                     <p class="text-gray-500 font-bold">Session is currently offline. Click "Start Session"
@@ -610,137 +731,165 @@
                             </div>
                         </div>
 
-                      <div x-show="activeTab === 'quizzes'" x-data="{ 
+                        <div x-show="activeTab === 'quizzes'" x-data="{ 
         selectedQuiz: null, 
         scores: [],
         closeResults() { this.selectedQuiz = null; }
     }" class="space-y-6" x-cloak>
 
-    <div class="flex justify-between items-center mb-8 ms-4 me-4">
-        <div>
-            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Quiz Management</h2>
-            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Control laboratory quiz & results</p>
-        </div>
-        <a href="{{ route('professor.quizzes.create', ['session_id' => $session->id]) }}"
-            target="_blank"
-            class="bg-[#383838] text-white px-6 py-2.5 rounded-xl font-bold uppercase text-xs hover:bg-black transition-all shadow-sm active:scale-95 inline-block">
-            + Create Quiz
-        </a>
-    </div>
+                            <div class="flex justify-between items-center mb-8 ms-4 me-4">
+                                <div>
+                                    <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Quiz
+                                        Management</h2>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                        Control laboratory quiz & results</p>
+                                </div>
+                                <a href="{{ route('professor.quizzes.create', ['session_id' => $session->id]) }}"
+                                    target="_blank"
+                                    class="bg-[#383838] text-white px-6 py-2.5 rounded-xl font-bold uppercase text-xs hover:bg-black transition-all shadow-sm active:scale-95 inline-block">
+                                    + Create Quiz
+                                </a>
+                            </div>
 
-    <div id="quizzes-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        @forelse($session->quizzes ?? [] as $quiz)
-            <div class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all shadow-sm">
-                <div>
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
-                            <i class="ri-timer-line text-lg"></i>
-                        </div>
-                        <span class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                            {{ $quiz->questions->count() }} PTS
-                        </span>
-                    </div>
-
-                    <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
-                        {{ $quiz->title }}
-                    </h4>
-
-                    <div class="space-y-2 mt-4">
-                        <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                            <i class="ri-calendar-todo-line mr-2"></i>
-                            {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}
-                        </div>
-                        <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                            <i class="ri-time-line mr-2"></i>
-                            {{ $quiz->time_limit }} Mins Duration
-                        </div>
-                        <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                            <i class="ri-group-line mr-2"></i>
-                            {{ $quiz->attempts->count() }} Answered
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <button
-                        @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
-                        class="w-full bg-gray-50 text-[#383838] border border-gray-200 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest">
-                        View Results
-                    </button>
-                </div>
-            </div>
-        @empty
-            <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
-                <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
-                <p class="text-gray-400 italic text-sm">No quizzes available for this session.</p>
-            </div>
-        @endforelse
-    </div>
-
-    <template x-if="selectedQuiz">
-        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4">
-            <div class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-                <div class="p-6 border-b flex justify-between items-center bg-white">
-                    <div>
-                        <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight" x-text="selectedQuiz.title"></h3>
-                        <p class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Quiz Performance & Score Overview</p>
-                    </div>
-                    <button @click="closeResults()" class="text-gray-400 hover:text-black transition text-2xl">
-                        <i class="ri-close-line"></i>
-                    </button>
-                </div>
-
-                <div class="overflow-y-auto p-6 bg-gray-50/50">
-                    <table class="w-full text-left border-separate border-spacing-y-3">
-                        <thead>
-                            <tr class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                <th class="px-6 pb-2">Student Name</th>
-                                <th class="px-6 pb-2">Time Taken</th>
-                                <th class="px-6 pb-2 text-right">Final Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="attempt in scores" :key="attempt.id">
-                                <tr class="bg-white shadow-sm rounded-2xl transition-all hover:shadow-md">
-                                    <td class="px-6 py-4 font-bold text-gray-900 rounded-s-2xl border-y border-l border-gray-100">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">
-                                                <span x-text="attempt.user.first_name.charAt(0) + attempt.user.last_name.charAt(0)"></span>
+                            <div id="quizzes-list-container"
+                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                @forelse($session->quizzes ?? [] as $quiz)
+                                    <div
+                                        class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all shadow-sm">
+                                        <div>
+                                            <div class="flex justify-between items-start mb-4">
+                                                <div
+                                                    class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
+                                                    <i class="ri-timer-line text-lg"></i>
+                                                </div>
+                                                <span
+                                                    class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                                                    {{ $quiz->questions->count() }} PTS
+                                                </span>
                                             </div>
-                                            <span x-text="attempt.user ? `${attempt.user.last_name}, ${attempt.user.first_name}` : 'N/A'"></span>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 border-y border-gray-100">
-                                        <div class="inline-flex items-center text-[10px] font-black text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 uppercase tracking-widest">
-                                            <i class="ri-timer-line mr-2"></i>
-                                            <span x-text="Math.floor(attempt.time_spent / 60) + 'm ' + (attempt.time_spent % 60) + 's'"></span>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 rounded-e-2xl border-y border-r border-gray-100">
-                                        <div class="flex items-center justify-end gap-3">
-                                            <div class="px-4 py-2 border-2 border-gray-100 rounded-xl">
-                                                <span class="text-xs font-black text-[#383838]" x-text="Math.round((attempt.score / attempt.total_questions) * 100) + '%'"></span>
-                                            </div>
-                                            <div class="px-4 py-2 bg-[#383838] text-white rounded-xl">
-                                                <span class="text-sm font-black" x-text="attempt.score + ' / ' + attempt.total_questions"></span>
+
+                                            <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
+                                                {{ $quiz->title }}
+                                            </h4>
+
+                                            <div class="space-y-2 mt-4">
+                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                                                    <i class="ri-calendar-todo-line mr-2"></i>
+                                                    {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}
+                                                </div>
+                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                                                    <i class="ri-time-line mr-2"></i>
+                                                    {{ $quiz->time_limit }} Mins Duration
+                                                </div>
+                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                                                    <i class="ri-group-line mr-2"></i>
+                                                    {{ $quiz->attempts->count() }} Answered
+                                                </div>
                                             </div>
                                         </div>
-                                    </td>
-                                </tr>
+
+                                        <div class="mt-6">
+                                            <button
+                                                @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
+                                                class="w-full bg-gray-50 text-[#383838] border border-gray-200 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest">
+                                                View Results
+                                            </button>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div
+                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
+                                        <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
+                                        <p class="text-gray-400 italic text-sm">No quizzes available for this session.</p>
+                                    </div>
+                                @endforelse
+                            </div>
+
+                            <template x-if="selectedQuiz">
+                                <div
+                                    class="fixed inset-0 z-[100] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4">
+                                    <div
+                                        class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                                        <div class="p-6 border-b flex justify-between items-center bg-white">
+                                            <div>
+                                                <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
+                                                    x-text="selectedQuiz.title"></h3>
+                                                <p
+                                                    class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                                                    Quiz Performance & Score Overview</p>
+                                            </div>
+                                            <button @click="closeResults()"
+                                                class="text-gray-400 hover:text-black transition text-2xl">
+                                                <i class="ri-close-line"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="overflow-y-auto p-6 bg-gray-50/50">
+                                            <table class="w-full text-left border-separate border-spacing-y-3">
+                                                <thead>
+                                                    <tr
+                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                        <th class="px-6 pb-2">Student Name</th>
+                                                        <th class="px-6 pb-2">Time Taken</th>
+                                                        <th class="px-6 pb-2 text-right">Final Score</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template x-for="attempt in scores" :key="attempt.id">
+                                                        <tr
+                                                            class="bg-white shadow-sm rounded-2xl transition-all hover:shadow-md">
+                                                            <td
+                                                                class="px-6 py-4 font-bold text-gray-900 rounded-s-2xl border-y border-l border-gray-100">
+                                                                <div class="flex items-center gap-3">
+                                                                    <div
+                                                                        class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">
+                                                                        <span
+                                                                            x-text="attempt.user.first_name.charAt(0) + attempt.user.last_name.charAt(0)"></span>
+                                                                    </div>
+                                                                    <span
+                                                                        x-text="attempt.user ? `${attempt.user.last_name}, ${attempt.user.first_name}` : 'N/A'"></span>
+                                                                </div>
+                                                            </td>
+                                                            <td class="px-6 py-4 border-y border-gray-100">
+                                                                <div
+                                                                    class="inline-flex items-center text-[10px] font-black text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 uppercase tracking-widest">
+                                                                    <i class="ri-timer-line mr-2"></i>
+                                                                    <span
+                                                                        x-text="Math.floor(attempt.time_spent / 60) + 'm ' + (attempt.time_spent % 60) + 's'"></span>
+                                                                </div>
+                                                            </td>
+                                                            <td
+                                                                class="px-6 py-4 rounded-e-2xl border-y border-r border-gray-100">
+                                                                <div class="flex items-center justify-end gap-3">
+                                                                    <div
+                                                                        class="px-4 py-2 border-2 border-gray-100 rounded-xl">
+                                                                        <span class="text-xs font-black text-[#383838]"
+                                                                            x-text="Math.round((attempt.score / attempt.total_questions) * 100) + '%'"></span>
+                                                                    </div>
+                                                                    <div
+                                                                        class="px-4 py-2 bg-[#383838] text-white rounded-xl">
+                                                                        <span class="text-sm font-black"
+                                                                            x-text="attempt.score + ' / ' + attempt.total_questions"></span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+
+                                            <template x-if="scores.length === 0">
+                                                <div
+                                                    class="text-center py-20 bg-white rounded-3xl border border-gray-100 mt-4">
+                                                    <p class="text-gray-400 italic text-sm font-medium">No students have
+                                                        completed this quiz yet.</p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
                             </template>
-                        </tbody>
-                    </table>
-
-                    <template x-if="scores.length === 0">
-                        <div class="text-center py-20 bg-white rounded-3xl border border-gray-100 mt-4">
-                            <p class="text-gray-400 italic text-sm font-medium">No students have completed this quiz yet.</p>
                         </div>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </template>
-</div>
 
                         <div x-show="activeTab === 'students'" x-cloak class="space-y-6 animate-fade-in">
 
@@ -1170,25 +1319,6 @@
 
                     </div>
         </main>
-    </div>
-
-    <div x-data="{ 
-        isActive: {{ $class->is_active ? 'true' : 'false' }},
-        isBroadcasting: {{ $class->is_broadcasting ? 'true' : 'false' }} 
-    }" class="fixed bottom-6 right-6 z-50 flex gap-3 shadow-2xl rounded-lg bg-white p-3 border border-gray-200">
-        <button @click="toggleSession()"
-            :class="isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'"
-            class="px-6 py-3 rounded-lg text-white font-bold transition-all shadow-md flex items-center gap-2">
-            <i :class="isActive ? 'ri-stop-circle-line' : 'ri-play-circle-line'" class="text-lg"></i>
-            <span x-text="isActive ? 'Stop Lab Session' : 'Start Lab Session'"></span>
-        </button>
-
-        <button type="button" x-show="isActive" @click.prevent="toggleBroadcast()"
-            :class="isBroadcasting ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'"
-            class="px-6 py-3 rounded-lg text-white font-bold shadow-md transition-all flex items-center gap-2">
-            <i :class="isBroadcasting ? 'ri-broadcast-line animate-pulse' : 'ri-computer-line'" class="text-lg"></i>
-            <span x-text="isBroadcasting ? 'Stop Broadcasting' : 'Share My Screen'"></span>
-        </button>
     </div>
 
     <script>

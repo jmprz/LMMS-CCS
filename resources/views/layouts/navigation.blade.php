@@ -5,7 +5,7 @@
                 <div class="shrink-0 flex items-center group">
                     <div class="flex items-center space-x-3">
                         <div class="p-1.5 rounded-lg shadow-sm">
-                            <img src="{{ ('/img/ccs_logo.png') }}" class="h-14 w-auto" alt="Logo">
+                            <img src="{{ asset('/img/ccs_logo.png') }}" class="h-14 w-auto" alt="Logo">
                         </div>
                         <div class="hidden md:flex flex-col">
                             <span class="font-black tracking-tighter text-lg uppercase leading-tight text-gray-900">
@@ -19,72 +19,53 @@
                 </div>
             </div>
 
-
-
             <div class="flex items-center">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="flex items-center hover:opacity-80 transition">
-                            <div class="text-right mr-3 hidden sm:block">
-                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">
-                                    Welcome</p>
-                                <p class="text-sm font-black text-gray-800 leading-tight">
-                                    {{ Auth::user()->name }}
-                                    <i class="ri-arrow-down-s-line text-gray-400"></i>
-                                </p>
-                            </div>
-
-                            <div
-                                class="h-10 w-10 rounded-full bg-[#383838] flex items-center justify-center text-white uppercase font-bold shadow-md">
-                                {{ substr(Auth::user()->name, 0, 1) }}{{ substr(strrchr(Auth::user()->name, " "), 1, 1) }}
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('My Profile') }}
-                        </x-dropdown-link>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <x-dropdown-link :href="route('logout')" class="text-red-600 font-bold"
-                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                {{ __('Sign Out') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="p-2 rounded-md text-gray-500 hover:bg-gray-100">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" d="M4 6h16M4 12h16M4 18h16"
-                            stroke-linecap="round" stroke-width="2" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" d="M6 18L18 6M6 6l12 12"
-                            stroke-linecap="round" stroke-width="2" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-gray-50 border-t">
-        <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-bold text-base">{{ Auth::user()->name }}</div>
-                <div class="text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">{{ __('Profile') }}</x-responsive-nav-link>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <x-responsive-nav-link :href="route('logout')"
-                        onclick="event.preventDefault(); this.closest('form').submit();">
-                        {{ __('Sign Out') }}
-                    </x-responsive-nav-link>
-                </form>
+                <div class="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                    </div>
+                    
+                    <div class="flex flex-col text-right">
+                        <span id="nav-live-clock" class="font-black text-sm text-gray-800 tracking-tight leading-none">
+                            00:00:00 AM
+                        </span>
+                        <span id="nav-live-date" class="font-bold text-[10px] text-gray-400 uppercase tracking-wider mt-0.5 leading-none">
+                            Loading Date...
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </nav>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        function updateSystemTime() {
+            const now = new Date();
+            
+            const timeOptions = { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                hour12: true 
+            };
+            const dateOptions = { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            };
+
+            const clockEl = document.getElementById('nav-live-clock');
+            const dateEl = document.getElementById('nav-live-date');
+            
+            if(clockEl) clockEl.innerText = now.toLocaleTimeString('en-US', timeOptions);
+            if(dateEl) dateEl.innerText = now.toLocaleDateString('en-US', dateOptions);
+        }
+
+        updateSystemTime();
+        setInterval(updateSystemTime, 1000);
+    });
+</script>

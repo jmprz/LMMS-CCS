@@ -147,23 +147,37 @@
                     </div>
                 @else
                                 <div x-show="!isSharing"
-                                    class="flex flex-col items-center justify-center bg-white p-12 rounded-[40px] border border-gray-200 shadow-sm text-center">
-                                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                                        <i class="ri-macbook-line text-4xl text-[#383838]"></i>
-                                    </div>
-                                    <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Security Check Required</h3>
-                                    <p class="text-gray-500 mb-8 max-w-md">To maintain lab integrity, share your <span
-                                            class="font-bold text-gray-800 underline underline-offset-4">Entire Screen</span> to unlock
-                                        the classroom dashboard.</p>
-                                    <button onclick="enterClassroom()"
-                                        class="bg-[#383838] text-white px-10 py-4 rounded-2xl shadow-xl hover:bg-[#2c2c2c] font-black transition-all hover:scale-105">
-                                        Share Screen & Enter Classroom
-                                    </button>
-                                </div>
+     class="flex flex-col items-center justify-center bg-white p-12 rounded-[40px] border border-gray-200 shadow-sm text-center">
+    
+    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+        <i class="ri-macbook-line text-4xl text-[#383838]"></i>
+    </div>
+    
+    <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Security Check Required</h3>
+    
+    <p class="text-gray-500 mb-8 max-w-md">
+        To maintain lab integrity, share your 
+        <span class="font-bold text-gray-800 underline underline-offset-4">Entire Screen</span> 
+        to unlock the classroom dashboard.
+    </p>
+    
+    <div class="flex flex-col items-center space-y-4">
+        <button onclick="enterClassroom()"
+            class="bg-[#383838] text-white px-10 py-4 rounded-2xl shadow-xl hover:bg-[#2c2c2c] font-black transition-all hover:scale-105 duration-150">
+            Share Screen & Enter Classroom
+        </button>
+
+        <a href="{{ route('dashboard') }}" 
+           class="inline-flex items-center text-xs font-black text-gray-400 hover:text-gray-800 uppercase tracking-widest transition duration-150 group">
+            <i class="ri-arrow-left-line mr-2 text-sm transition-transform group-hover:-translate-x-1"></i>
+            Back to Dashboard
+        </a>
+    </div>
+</div>
 
                                 <div x-show="isSharing" x-cloak class="animate-fade-in">
                                     <div class="flex border-b border-gray-200 mb-8">
-                                        <template x-for="t in ['activities', 'quizzes', 'materials', 'classmates', 'Browser']">
+                                        <template x-for="t in ['activities', 'quizzes', 'materials', 'Browser']">
                                             <button @click="activeTab = t"
                                                 :class="activeTab === t ? 'border-b-2 border-black text-black font-black' : 'text-gray-400 hover:text-gray-600 font-bold'"
                                                 class="px-8 py-4 text-[10px] uppercase tracking-widest transition" x-text="t"></button>
@@ -458,11 +472,7 @@
         </div>
     </div>
 </div>
-                                    <div x-show="activeTab === 'classmates'"
-                                        class="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white/50">
-                                        <i class="ri-group-line text-gray-300 text-6xl mb-4 block"></i>
-                                        <p class="font-black text-gray-400 uppercase tracking-widest text-[10px]">Classmate Roster</p>
-                                    </div>
+                                
 
                                     <div x-show="activeTab === 'Browser'" class="animate-fade-in" x-data="browserManager()">
                                         <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl">

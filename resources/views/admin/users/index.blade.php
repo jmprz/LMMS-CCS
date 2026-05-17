@@ -2,29 +2,86 @@
     <x-slot name="header"></x-slot>
     <div class="fixed inset-0 flex bg-gray-100">
 
-        <aside class="w-64 border-r border-gray-300 bg-white mt-[80px] flex-shrink-0">
-            <nav class="mt-8 px-4 space-y-2">
-                <a href="{{ route('admin.dashboard') }}"
-                    class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                    <i class="ri-dashboard-line mr-3 text-lg"></i> Dashboard
+     <aside class="w-64 border-r border-gray-300 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] sticky top-[80px]">
+   <nav class="mt-8 px-4 space-y-2">
+            <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">System Admin</div>
+
+            <a href="{{ route('admin.dashboard') }}"
+                class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.dashboard') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                <i class="ri-dashboard-line mr-3 text-lg"></i> Dashboard
+            </a>
+
+            <a href="{{ route('admin.classroom') }}"
+                class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.classroom*') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                <i class="ri-folder-5-line mr-3 text-lg"></i> Classroom
+            </a>
+
+            <a href="{{ route('admin.users.index') }}"
+                class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.users*') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                <i class="ri-user-line mr-3 text-lg"></i> Users
+            </a>
+
+            <a href="{{ route('profile.edit') }}"
+                class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('profile.edit') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                <i class="ri-settings-5-line mr-3 text-lg"></i> Settings
+            </a>
+            <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Platform Support</div>
+
+            <a href="#"
+                class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.about') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                <i class="ri-information-line mr-3 text-lg"></i> About System
+            </a>
+
+            <a href="#"
+                class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.faqs') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                <i class="ri-questionnaire-line mr-3 text-lg"></i> FAQs Hub
+            </a>
+        </nav>
+
+    <div class="p-4 border-t border-gray-200 bg-gray-50/50 relative" x-data="{ open: false }" @click.away="open = false">
+        
+        <div x-show="open" 
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="transform opacity-0 scale-95"
+             x-transition:enter-end="transform opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="transform opacity-100 scale-100"
+             x-transition:leave-end="transform opacity-0 scale-95"
+             class="absolute bottom-full left-4 right-4 mb-2 w-56 rounded-xl md:w-auto bg-white border border-gray-200 shadow-xl z-50 divide-y divide-gray-100"
+             style="display: none;">
+            
+            <div class="py-1">
+                <form id="admin-logout-form" method="POST" action="{{ route('logout') }}" class="hidden">
+                    @csrf
+                </form>
+                <a href="{{ route('logout') }}" 
+                   class="flex items-center px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition"
+                   onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">
+                    <i class="ri-logout-box-r-line mr-2.5 text-red-500 text-sm"></i> Sign Out
                 </a>
-                <a href="{{ route('admin.classroom') }}"
-                    class="flex items-center py-3 px-4 rounded-lg {{ request()->routeIs('admin.classroom') ? 'bg-black text-white font-bold' : 'text-gray-600 hover:bg-gray-100' }} transition">
-                    <i class="ri-graduation-cap-line mr-3 text-lg"></i>
-                    Classroom
-                </a>
-                <a href="{{ route('admin.users.index') }}"
-                    class="flex items-center py-3 px-4 rounded-lg {{ request()->routeIs('admin.users*') ? 'bg-[#383838] text-white font-bold' : 'text-gray-600 hover:bg-gray-100' }} transition">
-                    <i class="ri-user-line mr-3 text-lg"></i> User Management
-                </a>
-                <a href="#" class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                    <i class="ri-message-3-line mr-3 text-lg"></i> Message
-                </a>
-                <a href="#" class="flex items-center py-3 px-4 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                    <i class="ri-history-line mr-3 text-lg"></i> Activity Log
-                </a>
-            </nav>
-        </aside>
+            </div>
+        </div>
+
+        <button @click="open = !open" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-200/60 transition duration-150 text-left">
+            <div class="flex items-center min-w-0">
+                <div class="h-9 w-9 rounded-xl bg-[#383838] flex items-center justify-center text-white uppercase font-black shadow-sm text-xs flex-shrink-0">
+                    {{ substr(Auth::user()->name, 0, 1) }}{{ substr(strrchr(Auth::user()->name, " "), 1, 1) }}
+                </div>
+                
+                <div class="ml-3 truncate">
+                    <p class="text-xs font-black text-gray-800 truncate leading-snug">
+                        {{ Auth::user()->name }}
+                    </p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none mt-0.5">
+                        Administrator
+                    </p>
+                </div>
+            </div>
+           <i class="ri-arrow-up-s-line text-gray-400 text-base transition group-hover:text-gray-700 mr-1"
+               :class="open ? 'transform rotate-180 text-gray-700' : ''"></i>
+        </button>
+    </div>
+</aside>
 
         <main class="flex-1 overflow-y-auto h-full">
             <div class="p-8 mt-[80px]">
@@ -47,8 +104,7 @@
         this.editUserData = { ...user };
         this.showEditModal = true;
     }
-}"
-x-cloak>
+}" x-cloak>
                     <div class="mt-4" x-data="userManagement({{ $users->toJson() }})">
                         <div
                             class="mb-6 grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
@@ -326,8 +382,11 @@ x-cloak>
                                                                     <div>
                                                                         <p class="text-sm font-bold text-gray-800 leading-tight"
                                                                             x-text="log.content"></p>
-                                                                        <p class="text-[11px] mt-1 text-gray-500"
-                                                                            x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 'Navigation Log'">
+                                                                        <p class="text-[11px] mt-1 text-gray-500 font-bold uppercase tracking-wider text-[10px]"
+                                                                            x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 
+                                                                            log.log_type === 'submission' ? 'Task Submission' : 
+                                                                            log.log_type === 'material' ? 'Courseware Access' : 
+                                                                            log.log_type === 'quiz' ? 'Assessment Activity' : 'Navigation Log'">
                                                                         </p>
                                                                     </div>
                                                                     <span
@@ -489,12 +548,20 @@ x-cloak>
 
                 getIcon(type) {
                     if (type === 'attendance') return 'ri-checkbox-circle-line';
-                    return type === 'navigation' ? 'ri-global-line' : 'ri-cursor-line';
+                    if (type === 'navigation') return 'ri-global-line';
+                    if (type === 'submission') return 'ri-file-upload-line';
+                    if (type === 'material') return 'ri-book-open-line';
+                    if (type === 'quiz') return 'ri-task-line';
+                    return 'ri-cursor-line';
                 },
 
                 getIconClass(type) {
-                    if (type === 'attendance') return 'bg-gray-100 text-gray-600';
-                    return type === 'navigation' ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-600';
+                    if (type === 'attendance') return 'bg-green-50 text-green-600 border border-green-200';
+                    if (type === 'navigation') return 'bg-amber-50 text-amber-600 border border-amber-200';
+                    if (type === 'submission') return 'bg-blue-50 text-blue-600 border border-blue-200';
+                    if (type === 'material') return 'bg-purple-50 text-purple-600 border border-purple-200';
+                    if (type === 'quiz') return 'bg-indigo-50 text-indigo-600 border border-indigo-200';
+                    return 'bg-gray-100 text-gray-600';
                 }
             }
         }

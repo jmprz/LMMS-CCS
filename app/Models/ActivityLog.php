@@ -20,4 +20,10 @@ protected function serializeDate(\DateTimeInterface $date)
 {
     return $date->format('Y-m-d H:i:s.u');
 }
+
+public function labSession()
+    {
+        // Fits perfectly if your foreign key column is 'lab_session_id'
+        return $this->belongsTo(LabSession::class, 'lab_session_id');
+    }
 }

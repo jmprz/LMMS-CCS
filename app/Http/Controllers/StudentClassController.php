@@ -112,12 +112,14 @@ class StudentClassController extends Controller
         ]);
     }
 
-   public function submitTask(Request $request, $taskId)
+public function submitTask(Request $request, $taskId)
 {
-    // Use now() helper to avoid Carbon namespace issues
+    // 1. Fetch task along with its associated session details
     $task = Task::with('labSession')->findOrFail($taskId);
     $user = auth()->user();
+    $userId = $user->id;
 
+    // 2. Deadline Check
     if ($task->deadline && now()->gt(Carbon::parse($task->deadline))) {
         return response()->json(['status' => 'error', 'message' => 'The deadline has passed.'], 403);
     }
@@ -126,17 +128,60 @@ class StudentClassController extends Controller
         'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:10240',
     ]);
 
+    // 3. STOPWATCH DURATION CALCULATION
+    $durationSeconds = 0;
+    $submittedAt = now();
+
+    // Check if an entry exists for when they first opened this specific task workspace
+    $activity = \App\Models\StudentActivity::where('task_id', $taskId)
+        ->where('user_id', $userId)
+        ->first();
+
+    if ($activity) {
+        // 1. Convert BOTH times to UNIX timestamps
+        $startTimestamp = \Carbon\Carbon::parse($activity->created_at)->getTimestamp();
+        $endTimestamp = \Carbon\Carbon::parse($submittedAt)->getTimestamp();
+
+        // 2. Wrap with abs() to guarantee it's positive
+        $calculatedDuration = abs($endTimestamp - $startTimestamp);
+        
+        $maxDurationSeconds = 3600; // 1-hour session cap
+        $durationSeconds = min($calculatedDuration, $maxDurationSeconds);
+
+        // Mark the individual workspace activity tracking block as completed
+        $activity->update([
+            'ended_at' => $submittedAt,
+            'duration_seconds' => $durationSeconds,
+            'is_completed' => true
+        ]);
+    } else {
+        // Fallback: If no workspace log was caught, look at the elapsed time since their last overall activity heartbeat
+        $lastLog = \App\Models\ActivityLog::where('user_id', $userId)
+            ->where('lab_session_id', $task->subject_id)
+            ->latest()
+            ->first();
+            
+        if ($lastLog) {
+            // 🟢 FIXED: Convert to raw timestamps here too to avoid negative calculations
+            $startTimestamp = \Carbon\Carbon::parse($lastLog->created_at)->getTimestamp();
+            $endTimestamp = \Carbon\Carbon::parse($submittedAt)->getTimestamp();
+            
+            // 🟢 FIXED: Wrapped in abs() so it can NEVER be negative
+            $durationSeconds = min(abs($endTimestamp - $startTimestamp), 3600);
+        }
+    }
+
+    // 4. File Handling & Folder Path Building
     if ($request->hasFile('submission')) {
         $file = $request->file('submission');
 
-        // 1. Format Subject - Added default fallback
+        // Format Subject Code
         $subjectCode = strtoupper($task->labSession->class_code ?? 'GENERAL');
 
-        // 2. Format Section
+        // Format Section string
         $section = strtoupper(($user->year_level ?? '') . ($user->section ?? 'NA'));
 
-        // 3. Format Student Name (LASTNAME_FIRSTNAME)
-        // Trim removes accidental spaces at the start or end
+        // Format Student Folder Identity (LASTNAME_FIRSTNAME)
         $nameParts = explode(' ', trim($user->name));
         if (count($nameParts) > 1) {
             $lastName = array_pop($nameParts); 
@@ -146,30 +191,39 @@ class StudentClassController extends Controller
             $formattedName = strtoupper($user->name);
         }
 
-        // 4. Build the Path
+        // Build Public Storage Destination Path
         $folderPath = "submissions/{$subjectCode}/{$section}/{$formattedName}";
         $filename = time() . '_' . $file->getClientOriginalName();
         
-        // Laravel's move() automatically creates folders if they don't exist
+        // Move the file into the public uploads directory
         $file->move(public_path($folderPath), $filename);
         $fullPath = $folderPath . '/' . $filename;
 
-        // 5. Cleanup Old Files
-        $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', $user->id)->first();
+        // 5. Cleanup Obsolete/Prior Uploads
+        $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', $userId)->first();
         if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
-            @unlink(public_path($oldSubmission->file_path)); // @ suppresses errors if file is missing
+            @unlink(public_path($oldSubmission->file_path));
         }
 
-        // 6. Save to Database
+        // 6. Save or Update Submission data with the correct dynamic duration
         Submission::updateOrCreate(
-            ['task_id' => $taskId, 'user_id' => $user->id],
+            ['task_id' => $taskId, 'user_id' => $userId],
             [
                 'file_path' => $fullPath,
                 'original_filename' => $file->getClientOriginalName(),
-                'duration_seconds' => abs(now()->diffInSeconds($task->created_at)),
-                'submitted_at' => now(),
+                'duration_seconds' => $durationSeconds, // Stores active duration
+                'submitted_at' => $submittedAt,
             ]
         );
+
+        // 7. Create Timeline Log row with the actual duration included!
+        \App\Models\ActivityLog::create([
+            'user_id'          => $userId,
+            'log_type'         => 'submission',
+            'content'          => "Student submitted activity: \"" . $task->title . "\"",
+            'lab_session_id'   => $task->subject_id, // Maps to your subject_id column
+            'duration_seconds' => $durationSeconds,  // Reflects real stopwatch metrics
+        ]);
 
         return response()->json([
             'status' => 'success', 
