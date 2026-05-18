@@ -351,7 +351,55 @@
                             @endif
                         </div>
 
-                        <div x-show="activeTab === 'materials'" x-cloak class="animate-fade-in">
+                        <div x-show="activeTab === 'materials'" x-cloak class="animate-fade-in" x-data="{
+        // Central Modal Variables Control Blocks
+        previewOpen: false,
+        previewTitle: '',
+        previewType: '',
+        previewUrl: '',
+
+        editOpen: false,
+        editId: '',
+        editTitle: '',
+        editType: '',
+        editContentUrl: '',
+        editActionUrl: '',
+
+        viewersOpen: false,
+        viewersTitle: '',
+        viewersList: [],
+        loadingViewers: false,
+
+        // Fetch viewer metrics using Query Builder API endpoint target
+        fetchViewers(materialId, materialTitle) {
+            this.viewersTitle = materialTitle;
+            this.viewersOpen = true;
+            this.loadingViewers = true;
+            this.viewersList = [];
+            
+            fetch(`/professor/materials/${materialId}/viewers`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.viewersList = data;
+                this.loadingViewers = false;
+            })
+            .catch(err => {
+                console.error('Data pipeline exception:', err);
+                this.loadingViewers = false;
+            });
+        },
+
+        // Clean layout timing formats
+        formatDuration(seconds) {
+            if (!seconds) return '0s';
+            if (seconds < 60) return seconds + 's';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+        }
+     }">
 
                             <div class="flex justify-between items-center mb-8 ms-4 me-4">
                                 <div>
@@ -369,6 +417,10 @@
                             <div id="materials-list-container"
                                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 @forelse($class->materials as $material)
+                                    @php
+                                        // Build dynamic web asset resolution matching controller's upload locations
+                                        $cleanUrl = $material->type === 'youtube' ? $material->content : url('/' . $material->content);
+                                    @endphp
                                     <div
                                         class="bg-white p-6 rounded-[32px] border border-gray-100 flex flex-col justify-between group hover:border-black transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-gray-100">
                                         <div>
@@ -380,7 +432,7 @@
                                                     @elseif($material->type == 'youtube')
                                                         <i class="ri-youtube-line text-xl"></i>
                                                     @else
-                                                        <i class="ri-file-line text-xl"></i>
+                                                        <i class="ri-presentation-line text-xl"></i>
                                                     @endif
                                                 </div>
                                                 <span
@@ -395,15 +447,38 @@
                                             </h4>
                                         </div>
 
-                                        <div class="mt-6 pt-4 border-t border-gray-50 flex justify-between items-center">
-                                            <a href="{{ $material->type === 'youtube' ? $material->content : url('/' . $material->content) }}"
-                                                target="_blank"
-                                                class="text-[10px] font-black uppercase text-gray-400 hover:text-black tracking-widest transition-colors">
-                                                Preview Content
-                                            </a>
-                                            <button class="text-gray-300 hover:text-red-500 transition-colors">
-                                                <i class="ri-delete-bin-line"></i>
+                                        <div class="mt-6 pt-4 border-t border-gray-50 flex flex-col space-y-3">
+                                            <button
+                                                @click="fetchViewers({{ $material->id }}, '{{ addslashes($material->title) }}')"
+                                                class="w-full bg-gray-50 hover:bg-black hover:text-white text-[#383838] py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center transition-all duration-200">
+                                                <i class="ri-group-line mr-2 text-sm"></i> View Logs & Duration
                                             </button>
+
+                                            <div class="flex justify-between items-center">
+                                                <button
+                                                    @click="previewOpen = true; previewTitle = '{{ addslashes($material->title) }}'; previewType = '{{ $material->type }}'; previewUrl = '{{ $cleanUrl }}'"
+                                                    class="text-[10px] font-black uppercase text-gray-400 hover:text-black tracking-widest transition-colors flex items-center">
+                                                    <i class="ri-eye-line mr-1 text-sm"></i> Preview Content
+                                                </button>
+
+                                                <div class="flex items-center space-x-3">
+                                                    <button
+                                                        @click="editOpen = true; editId = '{{ $material->id }}'; editTitle = '{{ addslashes($material->title) }}'; editType = '{{ $material->type }}'; editContentUrl = '{{ $material->type === 'youtube' ? $material->content : '' }}'; editActionUrl = '/professor/materials/' + {{ $material->id }}"
+                                                        class="text-gray-300 hover:text-blue-500 transition-colors">
+                                                        <i class="ri-edit-line text-base"></i>
+                                                    </button>
+
+                                                    <form action="/professor/materials/{{ $material->id }}" method="POST"
+                                                        @submit.prevent="if(confirm('Are you sure you want to completely erase this file?')) submitAjaxForm($event)">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                            class="text-gray-300 hover:text-red-500 transition-colors pt-1">
+                                                            <i class="ri-delete-bin-line text-base"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 @empty
@@ -417,87 +492,285 @@
                             </div>
 
                             <template x-teleport="body">
-                                <div x-data="{ open: false, type: 'pdf' }" @open-material-modal.window="open = true"
-                                    x-show="open"
-                                    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
-                                    x-transition:enter="transition ease-out duration-300"
-                                    x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                                    x-transition:leave="transition ease-in duration-200"
-                                    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak>
+                                <div>
+                                    <div x-data="{ open: false, type: 'pdf' }" @open-material-modal.window="open = true"
+                                        x-show="open"
+                                        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+                                        x-transition:enter="transition ease-out duration-300"
+                                        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                        x-transition:leave="transition ease-in duration-200"
+                                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                                        x-cloak>
 
-                                    <div @click.away="open = false"
-                                        class="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden animate-modal-in">
-
-                                        <div class="p-8 border-b border-gray-50 flex justify-between items-center">
-                                            <div>
-                                                <h3
-                                                    class="text-2xl font-black text-[#383838] tracking-tighter uppercase">
-                                                    Upload Content</h3>
-                                                <p
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
-                                                    Add materials to student view</p>
+                                        <div @click.away="open = false"
+                                            class="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden animate-modal-in">
+                                            <div class="p-8 border-b border-gray-50 flex justify-between items-center">
+                                                <div>
+                                                    <h3
+                                                        class="text-2xl font-black text-[#383838] tracking-tighter uppercase">
+                                                        Upload Content</h3>
+                                                    <p
+                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                                                        Add materials to student view</p>
+                                                </div>
+                                                <button @click="open = false"
+                                                    class="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full hover:bg-black hover:text-white transition-all">
+                                                    <i class="ri-close-line text-xl"></i>
+                                                </button>
                                             </div>
-                                            <button @click="open = false"
-                                                class="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full hover:bg-black hover:text-white transition-all">
-                                                <i class="ri-close-line text-xl"></i>
-                                            </button>
+
+                                            <form action="{{ route('professor.materials.store', $session->id) }}"
+                                                method="POST" enctype="multipart/form-data" class="p-8 space-y-6"
+                                                @submit.prevent="submitAjaxForm($event, () => open = false)">
+                                                @csrf
+                                                <div class="space-y-2">
+                                                    <label
+                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
+                                                    <input type="text" name="title" required
+                                                        placeholder="e.g., Introduction to Neural Networks"
+                                                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-black outline-none transition-all font-bold text-[#383838]">
+                                                </div>
+
+                                                <div class="space-y-2">
+                                                    <label
+                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Content
+                                                        Category</label>
+                                                    <select name="type" x-model="type"
+                                                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none cursor-pointer focus:ring-2 focus:ring-black font-bold text-[#383838]">
+                                                        <option value="pdf">PDF Document</option>
+                                                        <option value="pptx">PowerPoint Presentation</option>
+                                                        <option value="youtube">YouTube Video</option>
+                                                    </select>
+                                                </div>
+
+                                                <div
+                                                    class="p-6 bg-gray-50 rounded-[24px] border-2 border-dashed border-gray-200">
+                                                    <template x-if="type === 'youtube'">
+                                                        <div class="space-y-2">
+                                                            <label
+                                                                class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Video
+                                                                URL</label>
+                                                            <input type="url" name="content_url" required
+                                                                placeholder="https://www.youtube.com/watch?v=..."
+                                                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none font-medium">
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="type === 'pdf' || type === 'pptx'">
+                                                        <div class="space-y-2 text-center">
+                                                            <label
+                                                                class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4">Select
+                                                                Source File</label>
+                                                            <input type="file" name="content_file" required
+                                                                :accept="type === 'pdf' ? '.pdf' : '.ppt,.pptx'"
+                                                                class="block w-full text-xs text-gray-400 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-black file:text-white hover:file:bg-gray-800 transition-all">
+                                                        </div>
+                                                    </template>
+                                                </div>
+
+                                                <button type="submit"
+                                                    class="w-full bg-[#383838] text-white py-5 rounded-[24px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200">
+                                                    Publish to Classroom
+                                                </button>
+                                            </form>
                                         </div>
+                                    </div>
 
-                                        <form action="{{ route('professor.materials.store', $session->id) }}"
-                                            method="POST" enctype="multipart/form-data" class="p-8 space-y-6"
-                                            @submit.prevent="submitAjaxForm($event, () => open = false)">
-                                            @csrf
-
-                                            <div class="space-y-2">
-                                                <label
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
-                                                <input type="text" name="title" required
-                                                    placeholder="e.g., Introduction to Neural Networks"
-                                                    class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-black outline-none transition-all font-bold text-[#383838]">
+                                    <div x-show="editOpen"
+                                        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+                                        x-cloak>
+                                        <div @click.away="editOpen = false"
+                                            class="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden">
+                                            <div class="p-8 border-b border-gray-50 flex justify-between items-center">
+                                                <div>
+                                                    <h3
+                                                        class="text-2xl font-black text-[#383838] tracking-tighter uppercase">
+                                                        Edit Resource</h3>
+                                                    <p
+                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                                                        Modify learning material entries</p>
+                                                </div>
+                                                <button @click="editOpen = false"
+                                                    class="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full hover:bg-black hover:text-white">
+                                                    <i class="ri-close-line text-xl"></i>
+                                                </button>
                                             </div>
 
-                                            <div class="space-y-2">
-                                                <label
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Content
-                                                    Category</label>
-                                                <select name="type" x-model="type"
-                                                    class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none cursor-pointer focus:ring-2 focus:ring-black font-bold text-[#383838]">
-                                                    <option value="pdf">PDF Document</option>
-                                                    <option value="pptx">PowerPoint Presentation</option>
-                                                    <option value="youtube">YouTube Video</option>
-                                                </select>
+                                            <form :action="editActionUrl" method="POST" enctype="multipart/form-data"
+                                                class="p-8 space-y-6"
+                                                @submit.prevent="submitAjaxForm($event, () => editOpen = false)">
+                                                @csrf
+                                                @method('PUT')
+
+                                                <div class="space-y-2">
+                                                    <label
+                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
+                                                    <input type="text" name="title" x-model="editTitle" required
+                                                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-black outline-none font-bold text-[#383838]">
+                                                </div>
+
+                                                <div
+                                                    class="p-6 bg-gray-50 rounded-[24px] border-2 border-dashed border-gray-200">
+                                                    <template x-if="editType === 'youtube'">
+                                                        <div class="space-y-2">
+                                                            <label
+                                                                class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Update
+                                                                Video URL</label>
+                                                            <input type="url" name="content_url"
+                                                                x-model="editContentUrl" required
+                                                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none">
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="editType === 'pdf' || editType === 'pptx'">
+                                                        <div class="space-y-2 text-center">
+                                                            <label
+                                                                class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Replace
+                                                                File Asset (Optional)</label>
+                                                            <p
+                                                                class="text-[10px] text-amber-500 font-bold mb-3 uppercase tracking-wider">
+                                                                Leave blank to retain original resource</p>
+                                                            <input type="file" name="content_file"
+                                                                :accept="editType === 'pdf' ? '.pdf' : '.ppt,.pptx'"
+                                                                class="block w-full text-xs text-gray-400 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-black file:text-white hover:file:bg-gray-800">
+                                                        </div>
+                                                    </template>
+                                                </div>
+
+                                                <button type="submit"
+                                                    class="w-full bg-[#383838] text-white py-5 rounded-[24px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md">
+                                                    Save Resource Changes
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <div x-show="previewOpen"
+                                        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
+                                        x-cloak>
+                                        <div
+                                            class="bg-white w-full max-w-5xl h-[85vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden">
+                                            <div
+                                                class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                                <div>
+                                                    <span
+                                                        class="text-[9px] font-black px-2.5 py-1 bg-black text-white rounded-md uppercase tracking-widest mb-1 inline-block"
+                                                        x-text="previewType"></span>
+                                                    <h3 class="text-xl font-black text-gray-900 tracking-tight"
+                                                        x-text="previewTitle"></h3>
+                                                </div>
+                                                <button @click="previewOpen = false; previewUrl = ''"
+                                                    class="w-10 h-10 flex items-center justify-center bg-white rounded-full hover:bg-black hover:text-white shadow-sm border transition-all">
+                                                    <i class="ri-close-line text-xl"></i>
+                                                </button>
                                             </div>
 
                                             <div
-                                                class="p-6 bg-gray-50 rounded-[24px] border-2 border-dashed border-gray-200">
-                                                <template x-if="type === 'youtube'">
-                                                    <div class="space-y-2">
-                                                        <label
-                                                            class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Video
-                                                            URL</label>
-                                                        <input type="url" name="content_url" required
-                                                            placeholder="https://www.youtube.com/watch?v=..."
-                                                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none font-medium">
-                                                    </div>
+                                                class="flex-grow bg-gray-100 flex items-center justify-center relative">
+                                                <template x-if="previewOpen && previewType === 'youtube'">
+                                                    <iframe class="w-full h-full"
+                                                        :src="previewUrl.replace('watch?v=', 'embed/')" frameborder="0"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowfullscreen></iframe>
                                                 </template>
 
-                                                <template x-if="type === 'pdf' || type === 'pptx'">
-                                                    <div class="space-y-2 text-center">
-                                                        <label
-                                                            class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4">Select
-                                                            Source File</label>
-                                                        <input type="file" name="content_file" required
-                                                            :accept="type === 'pdf' ? '.pdf' : '.ppt,.pptx'"
-                                                            class="block w-full text-xs text-gray-400 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-black file:text-white hover:file:bg-gray-800 transition-all">
+                                                <template x-if="previewOpen && previewType === 'pdf'">
+                                                    <iframe class="w-full h-full" :src="previewUrl"
+                                                        frameborder="0"></iframe>
+                                                </template>
+
+                                                <template x-if="previewOpen && previewType === 'pptx'">
+                                                    <div
+                                                        class="text-center p-8 bg-white max-w-md rounded-2xl border border-gray-100 shadow-sm">
+                                                        <i
+                                                            class="ri-presentation-line text-6xl text-gray-300 mb-4 block"></i>
+                                                        <p class="text-sm font-bold text-gray-800 mb-4">Direct inline
+                                                            web rendering is unavailable for direct PowerPoint formats.
+                                                        </p>
+                                                        <a :href="previewUrl" download
+                                                            class="inline-block px-6 py-3 bg-[#383838] text-white font-black silverware uppercase text-[10px] tracking-widest rounded-xl hover:bg-black transition-all">
+                                                            <i class="ri-download-cloud-line mr-1 text-sm"></i> Download
+                                                            Presentation
+                                                        </a>
                                                     </div>
                                                 </template>
                                             </div>
+                                        </div>
+                                    </div>
 
-                                            <button type="submit"
-                                                class="w-full bg-[#383838] text-white py-5 rounded-[24px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200">
-                                                Publish to Classroom
-                                            </button>
-                                        </form>
+                                    <div x-show="viewersOpen"
+                                        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+                                        x-cloak>
+                                        <div @click.away="viewersOpen = false"
+                                            class="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+                                            <div class="p-8 border-b border-gray-50 flex justify-between items-center">
+                                                <div>
+                                                    <h3
+                                                        class="text-2xl font-black text-[#383838] tracking-tighter uppercase">
+                                                        Material Viewers</h3>
+                                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1"
+                                                        x-text="'Engagement Analysis For: ' + viewersTitle"></p>
+                                                </div>
+                                                <button @click="viewersOpen = false"
+                                                    class="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full hover:bg-black hover:text-white">
+                                                    <i class="ri-close-line text-xl"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="p-6 overflow-y-auto flex-grow bg-gray-50/50">
+                                                <div x-show="loadingViewers" class="py-12 text-center">
+                                                    <div
+                                                        class="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-2">
+                                                    </div>
+                                                    <p
+                                                        class="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                                                        Querying analytics logs...</p>
+                                                </div>
+
+                                                <div x-show="!loadingViewers">
+                                                    <table
+                                                        class="w-full text-left bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                                        <thead>
+                                                            <tr
+                                                                class="bg-gray-50 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                                                                <th class="py-4 px-6">Student Name</th>
+                                                                <th class="py-4 px-4">Opened Date/Time</th>
+                                                                <th class="py-4 px-6 text-right">View Duration</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody
+                                                            class="divide-y divide-gray-50 text-xs font-semibold text-gray-700">
+                                                            <template x-for="log in viewersList" :key="log.id">
+                                                                <tr class="hover:bg-gray-50/80 transition-colors">
+                                                                    <td class="py-4 px-6">
+                                                                        <div class="font-bold text-gray-900"
+                                                                            x-text="log.student_name"></div>
+                                                                        <div class="text-[10px] text-gray-400 font-mono"
+                                                                            x-text="log.student_info"></div>
+                                                                    </td>
+                                                                    <td class="py-4 px-4 text-gray-500"
+                                                                        x-text="log.viewed_at"></td>
+                                                                    <td
+                                                                        class="py-4 px-6 text-right font-mono text-black font-bold">
+                                                                        <span
+                                                                            class="inline-block px-2.5 py-1 bg-gray-100 rounded-md"
+                                                                            :class="log.seconds_spent > 60 ? 'bg-green-50 text-green-700' : 'text-gray-700'"
+                                                                            x-text="formatDuration(log.seconds_spent)"></span>
+                                                                    </td>
+                                                                </tr>
+                                                            </template>
+                                                            <template x-if="viewersList.length === 0">
+                                                                <tr>
+                                                                    <td colspan="3"
+                                                                        class="py-12 text-center text-gray-400 font-bold uppercase text-[11px] tracking-wider">
+                                                                        No tracking logs generated for this material
+                                                                        entry.
+                                                                    </td>
+                                                                </tr>
+                                                            </template>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </template>

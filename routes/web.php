@@ -159,7 +159,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
         Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
 
+        // Material Routes
         Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
+        Route::get('/materials/{id}/viewers', [MaterialController::class, 'getViewers'])->name('materials.viewers');
+        Route::put('/materials/{id}', [MaterialController::class, 'update'])->name('materials.update');
+        Route::delete('/materials/{id}', [MaterialController::class, 'destroy'])->name('materials.destroy');
+    
         // Session Controls
         Route::post('/sessions/{id}/toggle', [ClassroomController::class, 'toggleSession'])->name('sessions.toggle');
         Route::post('/sessions/{id}/broadcast', [ClassroomController::class, 'broadcast'])->name('sessions.broadcast');
