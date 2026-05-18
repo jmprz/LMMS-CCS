@@ -257,49 +257,59 @@ public function submitTask(Request $request, $taskId)
         return back()->with('error', 'No submission found to delete.');
     }
 
-    public function logBehavior(Request $request)
-    {
-        $userId = auth()->id() ?? 1;
-        $labSessionId = $request->lab_session_id;
-        $detail = $request->detail;
+   public function logBehavior(Request $request)
+{
+    $userId = auth()->id() ?? 1;
+    $labSessionId = $request->lab_session_id;
+    $detail = $request->detail;
 
-        if (str_contains($detail, 'google.com/search?q=')) {
-            parse_str(parse_url($detail, PHP_URL_QUERY), $query);
-            $detail = "Google Search: " . urldecode($query['q'] ?? 'unknown');
-        }
-
-        $lastLog = DB::table('activity_logs')
-                    ->where('user_id', $userId)
-                    ->where('lab_session_id', $labSessionId)
-                    ->orderBy('id', 'desc')
-                    ->first();
-
-        if ($lastLog) {
-            $startTime = strtotime($lastLog->created_at);
-            $endTime = time();
-            $duration = $endTime - $startTime;
-
-            if ($duration > 0) {
-                DB::table('activity_logs')
-                    ->where('id', $lastLog->id)
-                    ->update(['duration_seconds' => $duration]);
-                
-                \Log::info("ID {$lastLog->id} updated. Start: $startTime, End: $endTime, Diff: $duration");
-            }
-        }
-
-        DB::table('activity_logs')->insert([
-            'user_id' => $userId,
-            'log_type' => $request->type,
-            'content' => $detail,
-            'lab_session_id' => $labSessionId,
-            'duration_seconds' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json(['status' => 'success']);
+    // 🟢 BACKEND AUTO-RESOLVE GUARD: If the frontend sent null, find their active lab session
+    if (empty($labSessionId) || $labSessionId === 'null') {
+        $labSessionId = \DB::table('lab_session_student') // or your pivot table name
+            ->join('lab_sessions', 'lab_session_student.lab_session_id', '=', 'lab_sessions.id')
+            ->where('lab_session_student.user_id', $userId)
+            ->where('lab_sessions.is_active', true)
+            ->orderBy('lab_sessions.created_at', 'desc')
+            ->value('lab_sessions.id');
     }
+
+    if (str_contains($detail, 'google.com/search?q=')) {
+        parse_str(parse_url($detail, PHP_URL_QUERY), $query);
+        $detail = "Google Search: " . urldecode($query['q'] ?? 'unknown');
+    }
+
+    $lastLog = DB::table('activity_logs')
+                ->where('user_id', $userId)
+                ->where('lab_session_id', $labSessionId)
+                ->orderBy('id', 'desc')
+                ->first();
+
+    if ($lastLog) {
+        $startTime = strtotime($lastLog->created_at);
+        $endTime = time();
+        $duration = $endTime - $startTime;
+
+        if ($duration > 0) {
+            DB::table('activity_logs')
+                ->where('id', $lastLog->id)
+                ->update(['duration_seconds' => $duration]);
+            
+            \Log::info("ID {$lastLog->id} updated. Start: $startTime, End: $endTime, Diff: $duration");
+        }
+    }
+
+    DB::table('activity_logs')->insert([
+        'user_id' => $userId,
+        'log_type' => $request->type ?? 'navigation',
+        'content' => $detail,
+        'lab_session_id' => $labSessionId, // Safely assigned!
+        'duration_seconds' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return response()->json(['status' => 'success']);
+}
 
     public function enterClassroom($id)
     {

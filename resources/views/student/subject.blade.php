@@ -1061,114 +1061,109 @@ function quizModal() {
 
     <script>
         function browserManager() {
-            return {
-                // Initial state
-                browserUrl: 'https://www.google.com/search?igu=1',
-                urlInput: '',
-                loadingUrl: false,
-                refreshing: false,
+    return {
+        browserUrl: 'https://www.google.com/search?igu=1',
+        urlInput: '',
+        loadingUrl: false,
+        refreshing: false,
+        historyStack: ['https://www.google.com/search?igu=1'],
+        historyIndex: 0,
 
-                // Manual history tracking (bypasses cross-origin restrictions)
-                historyStack: ['https://www.google.com/search?igu=1'],
-                historyIndex: 0,
-
-                /**
-                 * Navigate to the URL entered in the input field.
-                 * @param {boolean} preserveHistory - Whether to add this navigation to the history stack.
-                 */
-                navigateTo(preserveHistory = true) {
-                    let url = this.urlInput.trim();
-                    if (!url) return;
-
-                    // Convert search queries / partial URLs
-                    if (!url.startsWith('http') && (url.includes(' ') || !url.includes('.'))) {
-                        url = 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
-                    } else if (!url.startsWith('http')) {
-                        url = 'https://' + url;
-                    }
-
-                    // Force Google IGU for embeddability
-                    if (url.includes('google.com') && !url.includes('igu=1')) {
-                        url += (url.includes('?') ? '&' : '?') + 'igu=1';
-                    }
-
-                    this.loadingUrl = true;
-
-                    if (preserveHistory) {
-                        // Remove any forward entries before pushing new URL
-                        this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
-                        this.historyStack.push(url);
-                        this.historyIndex = this.historyStack.length - 1;
-                    }
-
-                    this.browserUrl = url;
-                    const frame = document.getElementById('dashboard-browser-frame');
-                    if (frame) frame.src = url;
-
-                    this.urlInput = ''; // Clear input after navigation
-                    this.loadingUrl = false;
+        // 🌟 NEW: Helper function to send logs to the backend
+       logSiteVisit(targetUrl) {
+            fetch('/student/log-behavior', { // 🟢 MATCHES YOUR ROUTE
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 },
+                body: JSON.stringify({
+                    type: 'navigation',       // 🟢 MATCHES $request->type
+                    detail: targetUrl,        // 🟢 MATCHES $request->detail
+                    lab_session_id: classId   // 🟢 MATCHES $request->lab_session_id
+                })
+            }).catch(err => console.error('Failed to log site visit:', err));
+        },
 
-                /**
-                 * Go back one step in the manual history.
-                 */
-                browserBack() {
-                    if (this.historyIndex > 0) {
-                        this.historyIndex--;
-                        this.loadUrlFromHistory(this.historyStack[this.historyIndex]);
-                    }
-                },
+        navigateTo(preserveHistory = true) {
+            let url = this.urlInput.trim();
+            if (!url) return;
 
-                /**
-                 * Go forward one step in the manual history.
-                 */
-                browserForward() {
-                    if (this.historyIndex < this.historyStack.length - 1) {
-                        this.historyIndex++;
-                        this.loadUrlFromHistory(this.historyStack[this.historyIndex]);
-                    }
-                },
+            if (!url.startsWith('http') && (url.includes(' ') || !url.includes('.'))) {
+                url = 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
+            } else if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
 
-                /**
-                 * Load a URL from the history stack without adding a new entry.
-                 */
-                loadUrlFromHistory(url) {
-                    this.loadingUrl = true;
-                    this.browserUrl = url;
-                    const frame = document.getElementById('dashboard-browser-frame');
-                    if (frame) frame.src = url;
-                    this.loadingUrl = false;
-                },
+            if (url.includes('google.com') && !url.includes('igu=1')) {
+                url += (url.includes('?') ? '&' : '?') + 'igu=1';
+            }
 
-                /**
-                 * Refresh the current page.
-                 */
-                browserRefresh() {
-                    this.refreshing = true;
-                    const frame = document.getElementById('dashboard-browser-frame');
-                    if (frame) {
-                        const currentUrl = frame.src;
-                        frame.src = 'about:blank';
-                        setTimeout(() => {
-                            frame.src = currentUrl;
-                            this.refreshing = false;
-                        }, 100);
-                    }
-                },
+            this.loadingUrl = true;
+            if (preserveHistory) {
+                this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+                this.historyStack.push(url);
+                this.historyIndex = this.historyStack.length - 1;
+            }
 
-                /**
-                 * Quick navigation helper (e.g., from bookmarks).
-                 */
-                quickNav(url) {
-                    this.urlInput = url;
-                    this.navigateTo();
-                },
+            this.browserUrl = url;
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) frame.src = url;
 
-                /**
-                 * Display a blocked page message (unchanged).
-                 */
-                showBlockedPage(reason) {
-                    const blockedHtml = `
+            // 🟢 Send the log to the backend!
+            this.logSiteVisit(url);
+
+            this.urlInput = '';
+            this.loadingUrl = false;
+        },
+
+        browserBack() {
+            if (this.historyIndex > 0) {
+                this.historyIndex--;
+                this.loadUrlFromHistory(this.historyStack[this.historyIndex]);
+            }
+        },
+
+        browserForward() {
+            if (this.historyIndex < this.historyStack.length - 1) {
+                this.historyIndex++;
+                this.loadUrlFromHistory(this.historyStack[this.historyIndex]);
+            }
+        },
+
+        loadUrlFromHistory(url) {
+            this.loadingUrl = true;
+            this.browserUrl = url;
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) frame.src = url;
+            
+            // 🟢 Send the log to the backend when navigating via history too!
+            this.logSiteVisit(url);
+            
+            this.loadingUrl = false;
+        },
+
+        browserRefresh() {
+            this.refreshing = true;
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) {
+                const currentUrl = frame.src;
+                frame.src = 'about:blank';
+                setTimeout(() => {
+                    frame.src = currentUrl;
+                    this.refreshing = false;
+                }, 100);
+            }
+        },
+
+        quickNav(url) {
+            this.urlInput = url;
+            this.navigateTo();
+        },
+
+        showBlockedPage(reason) {
+            const blockedHtml = `
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -1190,13 +1185,13 @@ function quizModal() {
                 </body>
                 </html>
             `;
-                    const blob = new Blob([blockedHtml], { type: 'text/html' });
-                    this.browserUrl = URL.createObjectURL(blob);
-                    const frame = document.getElementById('dashboard-browser-frame');
-                    if (frame) frame.src = this.browserUrl;
-                }
-            };
+            const blob = new Blob([blockedHtml], { type: 'text/html' });
+            this.browserUrl = URL.createObjectURL(blob);
+            const frame = document.getElementById('dashboard-browser-frame');
+            if (frame) frame.src = this.browserUrl;
         }
+    };
+}
     </script>
 
     <style>
