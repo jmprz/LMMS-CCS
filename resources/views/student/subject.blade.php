@@ -592,6 +592,13 @@
                             <p class="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Remarks</p>
                             <p class="text-sm font-medium leading-relaxed opacity-90" x-text="currentTask?.current_user_submission?.feedback"></p>
                         </div>
+                        {{-- ✅ NEW: View detailed rubric feedback link --}}
+                        <div class="pt-4 border-t border-white/10 mt-2">
+                            <a :href="`/student/tasks/${currentTask?.id}`"
+                               class="w-full flex items-center justify-center gap-2 py-2.5 bg-white/20 hover:bg-white/30 text-white font-black text-xs uppercase tracking-widest rounded-xl transition">
+                                <i class="ri-file-chart-line"></i> View Detailed Feedback
+                            </a>
+                        </div>
                     </div>
 
                     <div x-show="currentTask?.current_user_submission?.grade === null" class="p-2">

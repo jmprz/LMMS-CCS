@@ -9,7 +9,6 @@ class Submission extends Model
 {
     use HasFactory;
 
-    // Allow mass assignment for these fields
     protected $fillable = [
         'task_id',
         'user_id',
@@ -17,8 +16,14 @@ class Submission extends Model
         'original_filename',
         'grade',
         'feedback',
+        'auto_graded',
         'duration_seconds',
-        'submitted_at'
+        'submitted_at',
+    ];
+
+    protected $casts = [
+        'submitted_at' => 'datetime',
+        'auto_graded'  => 'boolean',
     ];
 
     /**
@@ -35,5 +40,13 @@ class Submission extends Model
     public function task()
     {
         return $this->belongsTo(Task::class);
+    }
+
+    /**
+     * Get the detailed rubric grade record for this submission.
+     */
+    public function submissionGrade()
+    {
+        return $this->hasOne(SubmissionGrade::class);
     }
 }

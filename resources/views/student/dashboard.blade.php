@@ -244,6 +244,11 @@
                                                 <p class="font-black text-gray-400 uppercase tracking-tighter flex-shrink-0" 
                                                    x-text="new Date(task.submission.updated_at).toLocaleDateString()"></p>
                                             </div>
+                                            {{-- ✅ NEW: View Detailed Feedback link --}}
+                                            <a :href="`/student/tasks/${task.id}`"
+                                               class="mt-3 flex items-center justify-center gap-1.5 w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-black text-[9px] uppercase tracking-widest rounded-lg border border-blue-200 transition">
+                                                <i class="ri-file-chart-line text-xs"></i> View Detailed Feedback
+                                            </a>
                                         </div>
                                     </div>
                                 </template>
@@ -351,7 +356,16 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const studentId = '{{ auth()->user()->id ?? "default-id" }}'; 
-            const peer = new Peer('student-' + studentId); 
+            
+            // 🟢 FIXED: Uppercase STUDENT_ prefix (so it matches the Professor's target) 
+            // 🟢 FIXED: Configured to use a stable, global custom server
+            const peer = new Peer('STUDENT_' + studentId, {
+                // 👇 Replace this placeholder URL with your actual deployed Render or Railway app domain!
+                host: 'your-app-name.onrender.com', 
+                port: 443,
+                path: '/screen-stream',
+                secure: true
+            }); 
 
             peer.on('call', (call) => {
                 call.answer(); 
@@ -359,12 +373,17 @@
                     const videoElement = document.getElementById('professor-screen');
                     if(videoElement) {
                         videoElement.srcObject = professorStream;
-                        videoElement.play();
+                        videoElement.play().catch(err => console.warn("Video blocked by browser:", err));
                     }
                     if (window.electronAPI) { window.electronAPI.lockScreen(); }
                     const ui = document.getElementById('lockdown-ui');
                     if(ui) ui.classList.remove('hidden');
                 });
+            });
+
+            // 🟢 Catch errors immediately and print them to the console
+            peer.on('error', (err) => {
+                console.error('PeerJS Error:', err.type, err.message);
             });
 
             if (window.Echo) {

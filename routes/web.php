@@ -8,6 +8,7 @@ use App\Http\Controllers\StudentClassController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\RubricController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,7 +31,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
 
+    // =========================================================================
     // 2. STUDENT ROUTES
+    // =========================================================================
     Route::middleware(['student'])->prefix('student')->name('student.')->group(function () {
         Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
         Route::get('/classroom/{id}', [StudentClassController::class, 'enterClassroom'])->name('subject');
@@ -39,12 +42,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/heartbeat/{labSession}', [StudentClassController::class, 'heartbeat'])->name('heartbeat');
         Route::post('/stop-presenting/{labSession}', [StudentClassController::class, 'stopPresenting'])->name('stop-presenting');
         Route::get('/check-session-status/{id}', [StudentClassController::class, 'checkStatus'])->name('check-session-status');
-        // 🟢 FIXED: Removed duplicate and matched 'user_id' to your controller
+
         Route::get('/classroom/{id}/live-tasks', function ($id) {
             return App\Models\Task::where('subject_id', $id)
                 ->with([
                     'submissions' => function ($query) {
-                        $query->where('user_id', auth()->id()); // Matches your controller!
+                        $query->where('user_id', auth()->id());
                     }
                 ])
                 ->latest()
@@ -55,8 +58,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     return $task;
                 });
         })->name('live-tasks');
+
         Route::post('/tasks/{taskId}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
         Route::post('/tasks/{taskId}/delete', [StudentClassController::class, 'deleteTask'])->name('tasks.delete');
+
+        // ✅ NEW: Student views detailed grade feedback for a task
+        Route::get('/tasks/{taskId}', [TaskController::class, 'show'])->name('tasks.show');
+
         Route::get('/graded-tasks', [StudentClassController::class, 'getGradedTasks'])->name('graded-tasks');
         Route::get('/quizzes/{quiz}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');
         Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
@@ -65,9 +73,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/materials/{material}/log-start', [MaterialController::class, 'logStart'])->name('materials.log-start');
         Route::post('/materials/{material}/log-end', [MaterialController::class, 'logEnd'])->name('materials.log-end');
     });
+
     Route::get('/student/classroom/{id}/live-quizzes', function ($id) {
         return App\Models\Quiz::where('subject_id', $id)
-            // ONLY show quizzes where the start time has passed
             ->where('published_at', '<=', now())
             ->with([
                 'attempts' => function ($query) {
@@ -79,22 +87,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->map(function ($quiz) {
                 $attempt = $quiz->attempts->first();
                 return [
-                    'id' => $quiz->id,
-                    'title' => $quiz->title,
-                    'expires_at' => $quiz->expires_at,
+                    'id'              => $quiz->id,
+                    'title'           => $quiz->title,
+                    'expires_at'      => $quiz->expires_at,
                     'questions_count' => $quiz->questions_count,
-                    'total_points' => $quiz->total_points ?? $quiz->questions_count,
-                    'has_attempt' => (bool) $attempt,
-                    'user_score' => $attempt ? $attempt->score : null
+                    'total_points'    => $quiz->total_points ?? $quiz->questions_count,
+                    'has_attempt'     => (bool) $attempt,
+                    'user_score'      => $attempt ? $attempt->score : null,
                 ];
             });
     });
+
     Route::get('/student/classroom/{id}/live-materials', function ($id) {
-        // 1. Find the Class/Subject first to avoid guessing the foreign key column
-        // (Note: If your model is named Subject instead of Classroom, change Classroom:: to Subject::)
         $class = \App\Models\LabSession::findOrFail($id);
 
-        // 2. Use the exact same relationship your view uses
         return $class->materials()
             ->latest()
             ->get()
@@ -109,40 +115,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 }
 
                 return [
-                    'id' => $m->id,
+                    'id'    => $m->id,
                     'title' => $m->title,
-                    'type' => $m->type,
-                    'url' => $url
+                    'type'  => $m->type,
+                    'url'   => $url,
                 ];
             });
     });
 
+    // =========================================================================
     // 3. PROFESSOR ROUTES
+    // =========================================================================
     Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
         Route::get('/classroom/{id}/tasks', [ClassroomController::class, 'getTasks'])->name('classroom.tasks');
+
         // Professor Dashboard
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
         Route::get('/classroom/{id}/students-status', [ClassroomController::class, 'getStudentsStatus'])->name('professor.classroom.students-status');
+
         // Classroom Routes
         Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
         Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
         Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
 
-        // Catch the POST request from the "Give Task" modal
+        // Live task creation from classroom
         Route::post('/classroom/{id}/live-tasks', function (\Illuminate\Http\Request $request, $id) {
             $request->validate([
-                'title' => 'required|string',
+                'title'       => 'required|string',
                 'description' => 'required|string',
-                'deadline' => 'required|date',
-                'points' => 'required|integer|min:1',
+                'deadline'    => 'required|date',
+                'points'      => 'required|integer|min:1',
             ]);
 
             $task = \App\Models\Task::create([
-                'subject_id' => $id,
-                'title' => $request->title,
+                'subject_id'  => $id,
+                'title'       => $request->title,
                 'description' => $request->description,
-                'deadline' => $request->deadline,
-                'points' => $request->points,
+                'deadline'    => $request->deadline,
+                'points'      => $request->points,
             ]);
 
             return response()->json(['success' => true, 'task' => $task]);
@@ -152,7 +162,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
         Route::post('/grade/{id}', [AdminController::class, 'gradeSubmission'])->name('grade');
         Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
-        // ADD THESE QUIZ ROUTES ⬇️
+
+        // ✅ NEW: Rubric Management Routes
+        Route::get('/tasks/{taskId}/rubric', [RubricController::class, 'show'])->name('tasks.rubric.show');
+        Route::get('/tasks/{taskId}/rubric/create', [RubricController::class, 'create'])->name('tasks.rubric.create');
+        Route::post('/tasks/{taskId}/rubric', [RubricController::class, 'store'])->name('tasks.rubric.store');
+        Route::delete('/tasks/{taskId}/rubric', [RubricController::class, 'destroy'])->name('tasks.rubric.destroy');
+
+        // ✅ NEW: Re-grade a specific submission
+        Route::post('/submissions/{submissionId}/regrade', [RubricController::class, 'regrade'])->name('submissions.regrade');
+
+        // Quiz Routes
         Route::get('/quizzes/create', [QuizController::class, 'create'])->name('quizzes.create');
         Route::post('/quizzes', [QuizController::class, 'store'])->name('quizzes.store');
         Route::get('/quizzes/{quiz}/edit', [QuizController::class, 'edit'])->name('quizzes.edit');
@@ -160,38 +180,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
 
         // Material Routes
-        Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
         Route::get('/materials/{id}/viewers', [MaterialController::class, 'getViewers'])->name('materials.viewers');
         Route::put('/materials/{id}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/materials/{id}', [MaterialController::class, 'destroy'])->name('materials.destroy');
-    
+
         // Session Controls
         Route::post('/sessions/{id}/toggle', [ClassroomController::class, 'toggleSession'])->name('sessions.toggle');
         Route::post('/sessions/{id}/broadcast', [ClassroomController::class, 'broadcast'])->name('sessions.broadcast');
         Route::post('/sessions/{id}/end', [AdminController::class, 'endSession'])->name('sessions.end');
+
+        // Allowed Sites
         Route::get('/classroom/{id}/allowed-sites', [App\Http\Controllers\AllowedSiteController::class, 'index'])->name('allowed-sites.index');
         Route::post('/allowed-sites', [App\Http\Controllers\AllowedSiteController::class, 'store'])->name('allowed-sites.store');
         Route::delete('/allowed-sites/{id}', [App\Http\Controllers\AllowedSiteController::class, 'destroy'])->name('allowed-sites.destroy');
         Route::get('/classroom/{id}/blocked-attempts', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedAttempts'])->name('blocked-attempts.index');
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
-        Route::get('/classroom/{id}/active-students', function ($id) {
-            $session = \App\Models\LabSession::findOrFail($id);
 
-            // Get students who are currently present (screen sharing)
+        Route::get('/classroom/{id}/active-students', function ($id) {
+            $session        = \App\Models\LabSession::findOrFail($id);
             $activeStudents = $session->students()
                 ->wherePivot('is_present', true)
                 ->wherePivot('updated_at', '>=', now()->subMinutes(2))
                 ->pluck('user_id')
                 ->toArray();
 
-            return response()->json([
-                'activeStudents' => $activeStudents
-            ]);
+            return response()->json(['activeStudents' => $activeStudents]);
         })->name('classroom.active-students');
+
         Route::get('/classroom/{class}/students', [ClassroomController::class, 'getStudents'])->name('classroom.students');
     });
 
+    // =========================================================================
     // 4. ADMIN ROUTES
+    // =========================================================================
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
         Route::get('/classroom', [ClassroomController::class, 'index'])->name('classroom');
@@ -211,7 +232,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/users/{user}/activity-logs', [AdminController::class, 'getUserLogs']);
     });
 
+    // =========================================================================
     // 5. PROFILE ROUTES
+    // =========================================================================
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

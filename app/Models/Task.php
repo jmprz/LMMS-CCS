@@ -11,11 +11,15 @@ class Task extends Model
         'title',
         'description',
         'deadline',
-        'points'
+        'points',
+    ];
+
+    protected $casts = [
+        'deadline' => 'datetime',
     ];
 
     /**
-     * Get the lab session this task belongs to
+     * Get the lab session this task belongs to.
      */
     public function labSession()
     {
@@ -23,7 +27,7 @@ class Task extends Model
     }
 
     /**
-     * Get all submissions for this task
+     * Get all submissions for this task.
      */
     public function submissions()
     {
@@ -31,11 +35,18 @@ class Task extends Model
     }
 
     /**
-     * Get current user's submission for this task
+     * Get current user's submission for this task.
      */
     public function currentUserSubmission()
     {
-        // This allows us to check if the specific student viewing the task has a submission
         return $this->hasOne(Submission::class)->where('user_id', auth()->id());
+    }
+
+    /**
+     * Get the rubric for this task.
+     */
+    public function rubric()
+    {
+        return $this->hasOne(Rubric::class);
     }
 }

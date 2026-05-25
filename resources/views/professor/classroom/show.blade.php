@@ -798,25 +798,32 @@
 
                             <div id="tasks-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 @forelse($tasks as $task)
-                                    <div
-                                        class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all shadow-sm">
+                                    <div class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all shadow-sm">
                                         <div>
                                             <div class="flex justify-between items-start mb-4">
-                                                <div
-                                                    class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
+                                                <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
                                                     <i class="ri-clipboard-line text-lg"></i>
                                                 </div>
-                                                <span
-                                                    class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                                                <span class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
                                                     {{ $task->points }} PTS
                                                 </span>
                                             </div>
 
-                                            <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
+                                            <h4 class="font-bold text-gray-900 mb-2 group-hover:text-black transition">
                                                 {{ $task->title }}
                                             </h4>
 
-                                            <div class="space-y-2 mt-4">
+                                            {{-- ✅ NEW: The Rubric Builder Button --}}
+                                            <div class="inline-flex mb-3">
+                                                <a href="{{ route('professor.tasks.rubric.create', $task->id) }}"
+                                                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition
+                                                          {{ $task->rubric ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100' : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100' }}">
+                                                    <i class="{{ $task->rubric ? 'ri-file-list-3-fill' : 'ri-file-list-3-line' }} text-sm"></i>
+                                                    {{ $task->rubric ? 'Edit Rubric' : 'Create Rubric' }}
+                                                </a>
+                                            </div>
+
+                                            <div class="space-y-2 mt-2">
                                                 <div class="flex items-center text-gray-500 text-[11px] font-medium">
                                                     <i class="ri-calendar-todo-line mr-2"></i>
                                                     {{ \Carbon\Carbon::parse($task->deadline)->format('M d, h:i A') }}
@@ -829,16 +836,15 @@
                                         </div>
 
                                         <div class="mt-6">
-                                            <button
-                                                @click="selectedTask = {{ json_encode($task) }}; submissions = {{ json_encode($task->submissions()->with('user')->get()) }}"
-                                                class="w-full bg-gray-50 text-[#383838] border border-gray-200 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest">
-                                                View Submissions
+                                            {{-- ✅ PREVIOUS FIX: Added submissionGrade.criterionScores.criterion to eager loading --}}
+                                            <button @click="selectedTask = {{ json_encode($task) }}; submissions = {{ json_encode($task->submissions()->with(['user', 'submissionGrade.criterionScores.criterion'])->get()) }}" 
+                                                    class="w-full bg-gray-50 text-[#383838] border border-gray-200 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest"> 
+                                                    View Submissions 
                                             </button>
                                         </div>
                                     </div>
                                 @empty
-                                    <div
-                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
+                                    <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
                                         <i class="ri-inbox-line text-4xl text-gray-200 mb-3 block"></i>
                                         <p class="text-gray-400 italic text-sm">No tasks assigned to this class yet.</p>
                                     </div>
@@ -879,7 +885,7 @@
                                                         <tr
                                                             class="bg-white shadow-sm rounded-2xl transition-all hover:shadow-md">
                                                             <td
-                                                                class="px-6 py-4 font-bold text-gray-900 rounded-s-2xl border-y border-l border-gray-100">
+                                                                class="px-6 py-4 font-bold text-gray-900 rounded-s-2xl border-y border-l border-gray-100 align-top">
                                                                 <div class="flex items-center gap-3">
                                                                     <div
                                                                         class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">
@@ -890,39 +896,61 @@
                                                                         x-text="sub.user ? `${sub.user.last_name}, ${sub.user.first_name}` : 'N/A'"></span>
                                                                 </div>
                                                             </td>
-                                                            <td class="px-6 py-4 border-y border-gray-100">
+                                                            <td class="px-6 py-4 border-y border-gray-100 align-top">
                                                                 <a :href="'{{ url('/') }}/' + sub.file_path"
                                                                     target="_blank"
                                                                     class="inline-flex items-center text-[10px] font-black text-[#383838] bg-gray-50 px-3 py-2 rounded-lg hover:bg-black hover:text-white transition-all uppercase tracking-widest border border-gray-200">
                                                                     <i class="ri-download-2-line mr-2"></i> File
                                                                 </a>
                                                             </td>
-                                                            <td
-                                                                class="px-6 py-4 rounded-e-2xl border-y border-r border-gray-100">
-                                                                <form :action="'/professor/grade/' + sub.id"
-                                                                    method="POST"
-                                                                    class="flex items-center justify-end gap-3"
-                                                                    @submit.prevent="submitGrade($event)">
+                                                            <td class="px-6 py-4 rounded-e-2xl border-y border-r border-gray-100 align-top">
+                                                                
+                                                                {{-- ✅ NEW: Display AI Auto-Grade Status & Total --}}
+                                                                <div class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                                    <div>
+                                                                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Grade Status</span>
+                                                                        <p class="text-xs font-black mt-0.5" x-text="sub.auto_graded ? '🤖 AI Graded' : '✍️ Manual'"></p>
+                                                                    </div>
+                                                                    <div class="text-right">
+                                                                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest block">Score</span>
+                                                                        <p class="text-sm font-black text-indigo-600" x-text="(sub.grade ?? '0') + ' Pts'"></p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {{-- ✅ NEW: Display Per-Criterion Breakdown from Gemini --}}
+                                                                <template x-if="sub.submission_grade && sub.submission_grade.criterion_scores">
+                                                                    <div class="mb-4 space-y-2">
+                                                                        <h4 class="text-[9px] font-black uppercase tracking-widest text-gray-400">Rubric Breakdown</h4>
+                                                                        <template x-for="score in sub.submission_grade.criterion_scores" :key="score.id">
+                                                                            <div class="p-2 border border-gray-100 bg-white rounded-lg shadow-sm">
+                                                                                <div class="flex justify-between items-center mb-1">
+                                                                                    <span class="text-[10px] font-black text-gray-800" x-text="score.criterion.criterion_name"></span>
+                                                                                    <span class="text-[10px] font-bold px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded"
+                                                                                          x-text="score.points_earned + '/' + score.max_points"></span>
+                                                                                </div>
+                                                                                <p class="text-[9px] text-gray-600 italic leading-tight" x-text="score.feedback"></p>
+                                                                            </div>
+                                                                        </template>
+                                                                    </div>
+                                                                </template>
+
+                                                                {{-- The Original Manual Grading Form (Allows Prof to Override AI) --}}
+                                                                <form :action="'/professor/grade/' + sub.id" method="POST" class="flex flex-col gap-3 mt-4 border-t border-gray-100 pt-4" @submit.prevent="submitGrade($event)">
                                                                     @csrf
-                                                                    <div class="flex flex-col gap-1">
-                                                                        <div
-                                                                            class="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-1">
-                                                                            <input type="number" name="grade"
-                                                                                :value="sub.grade"
-                                                                                class="w-12 bg-transparent border-none p-0 text-sm font-black text-center focus:ring-0"
-                                                                                placeholder="0">
-                                                                            <span
-                                                                                class="text-[10px] font-black text-gray-400 ml-1"
-                                                                                x-text="'/ ' + selectedTask.points"></span>
+                                                                    <div class="flex items-center justify-between">
+                                                                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Final Override</span>
+                                                                        <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1 shadow-sm">
+                                                                            <input type="number" name="grade" :value="sub.grade" class="w-12 bg-transparent border-none p-0 text-sm font-black text-center focus:ring-0" placeholder="0">
+                                                                            <span class="text-[10px] font-black text-gray-400 ml-1" x-text="'/ ' + selectedTask.points"></span>
                                                                         </div>
                                                                     </div>
-                                                                    <textarea name="feedback" :value="sub.feedback"
-                                                                        class="w-48 border-gray-200 rounded-xl text-[11px] py-2 px-3 focus:ring-1 focus:ring-black focus:border-black transition-all"
-                                                                        placeholder="Feedback..."></textarea>
-                                                                    <button type="submit"
-                                                                        class="bg-[#383838] text-white p-2.5 rounded-xl hover:bg-black transition shadow-sm">
-                                                                        <i class="ri-save-3-line"></i>
-                                                                    </button>
+                                                                    
+                                                                    <div class="flex items-start gap-2">
+                                                                        <textarea name="feedback" :value="sub.feedback" class="w-full border border-gray-200 rounded-xl text-[11px] py-2 px-3 focus:ring-1 focus:ring-black focus:border-black transition-all" placeholder="Overall Feedback..."></textarea>
+                                                                        <button type="submit" class="bg-[#383838] text-white p-3 rounded-xl hover:bg-black transition shadow-sm h-full">
+                                                                            <i class="ri-save-3-line"></i>
+                                                                        </button>
+                                                                    </div>
                                                                 </form>
                                                             </td>
                                                         </tr>
@@ -1228,7 +1256,6 @@
 
 
 
-                        <!-- BROWSER SECURITY TAB -->
                         <div x-show="activeTab === 'browser-security'" x-data="browserSecurityManager()" x-cloak
                             class="space-y-6 animate-fade-in">
 
@@ -1447,7 +1474,6 @@
                             </div>
                         </div>
 
-                        <!-- JavaScript for Browser Security Tab -->
                         <script>
                             function browserSecurityManager() {
                                 return {

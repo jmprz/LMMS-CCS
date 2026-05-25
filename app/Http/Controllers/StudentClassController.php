@@ -225,6 +225,15 @@ public function submitTask(Request $request, $taskId)
             'duration_seconds' => $durationSeconds,  // Reflects real stopwatch metrics
         ]);
 
+                // ✅ Auto-grade the submission using Gemini
+        try {
+            $gradingService = new \App\Services\GeminiGradingService();
+            $gradingService->gradeSubmission($submission);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Auto-grading failed: ' . $e->getMessage());
+            // Grading failure does NOT block submission — fails silently
+        }
+
         return response()->json([
             'status' => 'success', 
             'message' => 'Uploaded to ' . $formattedName
