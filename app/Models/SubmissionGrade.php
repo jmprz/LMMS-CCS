@@ -41,4 +41,9 @@ class SubmissionGrade extends Model
     {
         return $this->belongsTo(User::class, 'graded_by');
     }
+
+    public function task()
+{
+    return $this->belongsTo(Task::class);
+}
 }

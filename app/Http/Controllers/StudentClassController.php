@@ -206,12 +206,12 @@ public function submitTask(Request $request, $taskId)
         }
 
         // 6. Save or Update Submission data with the correct dynamic duration
-        Submission::updateOrCreate(
+        $submission = Submission::updateOrCreate( // 🚨 ADD "$submission =" HERE
             ['task_id' => $taskId, 'user_id' => $userId],
             [
                 'file_path' => $fullPath,
                 'original_filename' => $file->getClientOriginalName(),
-                'duration_seconds' => $durationSeconds, // Stores active duration
+                'duration_seconds' => $durationSeconds,
                 'submitted_at' => $submittedAt,
             ]
         );
