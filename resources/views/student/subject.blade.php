@@ -1,8 +1,8 @@
 <x-app-layout>
-    <div id="lockdown-ui" class="hidden fixed inset-0 z-[9999] bg-white w-full h-screen"
+   <div id="lockdown-ui" class="hidden fixed inset-0 z-[9999] bg-white w-full h-screen"
         x-data="{ workspaceOpen: true }">
         <div class="flex w-full h-full">
-            <div :class="workspaceOpen ? 'w-1/2' : 'w-full'"
+            <div :class="workspaceOpen ? 'w-1/2' : 'w-full''"
                 class="h-full bg-black relative transition-all duration-500 ease-in-out">
                 <video id="professor-screen" autoplay playsinline muted class="w-full h-full object-contain"></video>
 
@@ -116,27 +116,46 @@
         </div>
     </div>
 
-    <div id="normal-view" class="flex h-screen bg-gray-50" x-data="{ isSharing: false, activeTab: 'activities' }">
-        <main class="flex-1 p-8 overflow-y-auto" @screen-shared.window="isSharing = true"
+    <div id="normal-view" class="flex flex-col min-h-screen bg-gray-50" x-data="{ isSharing: false, activeTab: 'activities' }">
+        <main class="flex-1 p-8" @screen-shared.window="isSharing = true"
             @screen-stopped.window="isSharing = false">
-            <div class="max-w-5xl mx-auto space-y-6">
-                <div class="bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6">
-                    <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">
-                        {{ $class->subject_name }} <span class="text-gray-400 font-light mx-2">|</span>
-                        <span
-                            class="text-[#383838] uppercase">{{ $class->program }}-{{ $class->year_level }}{{ $class->section }}</span>
-                    </h1>
-                    <div class="flex gap-2">
-                        <span
-                            class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase border border-gray-200">
-                            <i class="ri-calendar-line mr-2"></i> {{ $class->schedule_day }}
-                        </span>
-                        <span
-                            class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase border border-gray-200">
-                            <i class="ri-time-line mr-2"></i> {{ $class->schedule_time }}
-                        </span>
-                    </div>
-                </div>
+            <div class="max-w-7xl mx-auto space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+    <div class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6">
+        <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">
+            {{ $class->subject_name }} <span class="text-gray-400 font-light mx-2">|</span>
+            <span class="text-[#383838] uppercase">{{ $class->program }}-{{ $class->year_level }}{{ $class->section }}</span>
+        </h1>
+        <div class="flex gap-2">
+            <span class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase border border-gray-200">
+                <i class="ri-calendar-line mr-2"></i> {{ $class->schedule_day }}
+            </span>
+            <span class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase border border-gray-200">
+                <i class="ri-time-line mr-2"></i> {{ $class->schedule_time }}
+            </span>
+        </div>
+    </div>
+
+    <div class="md:col-span-1">
+        @if(!$class->is_active)
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 h-full flex flex-col justify-center items-center text-center">
+                <i class="ri-error-warning-line text-3xl text-amber-500 mb-2"></i>
+                <p class="font-black text-amber-900">Session Offline</p>
+            </div>
+        @else
+            <div x-show="!isSharing" class="">
+               
+            </div>
+
+            <div x-show="isSharing" x-cloak class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-6 h-full flex flex-col justify-center items-center text-center animate-fade-in">
+                <div class="ri-broadcast-line text-3xl text-green-500 animate-pulse mb-2"></div>
+                <h2 class="font-black text-gray-900 tracking-tight">Monitoring Active</h2>
+                <p class="text-[10px] text-gray-500 mt-1">The professor is viewing your screen.</p>
+            </div>
+        @endif
+    </div>
+</div>
 
                 @if(!$class->is_active)
                     <div class="bg-amber-50 border border-amber-200 rounded-3xl p-12 text-center shadow-inner">
@@ -177,19 +196,11 @@
 
                                 <div x-show="isSharing" x-cloak class="animate-fade-in">
                                     <div class="flex border-b border-gray-200 mb-8">
-                                        <template x-for="t in ['activities', 'quizzes', 'materials', 'Browser']">
+                                        <template x-for="t in ['activities', 'quizzes', 'materials']">
                                             <button @click="activeTab = t"
                                                 :class="activeTab === t ? 'border-b-2 border-black text-black font-black' : 'text-gray-400 hover:text-gray-600 font-bold'"
                                                 class="px-8 py-4 text-[10px] uppercase tracking-widest transition" x-text="t"></button>
                                         </template>
-                                    </div>
-
-                                    <div
-                                        class="bg-white border-2 border-dashed border-gray-200 rounded-[30px] p-10 text-center mb-10 shadow-sm">
-                                        <div class="ri-broadcast-line text-5xl text-green-500 animate-pulse mb-4"></div>
-                                        <h2 class="text-xl font-black text-gray-900 tracking-tight">Monitoring Active</h2>
-                                        <p class="text-xs text-gray-500 max-w-md mx-auto">Your screen is being broadcast to the
-                                            instructor. Lockdown workspace will trigger automatically during demonstrations.</p>
                                     </div>
 
                                    <div x-show="activeTab === 'activities'" x-data="classroomTasks()" class="space-y-6" @task-updated.window="fetchTasks()">
@@ -342,52 +353,13 @@
         <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-4">No quizzes found</p>
     </div>
 </div>
-                                   <div x-data="{ 
-    showViewer: false, 
-    currentMaterial: { title: '', type: '', url: '', id: null },
-    startTime: null,
-
-    openMaterial(material) {
-        this.currentMaterial = material;
-        this.showViewer = true;
-        this.startTime = new Date();
-
-        // Log Start Activity
-        fetch(`/student/materials/${material.id}/log-start`, {
-            method: 'POST',
-            headers: { 
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            }
-        });
-    },
-
-    closeMaterial() {
-        let endTime = new Date();
-        let duration = Math.round((endTime - this.startTime) / 1000);
-
-        // Log End Activity
-        fetch(`/student/materials/${this.currentMaterial.id}/log-end`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ duration: duration })
-        }).then(() => {
-            this.showViewer = false;
-            this.currentMaterial = { title: '', type: '', url: '', id: null };
-        });
-    }
-}" class="contents">
+                                
 
   <div x-show="activeTab === 'materials'" x-data="classroomMaterials()" class="space-y-6 animate-fade-in">
-    
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <template x-for="material in materials" :key="material.id">
             <template x-if="material.type !== 'pptx'">
-                <div @click="openMaterial(material)" 
+                <div @click="$dispatch('open-material', material)" 
                     class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in min-h-[180px]">
                     
                     <div class="space-y-4">
@@ -418,7 +390,7 @@
                     </div>
 
                     <div class="flex items-center justify-between pt-3">
-                        <span class="flex items-center gap-1 text-[9px] font-black text-gray-300 group-hover:text-black uppercase tracking-tighter transition-colors">
+                        <span class="flex items-center gap-1 text-[9px] font-black text-gray-400 group-hover:text-black uppercase tracking-tighter transition-colors">
                             <i class="ri-external-link-line text-base"></i> View Material
                         </span>
                         <i class="ri-arrow-right-line text-gray-300 group-hover:text-[#383838] group-hover:translate-x-1 transition-all"></i>
@@ -427,106 +399,13 @@
             </template>
         </template>
     </div>
-
-    <div x-show="showViewer" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 scale-95"
-         x-transition:enter-end="opacity-100 scale-100"
-         x-cloak
-         class="fixed inset-0 z-[10000] w-[100%] h-screen flex flex-col bg-[#0F0F0F]">
-        
-        <div class="w-full h-16 px-6 flex justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/5 shrink-0">
-            <div class="flex items-center gap-4 overflow-hidden">
-                <button @click="closeMaterial()" class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition">
-                    <i class="ri-arrow-left-line text-xl"></i>
-                </button>
-                <div class="flex flex-col">
-                    <h3 class="font-black text-white text-sm tracking-tight truncate max-w-[200px] md:max-w-md" x-text="currentMaterial.title"></h3>
-                    <span class="text-[9px] text-gray-500 font-black uppercase tracking-widest" x-text="currentMaterial.type + ' Material'"></span>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <button @click="closeMaterial()" class="px-8 py-2.5 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-gray-200 transition shadow-xl">
-                    Finish Reading
-                </button>
-            </div>
-        </div>
-
-        <div class="flex-grow w-full bg-[#1A1A1A] relative">
-            <div class="absolute inset-0 flex items-center justify-center -z-10 bg-[#0F0F0F]">
-                <div class="flex flex-col items-center gap-4">
-                    <div class="w-8 h-8 border-2 border-white/10 border-t-white rounded-full animate-spin"></div>
-                </div>
-            </div>
-
-            <template x-if="currentMaterial.type === 'pdf'">
-                <iframe :src="currentMaterial.url" class="w-full h-full border-none block"></iframe>
-            </template>
-
-            <template x-if="currentMaterial.type === 'youtube'">
-                <div class="w-full h-full flex items-center justify-center bg-black">
-                    <iframe :src="currentMaterial.url" class="w-full h-full border-none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                </div>
-            </template>
-        </div>
-    </div>
 </div>
                                 
 
-                                    <div x-show="activeTab === 'Browser'" class="animate-fade-in" x-data="browserManager()">
-                                        <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl">
-                                            <!-- Browser Controls -->
-                                            <div class="p-4 border-b border-gray-100">
-                                                <div class="flex items-center gap-3">
-                                                    <!-- Back Button -->
-                                                    <button @click="browserBack()" class="p-2 hover:bg-gray-100 rounded-lg transition"
-                                                        title="Go Back">
-                                                        <i class="ri-arrow-left-line text-xl"></i>
-                                                    </button>
-
-                                                    <!-- Forward Button -->
-                                                    <button @click="browserForward()"
-                                                        class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Forward">
-                                                        <i class="ri-arrow-right-line text-xl"></i>
-                                                    </button>
-
-                                                    <!-- Refresh Button -->
-                                                    <button @click="browserRefresh()" :class="refreshing ? 'animate-spin' : ''"
-                                                        class="p-2 hover:bg-gray-100 rounded-lg transition" title="Refresh Page">
-                                                        <i class="ri-refresh-line text-xl"></i>
-                                                    </button>
-
-                                                    <!-- URL Input -->
-                                                    <div
-                                                        class="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
-                                                        <i class="ri-global-line text-gray-400"></i>
-                                                        <input type="text" x-model="urlInput" @keyup.enter="navigateTo()"
-                                                            placeholder="Search Google or enter educational URL..."
-                                                            class="flex-1 bg-transparent border-0 focus:ring-0 text-sm p-0">
-                                                    </div>
-
-                                                    <!-- Go Button -->
-                                                    <button @click="navigateTo()" :disabled="loadingUrl"
-                                                        :class="loadingUrl ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'"
-                                                        class="px-6 py-2 text-white rounded-xl font-bold transition text-xs">
-                                                        <span x-show="!loadingUrl">Go</span>
-                                                        <span x-show="loadingUrl">...</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <!-- Browser Iframe -->
-                                            <iframe id="dashboard-browser-frame" :src="browserUrl"
-                                                class="w-full h-[600px] border-none bg-white"></iframe>
-                                        </div>
-                                    </div>
-
-                                </div>
                             </div>
                     </div>
                 @endif
-    </div>
+        </div>
     </main>
     </div>
 
@@ -592,7 +471,6 @@
                             <p class="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Remarks</p>
                             <p class="text-sm font-medium leading-relaxed opacity-90" x-text="currentTask?.current_user_submission?.feedback"></p>
                         </div>
-                        {{-- ✅ NEW: View detailed rubric feedback link --}}
                         <div class="pt-4 border-t border-white/10 mt-2">
                             <a :href="`/student/tasks/${currentTask?.id}`"
                                class="w-full flex items-center justify-center gap-2 py-2.5 bg-white/20 hover:bg-white/30 text-white font-black text-xs uppercase tracking-widest rounded-xl transition">
@@ -717,6 +595,126 @@
 
         <div class="flex-grow bg-gray-50">
             <iframe :src="quizUrl" class="w-full h-full border-none shadow-inner"></iframe>
+        </div>
+    </div>
+</div>
+
+<div x-data="materialViewer()" 
+     @open-material.window="openMaterial($event.detail)" 
+     x-show="showViewer" 
+     x-cloak 
+     @click.self="closeMaterial()"
+     class="fixed inset-0 z-[20000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+    
+    <div class="bg-white rounded-[40px] shadow-2xl max-w-5xl w-full h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-gray-100" @click.stop>
+        
+        <div class="border-b border-gray-50 p-6 flex justify-between items-center bg-white shrink-0">
+            <div>
+                <h2 class="text-xl font-black text-[#383838] tracking-tight leading-tight truncate max-w-[300px] md:max-w-xl" x-text="currentMaterial.title"></h2>
+                <span class="text-[10px] text-gray-400 font-black uppercase tracking-widest block mt-0.5" x-text="currentMaterial.type + ' Reference Material'"></span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button @click="closeMaterial()" class="px-6 py-2.5 bg-[#383838] text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#2c2c2c] transition shadow-md">
+                    Finish Reading
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-grow w-full bg-gray-50 relative overflow-hidden">
+            <div class="absolute inset-0 flex items-center justify-center -z-10 bg-gray-100">
+                <div class="flex flex-col items-center gap-4">
+                    <div class="w-8 h-8 border-2 border-[#383838] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+
+            <template x-if="currentMaterial.type === 'pdf'">
+                <iframe :src="currentMaterial.url" class="w-full h-full border-none block"></iframe>
+            </template>
+
+            <template x-if="currentMaterial.type === 'youtube'">
+                <div class="w-full h-full flex items-center justify-center bg-black">
+                    <iframe :src="currentMaterial.url" class="w-full h-full border-none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<div x-data="{ openWorkspaceTools: false, activeToolTab: 'compiler' }">
+    <button @click="openWorkspaceTools = true" 
+        class="fixed bottom-6 right-6 z-[15000] bg-[#383838] hover:bg-black text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-200 group border border-gray-700/10">
+        <i class="ri-terminal-box-line text-2xl group-hover:rotate-12 transition-transform"></i>
+    </button>
+
+    <div x-show="openWorkspaceTools" x-cloak 
+         @click.self="openWorkspaceTools = false"
+         class="fixed inset-0 z-[25000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+        
+        <div class="bg-white rounded-[40px] shadow-2xl max-w-5xl w-full h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-gray-100" @click.stop>
+            
+            <div class="border-b border-gray-100 p-6 flex flex-col sm:flex-row justify-between items-center bg-white gap-4 shrink-0">
+                <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[18px] border border-gray-100">
+                    <button @click="activeToolTab = 'compiler'"
+                            :class="activeToolTab === 'compiler' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
+                            class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                        <i class="ri-code-s-slash-line text-sm"></i> OneCompiler
+                    </button>
+                    <button @click="activeToolTab = 'browser'"
+                            :class="activeToolTab === 'browser' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
+                            class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                        <i class="ri-global-line text-sm"></i> External Browser
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <button @click="openWorkspaceTools = false" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-black transition-all">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-grow w-full bg-gray-50 relative overflow-hidden flex flex-col">
+                
+                <div x-show="activeToolTab === 'compiler'" class="w-full h-full">
+                    <iframe src="https://onecompiler.com" class="w-full h-full border-none bg-white"></iframe>
+                </div>
+
+                <div x-show="activeToolTab === 'browser'" class="w-full h-full p-6 flex flex-col overflow-y-auto" x-data="browserManager()">
+                    <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl flex flex-col h-full">
+                        <div class="p-4 border-b border-gray-100 bg-white">
+                            <div class="flex items-center gap-3">
+                                <button @click="browserBack()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Back">
+                                    <i class="ri-arrow-left-line text-xl"></i>
+                                </button>
+
+                                <button @click="browserForward()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Forward">
+                                    <i class="ri-arrow-right-line text-xl"></i>
+                                </button>
+
+                                <button @click="browserRefresh()" :class="refreshing ? 'animate-spin' : ''" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Refresh Page">
+                                    <i class="ri-refresh-line text-xl"></i>
+                                </button>
+
+                                <div class="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
+                                    <i class="ri-global-line text-gray-400"></i>
+                                    <input type="text" x-model="urlInput" @keyup.enter="navigateTo()" placeholder="Search Google or enter educational URL..." class="flex-1 bg-transparent border-0 focus:ring-0 text-sm p-0 focus:outline-none">
+                                </div>
+
+                                <button @click="navigateTo()" :disabled="loadingUrl" :class="loadingUrl ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'" class="px-6 py-2 text-white rounded-xl font-bold transition text-xs">
+                                    <span x-show="!loadingUrl">Go</span>
+                                    <span x-show="loadingUrl">...</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex-grow w-full bg-white relative">
+                            <iframe id="dashboard-browser-frame" :src="browserUrl" class="w-full h-full border-none bg-white absolute inset-0"></iframe>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
@@ -1064,6 +1062,37 @@ function quizModal() {
         }
     }
 }
+
+function materialViewer() {
+    return {
+        showViewer: false,
+        currentMaterial: { title: '', type: '', url: '', id: null },
+        startTime: null,
+
+        openMaterial(material) {
+            this.currentMaterial = material;
+            this.showViewer = true;
+            this.startTime = new Date();
+            // Log logic remains the same
+            fetch(`/student/materials/${material.id}/log-start`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+            });
+        },
+
+        closeMaterial() {
+            let endTime = new Date();
+            let duration = Math.round((endTime - this.startTime) / 1000);
+            fetch(`/student/materials/${this.currentMaterial.id}/log-end`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ duration: duration })
+            }).then(() => {
+                this.showViewer = false;
+            });
+        }
+    }
+}
     </script>
 
     <script>
@@ -1200,6 +1229,8 @@ function quizModal() {
     };
 }
     </script>
+
+    
 
     <style>
         @keyframes fade-in {

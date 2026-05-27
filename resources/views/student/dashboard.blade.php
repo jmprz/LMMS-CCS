@@ -185,7 +185,7 @@
 </aside>
 
        <main class="flex-1 overflow-y-auto h-full p-6 md:p-10">
-    <div class="max-w-6xl mx-auto space-y-8 pb-16">
+    <div class="max-w-9xl mx-auto space-y-8 pb-16">
         
         <div>
             <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">My Dashboard</h1>
