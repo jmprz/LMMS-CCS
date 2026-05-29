@@ -2,7 +2,7 @@
    <div id="lockdown-ui" class="hidden fixed inset-0 z-[9999] bg-white w-full h-screen"
         x-data="{ workspaceOpen: true }">
         <div class="flex w-full h-full">
-            <div :class="workspaceOpen ? 'w-1/2' : 'w-full''"
+            <div :class="workspaceOpen ? 'w-1/2' : 'w-full'"
                 class="h-full bg-black relative transition-all duration-500 ease-in-out">
                 <video id="professor-screen" autoplay playsinline muted class="w-full h-full object-contain"></video>
 
@@ -654,16 +654,23 @@
         <div class="bg-white rounded-[40px] shadow-2xl max-w-5xl w-full h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-gray-100" @click.stop>
             
             <div class="border-b border-gray-100 p-6 flex flex-col sm:flex-row justify-between items-center bg-white gap-4 shrink-0">
-                <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[18px] border border-gray-100">
+                <div class="flex flex-wrap items-center gap-2 bg-gray-50/50 p-1.5 rounded-[18px] border border-gray-100">
                     <button @click="activeToolTab = 'compiler'"
                             :class="activeToolTab === 'compiler' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
                             class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
                         <i class="ri-code-s-slash-line text-sm"></i> OneCompiler
                     </button>
+                    
                     <button @click="activeToolTab = 'browser'"
                             :class="activeToolTab === 'browser' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
                             class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
                         <i class="ri-global-line text-sm"></i> External Browser
+                    </button>
+
+                    <button @click="activeToolTab = 'document'"
+                            :class="activeToolTab === 'document' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
+                            class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                        <i class="ri-file-text-line text-sm"></i> Document Editor
                     </button>
                 </div>
 
@@ -680,37 +687,72 @@
                     <iframe src="https://onecompiler.com" class="w-full h-full border-none bg-white"></iframe>
                 </div>
 
-                <div x-show="activeToolTab === 'browser'" class="w-full h-full p-6 flex flex-col overflow-y-auto" x-data="browserManager()">
-                    <div class="bg-white border border-gray-200 rounded-[30px] overflow-hidden shadow-2xl flex flex-col h-full">
-                        <div class="p-4 border-b border-gray-100 bg-white">
-                            <div class="flex items-center gap-3">
-                                <button @click="browserBack()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Back">
-                                    <i class="ri-arrow-left-line text-xl"></i>
-                                </button>
+                <div x-show="activeToolTab === 'browser'" class="w-full h-full flex flex-col bg-white" x-data="browserManager('{{ $class->id }}', '{{ csrf_token() }}')">
+                    <div class="p-4 border-b border-gray-100 bg-white shrink-0">
+                        <div class="flex items-center gap-3">
+                            <button @click="browserBack()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Back">
+                                <i class="ri-arrow-left-line text-xl"></i>
+                            </button>
 
-                                <button @click="browserForward()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Forward">
-                                    <i class="ri-arrow-right-line text-xl"></i>
-                                </button>
+                            <button @click="browserForward()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Forward">
+                                <i class="ri-arrow-right-line text-xl"></i>
+                            </button>
 
-                                <button @click="browserRefresh()" :class="refreshing ? 'animate-spin' : ''" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Refresh Page">
-                                    <i class="ri-refresh-line text-xl"></i>
-                                </button>
+                            <button @click="browserRefresh()" :class="refreshing ? 'animate-spin' : ''" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Refresh Page">
+                                <i class="ri-refresh-line text-xl"></i>
+                            </button>
 
-                                <div class="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
-                                    <i class="ri-global-line text-gray-400"></i>
-                                    <input type="text" x-model="urlInput" @keyup.enter="navigateTo()" placeholder="Search Google or enter educational URL..." class="flex-1 bg-transparent border-0 focus:ring-0 text-sm p-0 focus:outline-none">
-                                </div>
-
-                                <button @click="navigateTo()" :disabled="loadingUrl" :class="loadingUrl ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'" class="px-6 py-2 text-white rounded-xl font-bold transition text-xs">
-                                    <span x-show="!loadingUrl">Go</span>
-                                    <span x-show="loadingUrl">...</span>
-                                </button>
+                            <div class="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
+                                <i class="ri-global-line text-gray-400"></i>
+                                <input type="text" x-model="urlInput" @keyup.enter="navigateTo()" placeholder="Search the web or enter an educational URL..." class="flex-1 bg-transparent border-0 focus:ring-0 text-sm p-0 focus:outline-none">
                             </div>
-                        </div>
 
-                        <div class="flex-grow w-full bg-white relative">
-                            <iframe id="dashboard-browser-frame" :src="browserUrl" class="w-full h-full border-none bg-white absolute inset-0"></iframe>
+                            <button @click="navigateTo()" :disabled="loadingUrl" :class="loadingUrl ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'" class="px-6 py-2 text-white rounded-xl font-bold transition text-xs">
+                                <span x-show="!loadingUrl">Go</span>
+                                <span x-show="loadingUrl">...</span>
+                            </button>
                         </div>
+                    </div>
+
+                    <div class="flex-grow w-full bg-white relative">
+                        <iframe id="dashboard-browser-frame" :src="browserUrl" class="w-full h-full border-none bg-white absolute inset-0"></iframe>
+                    </div>
+                </div>
+
+                <div x-show="activeToolTab === 'document'" class="w-full h-full flex flex-col bg-white" 
+                     x-data="{ 
+                        docContent: '', 
+                        get wordCount() { 
+                            let text = this.docContent.trim();
+                            return text ? text.split(/\s+/).length : 0; 
+                        } 
+                     }">
+                    <div class="p-4 border-b border-gray-100 bg-white flex justify-between items-center shrink-0">
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs font-semibold text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+                                <i class="ri-text-spacing text-gray-400 text-sm"></i> Words: <span x-text="wordCount" class="font-bold text-gray-800">0</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="navigator.clipboard.writeText(docContent); alert('Content copied to clipboard!')" class="px-4 py-2 text-xs font-semibold bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-black rounded-xl border border-gray-100 transition flex items-center gap-1.5">
+                                <i class="ri-file-copy-line"></i> Copy Text
+                            </button>
+                            <button @click="
+                                const blob = new Blob([docContent], { type: 'text/plain' });
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = 'laboratory-notes.txt';
+                                link.click();
+                            " class="px-4 py-2 text-xs font-bold bg-[#383838] text-white hover:bg-black rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                                <i class="ri-download-cloud-line"></i> Save txt
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-grow w-full p-6 bg-gray-50/50">
+                        <textarea x-model="docContent" 
+                                  placeholder="Type or paste your data text structure notes, source snippets, or answers for the assignment here..." 
+                                  class="w-full h-full resize-none bg-white border border-gray-200 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 rounded-3xl p-6 text-sm text-gray-700 focus:outline-none transition-all shadow-sm leading-relaxed font-mono"></textarea>
                     </div>
                 </div>
 
@@ -1096,47 +1138,141 @@ function materialViewer() {
     </script>
 
     <script>
-        function browserManager() {
+ function browserManager() { 
     return {
-        browserUrl: 'https://www.google.com/search?igu=1',
+        classId: classId,
+        csrfToken: csrfToken,
+
+        browserUrl: classId ? `/student/classroom/${classId}/browser-home` : 'about:blank', 
         urlInput: '',
         loadingUrl: false,
         refreshing: false,
-        historyStack: ['https://www.google.com/search?igu=1'],
+        historyStack: classId ? [`/student/classroom/${classId}/browser-home`] : ['about:blank'],
         historyIndex: 0,
+        blockedSites: [], 
 
-        // 🌟 NEW: Helper function to send logs to the backend
-       logSiteVisit(targetUrl) {
-            fetch('/student/log-behavior', { // 🟢 MATCHES YOUR ROUTE
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    type: 'navigation',       // 🟢 MATCHES $request->type
-                    detail: targetUrl,        // 🟢 MATCHES $request->detail
-                    lab_session_id: classId   // 🟢 MATCHES $request->lab_session_id
-                })
-            }).catch(err => console.error('Failed to log site visit:', err));
+        init() {
+            if (!this.classId || this.classId === 'undefined') {
+                console.error("Context Error: classId initialization parameters missing.");
+                return;
+            }
+            this.loadBlockedRules();
+
+            // 🟢 NEW: Listen for click navigation events originating inside the search result iframe
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'iframe-navigate') {
+                    this.urlInput = event.data.url;
+                    this.navigateTo();
+                }
+            });
+
+            if (window.ipcRenderer) {
+                window.ipcRenderer.on('site-blocked-by-electron', (event, url) => {
+                    this.showBlockedPage(`"${this.cleanDomain(url)}" is restricted by the Instructor.`);
+                });
+            }
+        },
+
+        async loadBlockedRules() {
+            try {
+                const res = await fetch(`/student/classroom/${this.classId}/allowed-sites`);
+                if (res.ok) {
+                    const data = await res.json();
+                    this.blockedSites = [
+                        ...(data.pre_approved || []), 
+                        ...(data.session_sites || []), 
+                        ...(data.task_sites || [])
+                    ];
+
+                    const structuralDomains = this.blockedSites.map(site => {
+                        return site.domain.replace(/^www\./, '').toLowerCase().trim();
+                    });
+
+                    if (window.ipcRenderer) {
+                        window.ipcRenderer.send('update-blocklist', structuralDomains);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load blocklist configurations:", err);
+            }
+        },
+
+        cleanDomain(url) {
+            try {
+                let domain = url.includes('://') ? url.split('://')[1] : url;
+                return domain.split('/')[0].split('?')[0].replace(/^www\./, '').toLowerCase().trim();
+            } catch (e) {
+                return url;
+            }
+        },
+
+        isSiteBlocked(url) {
+            const currentDomain = this.cleanDomain(url);
+            return this.blockedSites.some(site => {
+                const blockedDomain = site.domain.replace(/^www\./, '').toLowerCase().trim();
+                return currentDomain === blockedDomain || currentDomain.endsWith('.' + blockedDomain);
+            });
         },
 
         navigateTo(preserveHistory = true) {
-            let url = this.urlInput.trim();
-            if (!url) return;
+            let input = this.urlInput.trim();
+            if (!input) return;
 
-            if (!url.startsWith('http') && (url.includes(' ') || !url.includes('.'))) {
-                url = 'https://www.google.com/search?q=' + encodeURIComponent(url) + '&igu=1';
-            } else if (!url.startsWith('http')) {
+            const isUrl = (input.includes('.') && !input.includes(' ')) || input.startsWith('http');
+
+            // 🔍 SEARCH HANDLING BLOCK
+            if (!isUrl) {
+                this.loadingUrl = true;
+                const lowerInput = input.toLowerCase();
+
+                // 🟢 NEW: Dynamic Keyword Verification against restricted rules
+                const containsBlockedKeyword = this.blockedSites.some(site => {
+                    // Strips extensions (extracts "youtube" from "youtube.com" or "www.youtube.co.uk")
+                    const domainClean = site.domain.replace(/^www\./, '').toLowerCase().trim();
+                    const keyword = domainClean.split('.')[0]; 
+                    
+                    return keyword.length > 2 && lowerInput.includes(keyword);
+                });
+
+                if (containsBlockedKeyword) {
+                    this.loadingUrl = false;
+                    this.showBlockedPage(`Search query contains restricted keyword terms.`);
+                    this.urlInput = '';
+                    return;
+                }
+
+                // Point iframe src to isolated search route
+                this.browserUrl = `/student/classroom/${this.classId}/search?q=${encodeURIComponent(input)}`;
+                
+                if (preserveHistory) {
+                    this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+                    this.historyStack.push(this.browserUrl);
+                    this.historyIndex = this.historyStack.length - 1;
+                }
+
+                const frame = document.getElementById('dashboard-browser-frame');
+                if (frame) frame.src = this.browserUrl;
+                
+                this.urlInput = '';
+                this.loadingUrl = false;
+                return;
+            }
+
+            let url = input.toLowerCase();
+            if (!url.startsWith('http')) {
                 url = 'https://' + url;
             }
 
-            if (url.includes('google.com') && !url.includes('igu=1')) {
-                url += (url.includes('?') ? '&' : '?') + 'igu=1';
+            this.loadingUrl = true;
+
+            if (this.isSiteBlocked(url)) {
+                this.loadingUrl = false;
+                this.showBlockedPage(`"${this.cleanDomain(url)}" is blocked by your instructor.`);
+                this.logViolationAttempt(url);
+                this.urlInput = '';
+                return;
             }
 
-            this.loadingUrl = true;
             if (preserveHistory) {
                 this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
                 this.historyStack.push(url);
@@ -1147,9 +1283,7 @@ function materialViewer() {
             const frame = document.getElementById('dashboard-browser-frame');
             if (frame) frame.src = url;
 
-            // 🟢 Send the log to the backend!
             this.logSiteVisit(url);
-
             this.urlInput = '';
             this.loadingUrl = false;
         },
@@ -1170,13 +1304,21 @@ function materialViewer() {
 
         loadUrlFromHistory(url) {
             this.loadingUrl = true;
+            if (url.includes('/browser-home') || url.includes('/search?q=')) {
+                this.browserUrl = url;
+                const frame = document.getElementById('dashboard-browser-frame');
+                if (frame) frame.src = url;
+                this.loadingUrl = false;
+                return;
+            }
+            if (this.isSiteBlocked(url)) {
+                this.loadingUrl = false;
+                this.showBlockedPage(`"${this.cleanDomain(url)}" is restricted.`);
+                return;
+            }
             this.browserUrl = url;
             const frame = document.getElementById('dashboard-browser-frame');
             if (frame) frame.src = url;
-            
-            // 🟢 Send the log to the backend when navigating via history too!
-            this.logSiteVisit(url);
-            
             this.loadingUrl = false;
         },
 
@@ -1202,29 +1344,35 @@ function materialViewer() {
             const blockedHtml = `
                 <!DOCTYPE html>
                 <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { font-family: sans-serif; background: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-                        .container { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; }
-                        .icon { font-size: 50px; }
-                        .message { color: #856404; background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffeeba; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="icon">🚫</div>
-                        <h1>Access Blocked</h1>
-                        <div class="message"><strong>${reason}</strong></div>
-                        <p>This website is not on the approved whitelist.</p>
+                <body style="font-family:sans-serif; background:#f8f9fa; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+                    <div style="background:white; padding:40px; border-radius:12px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.1); max-width:400px; border:1px solid #fee2e2;">
+                        <div style="font-size:50px; margin-bottom:10px;">🚫</div>
+                        <div style="color:#991b1b; background:#fef2f2; padding:15px; border-radius:8px; font-weight:bold;">${reason}</div>
+                        <p style="color:#6b7280; font-size:12px; margin-top:15px;">This website or search keyword is restricted during this laboratory session.</p>
                     </div>
                 </body>
-                </html>
-            `;
+                </html>`;
             const blob = new Blob([blockedHtml], { type: 'text/html' });
             this.browserUrl = URL.createObjectURL(blob);
             const frame = document.getElementById('dashboard-browser-frame');
             if (frame) frame.src = this.browserUrl;
+        },
+
+        logViolationAttempt(targetUrl) {
+            fetch('/student/log-behavior', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                body: JSON.stringify({ type: 'violation', detail: `Attempted to access blocked site: ${this.cleanDomain(targetUrl)}`, lab_session_id: this.classId })
+            }).catch(err => console.error(err));
+        },
+
+        logSiteVisit(targetUrl) {
+            if (targetUrl.startsWith('blob:') || targetUrl.includes('/search?q=')) return;
+            fetch('/student/log-behavior', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                body: JSON.stringify({ type: 'navigation', detail: targetUrl, lab_session_id: this.classId })
+            }).catch(err => console.error(err));
         }
     };
 }
