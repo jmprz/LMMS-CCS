@@ -1300,67 +1300,151 @@
     </template>
 </div>
 
-                        <div x-show="activeTab === 'students'" x-cloak class="space-y-6 animate-fade-in">
+                        <div x-show="activeTab === 'students'" x-data="studentManager()" x-cloak class="space-y-6 animate-fade-in">
 
-                            <div
-                                class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
-                                <div>
-                                    <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Enrolled
-                                        Students</h2>
-                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                        Monitor presence and connection status
-                                    </p>
-                                </div>
-                                <div
-                                    class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
-                                    <i class="ri-team-line text-lg"></i>
-                                    <span class="text-[10px] font-black uppercase tracking-widest">
-                                        Total Enrolled: {{ $class->students->count() ?? 0 }}
-                                    </span>
-                                </div>
-                            </div>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
+        <div>
+            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Enrolled Students</h2>
+            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                Monitor presence and activity history
+            </p>
+        </div>
+        <div class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
+            <i class="ri-team-line text-lg"></i>
+            <span class="text-[10px] font-black uppercase tracking-widest">
+                Total Enrolled: {{ $class->students->count() ?? 0 }}
+            </span>
+        </div>
+    </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                @forelse($class->students as $student)
-                                    <div
-                                        class="bg-white p-5 rounded-3xl border border-gray-100 flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300">
-                                        <div class="flex items-center gap-4">
-                                            <div
-                                                class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] font-black text-sm border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors">
-                                                {{ strtoupper(substr($student->first_name, 0, 1)) }}{{ strtoupper(substr($student->last_name, 0, 1)) }}
-                                            </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        @forelse($class->students as $student)
+            <div @click="viewStudentActivity({{ $student->id }}, '{{ addslashes($student->first_name) }}', '{{ addslashes($student->last_name) }}', {{ json_encode($student->attendances ?? []) }}, {{ $class->id }})"
+                class="bg-white p-5 rounded-3xl border border-gray-100 flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
+                
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] font-black text-sm border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors">
+                        {{ strtoupper(substr($student->first_name, 0, 1)) }}{{ strtoupper(substr($student->last_name, 0, 1)) }}
+                    </div>
 
-                                            <div class="flex flex-col min-w-0">
-                                                <h4
-                                                    class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
-                                                    {{ strtoupper($student->last_name) }}, {{ $student->first_name }}
-                                                    @if($student->middle_name)
-                                                    {{ strtoupper(substr($student->middle_name, 0, 1)) }}. @endif
-                                                </h4>
-                                                <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
-                                                    {{ $student->school_id }}
-                                                </p>
-                                            </div>
-                                        </div>
+                    <div class="flex flex-col min-w-0">
+                        <h4 class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
+                            {{ strtoupper($student->last_name) }}, {{ $student->first_name }}
+                            @if($student->middle_name) {{ strtoupper(substr($student->middle_name, 0, 1)) }}. @endif
+                        </h4>
+                        <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
+                            {{ $student->school_id }}
+                        </p>
+                    </div>
+                </div>
 
-                                        <div>
-                                            @if($student->pivot->is_present)
-                                                <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"
-                                                    title="Active"></div>
-                                            @else
-                                                <div class="w-3 h-3 rounded-full bg-gray-200" title="Offline"></div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div
-                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
-                                        <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
-                                        <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.</p>
-                                    </div>
-                                @endforelse
-                            </div>
+                <div>
+                    @if($student->pivot->is_present)
+                        <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" title="Active"></div>
+                    @else
+                        <div class="w-3 h-3 rounded-full bg-gray-200" title="Offline"></div>
+                    @endif
+                </div>
+            </div>
+        @empty
+            <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
+                <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
+                <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.</p>
+            </div>
+        @endforelse
+    </div>
+
+    <template x-teleport="body">
+        <div x-show="logModalOpen" class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4 sm:p-6" x-transition.opacity x-cloak>
+
+            <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden transform transition-all" @click.away="logModalOpen = false" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+                
+                <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+                    <div>
+                        <h3 class="font-black text-2xl text-gray-900 uppercase tracking-tight">Activity Timeline</h3>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">History for <span class="text-[#383838]" x-text="selectedUserName"></span></p>
+                    </div>
+                    <button @click="logModalOpen = false" class="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-all">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 md:p-8 overflow-y-auto bg-gray-50/50 flex-1">
+                    <template x-if="loading">
+                        <div class="flex flex-col items-center justify-center py-24 gap-4">
+                            <i class="ri-loader-4-line animate-spin text-5xl text-[#383838]"></i>
+                            <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest">Querying analytics logs...</p>
                         </div>
+                    </template>
+
+                    <div x-show="!loading" class="space-y-8 relative max-w-3xl mx-auto">
+                        <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+
+                        <template x-for="(group, date) in groupedLogs" :key="date">
+                            <div class="relative">
+                                <div class="sticky top-0 z-20 mb-6 flex">
+                                    <span class="bg-white border border-gray-200 text-[#383838] text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-sm" x-text="formatDateHeader(date)"></span>
+                                </div>
+
+                                <div class="space-y-4 ml-4">
+                                    <template x-for="log in group" :key="log.id">
+                                        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-5 hover:border-[#383838] transition-all relative group">
+                                            
+                                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm" :class="getIconClass(log.log_type)">
+                                                <i :class="getIcon(log.log_type)" class="text-xl"></i>
+                                            </div>
+
+                                            <div class="flex-1 min-w-0 pt-0.5">
+                                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                                    <div>
+                                                        <p class="text-sm font-black text-gray-900 leading-tight" x-text="log.content"></p>
+                                                        <p class="text-[9px] mt-1.5 text-gray-400 font-bold uppercase tracking-widest"
+                                                            x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 
+                                                                    log.log_type === 'submission' ? 'Task Submission' : 
+                                                                    log.log_type === 'material' ? 'Courseware Access' : 
+                                                                    log.log_type === 'quiz' ? 'Assessment Activity' : 'Navigation Log'">
+                                                        </p>
+                                                    </div>
+                                                    <span class="text-[10px] font-black text-[#383838] bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100" x-text="formatTime(log.created_at)"></span>
+                                                </div>
+
+                                                <div class="mt-4 flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                                    <template x-if="log.log_type !== 'attendance'">
+                                                        <span class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg">
+                                                            <i class="ri-time-line text-gray-400"></i>
+                                                            <span x-text="log.duration_seconds + 's'"></span>
+                                                        </span>
+                                                    </template>
+
+                                                    <span class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg truncate max-w-[250px]">
+                                                        <i class="ri-book-open-line text-gray-400"></i>
+                                                        <span class="truncate" x-text="log.class_name || 'General Session'"></span>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="Object.keys(groupedLogs).length === 0 && !loading">
+                            <div class="text-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center">
+                                <div class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
+                                    <i class="ri-history-line text-2xl text-gray-300"></i>
+                                </div>
+                                <h4 class="text-gray-900 font-bold mb-1">No Activity Found</h4>
+                                <p class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">This student has no recorded logs.</p>
+                            </div>
+                        </template>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
 
 
 
@@ -2299,6 +2383,102 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 });
+</script>
+
+<script>
+    function studentManager() {
+        return {
+            logModalOpen: false,
+            loading: false,
+            selectedUserName: '',
+            logs: [],
+
+            // Added classId parameter to the function
+            async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
+                this.selectedUserName = `${lastName}, ${firstName}`;
+                this.logModalOpen = true;
+                this.loading = true;
+                this.logs = [];
+
+                try {
+                    // Fetch logs specifically for this student and this class
+                    // Make sure your route in web.php is: /professor/students/{userId}/activity-logs/{classId}
+                  const response = await fetch(`/professor/students/${userId}/activity-logs/${classId}`);
+                    let fetchedLogs = await response.json();
+
+                    // Inject attendance records into the timeline
+                    if (attendances && attendances.length > 0) {
+                        attendances.forEach(att => {
+                            fetchedLogs.push({
+                                id: 'att-' + att.id,
+                                log_type: 'attendance',
+                                content: 'Official Attendance Marked',
+                                class_name: (att.lab_session ? att.lab_session.subject_name : null) ||
+                                            (att.labSession ? att.labSession.subject_name : null) ||
+                                            'Academic Session',
+                                duration_seconds: 0,
+                                created_at: `${att.attendance_date} ${att.joined_at}`
+                            });
+                        });
+                    }
+
+                    // Sort chronologically (Newest first)
+                    this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                } catch (e) {
+                    console.error("Log Fetch Failed", e);
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            // Keep all your existing helper methods below...
+            get groupedLogs() {
+                return this.logs.reduce((groups, log) => {
+                    const date = log.created_at.split(/[ T]/)[0];
+                    if (!groups[date]) { groups[date] = []; }
+                    groups[date].push(log);
+                    return groups;
+                }, {});
+            },
+
+            formatDateHeader(dateStr) {
+                const today = new Date().toISOString().split('T')[0];
+                const yesterdayDate = new Date();
+                yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+                const yesterday = yesterdayDate.toISOString().split('T')[0];
+                if (dateStr === today) return 'Today';
+                if (dateStr === yesterday) return 'Yesterday';
+                return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            },
+
+            formatTime(dateStr) {
+                return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            },
+
+            getIcon(type) {
+                const icons = {
+                    'attendance': 'ri-checkbox-circle-line',
+                    'navigation': 'ri-global-line',
+                    'submission': 'ri-file-upload-line',
+                    'material': 'ri-book-open-line',
+                    'quiz': 'ri-task-line'
+                };
+                return icons[type] || 'ri-cursor-line';
+            },
+
+            getIconClass(type) {
+                const classes = {
+                    'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                    'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                    'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                    'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                    'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                };
+                return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+            }
+        }
+    }
 </script>
 
 </x-app-layout>

@@ -144,6 +144,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/classroom/{id}', [ClassroomController::class, 'show'])->name('classroom.show');
         Route::get('/status-check', [AdminController::class, 'getActiveStatus'])->name('status-check');
 
+
+        // Fetch student activity logs for the modal
+      Route::get('/students/{userId}/activity-logs/{classId}', [ClassroomController::class, 'getStudentLogs']);
+
         // Live task creation from classroom
         Route::post('/classroom/{id}/live-tasks', function (\Illuminate\Http\Request $request, $id) {
             $request->validate([

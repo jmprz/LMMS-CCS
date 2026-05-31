@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\LabSession;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth;
 
 class ClassroomController extends Controller
@@ -249,6 +250,17 @@ public function getTasks($id)
         ->get(['id', 'title', 'description', 'deadline', 'points']);
     
     return response()->json($tasks);
+}
+
+public function getStudentLogs($userId, $classId)
+{
+    // Change 'class_id' to 'lab_session_id' to match your Model and Database
+    $logs = ActivityLog::where('user_id', $userId)
+                ->where('lab_session_id', $classId) 
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+    return response()->json($logs);
 }
 
 }
