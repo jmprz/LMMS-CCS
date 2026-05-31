@@ -166,11 +166,14 @@ class RubricController extends Controller
         $grade      = $service->gradeSubmission($submission);
 
         if ($grade) {
+
+            $grade->load('criterionScores.criterion');
             return response()->json([
                 'success'     => true,
                 'message'     => 'Re-graded successfully.',
                 'total_score' => $grade->total_score,
                 'max_score'   => $grade->max_score,
+                'submission_grade' => $grade,
             ]);
         }
 

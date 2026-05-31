@@ -169,6 +169,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/grade/{id}', [AdminController::class, 'gradeSubmission'])->name('grade');
         Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
 
+        // ✅ NEW: Add this line to handle editing/updating existing tasks
+        Route::put('/tasks/{id}', [TaskController::class, 'update'])->name('tasks.update');
+        
         // ✅ NEW: Rubric Management Routes
         Route::get('/tasks/{taskId}/rubric', [RubricController::class, 'show'])->name('tasks.rubric.show');
         Route::get('/tasks/{taskId}/rubric/create', [RubricController::class, 'create'])->name('tasks.rubric.create');
