@@ -741,9 +741,9 @@
                                                             <template x-for="log in viewersList" :key="log.id">
                                                                 <tr class="hover:bg-gray-50/80 transition-colors">
                                                                     <td class="py-4 px-6">
-                                                                        <div class="font-bold text-gray-900"
-                                                                            x-text="log.student_name"></div>
-                                                                    </td>
+    <div class="font-bold text-gray-900"
+        x-text="log.student_name.trim().includes(' ') ? log.student_name.trim().split(' ').pop() + ', ' + log.student_name.trim().split(' ').slice(0, -1).join(' ') : log.student_name"></div>
+</td>
                                                                     <td class="py-4 px-4 text-gray-500"
                                                                         x-text="log.viewed_at"></td>
                                                                     <td
@@ -1448,221 +1448,152 @@
 
 
 
-                        <div x-show="activeTab === 'browser-security'" x-data="browserSecurityManager()" x-cloak
-                            class="space-y-6 animate-fade-in">
+                        <div x-show="activeTab === 'browser-security'" x-data="browserSecurityManager()" x-cloak class="space-y-6 animate-fade-in">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
+        <div>
+            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Browser Security</h2>
+            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                Restrict access to specific websites and keywords during sessions
+            </p>
+        </div>
+        <div class="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl border border-gray-100 shadow-sm">
+            <span class="flex h-2 w-2 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-[#383838]"></span>
+            </span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-[#383838]">
+                Blacklist Mode Active
+            </span>
+        </div>
+    </div>
 
-                            <div
-                                class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
+    <!-- Main Grid Workspace -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- Left Column: Add Blocked Domain Form -->
+        <div class="xl:col-span-1">
+            <div class="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm sticky top-6">
+                <h3 class="text-xs font-black text-[#383838] uppercase tracking-widest mb-6 flex items-center">
+                    <i class="ri-forbid-2-line mr-2 text-lg text-[#383838]"></i> Block a Website
+                </h3>
+
+                <form @submit.prevent="addSite()" class="space-y-5">
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">
+                            Domain / Keyword *
+                        </label>
+                        <input type="text" x-model="newSite.domain" placeholder="facebook.com" required
+                            class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
+                        <p class="text-[9px] text-gray-400 font-bold mt-2 px-1 uppercase tracking-widest">
+                            Exclude http://, https://, or www.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">
+                            Display Name *
+                        </label>
+                        <input type="text" x-model="newSite.name" placeholder="Facebook" required
+                            class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
+                    </div>
+
+                    <div x-show="newSite.scope === 'task'" x-collapse>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">
+                            Target Task Restrictions
+                        </label>
+                        <select x-model="newSite.task_id"
+                            class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none cursor-pointer transition-all">
+                            <option value="">Select a task target...</option>
+                            <template x-for="task in tasks" :key="task.id">
+                                <option :value="task.id" x-text="task.title"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <button type="submit" :disabled="adding"
+                        class="w-full py-4 bg-[#383838] text-white rounded-2xl font-black uppercase text-[10px] hover:bg-black transition-all shadow-md tracking-widest mt-2 flex justify-center items-center gap-2">
+                        <span x-show="!adding">+ Blacklist Domain</span>
+                        <span x-show="adding" class="flex items-center gap-2">
+                            <i class="ri-loader-4-line animate-spin text-sm"></i> Updating Blocklist...
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Active Blacklist Restrictions Registry -->
+        <div class="xl:col-span-2 space-y-6">
+            
+            <!-- Quick Counters Panel -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Blocked Targets</p>
+                        <p class="text-2xl font-black text-[#383838] mt-1" x-text="sessionSites.length"></p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] text-xl">
+                        <i class="ri-shield-flash-line"></i>
+                    </div>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monitored Tasks</p>
+                        <p class="text-2xl font-black text-[#383838] mt-1" x-text="tasks.length"></p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 text-xl">
+                        <i class="ri-task-line"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Rules Card -->
+            <div class="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xs font-black text-[#383838] uppercase tracking-widest flex items-center">
+                        <i class="ri-list-check-2 mr-2 text-lg text-[#383838]"></i> Active Restrictions Registry
+                    </h3>
+                    <span class="text-[9px] bg-gray-100 font-black uppercase tracking-widest text-[#383838] px-3 py-1.5 rounded-lg" x-text="sessionSites.length + ' blocked sites'"></span>
+                </div>
+
+                <!-- Scrollable Container -->
+                <div class="space-y-3 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+                    <template x-for="site in sessionSites" :key="site.id">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent group transition-all hover:bg-white hover:border-gray-200 hover:shadow-sm">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-gray-200 text-[#383838] flex items-center justify-center font-black text-xs uppercase" x-text="site.name.substring(0,2)">
+                                </div>
                                 <div>
-                                    <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Browser
-                                        Security</h2>
-                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                        Control and monitor website access
-                                    </p>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-black text-sm text-[#383838]" x-text="site.name"></h4>
+                                        <span class="text-[8px] font-black bg-gray-100 text-gray-500 uppercase tracking-widest px-2 py-0.5 rounded-md border border-gray-200" x-text="site.scope || 'global'"></span>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-0.5" x-text="site.domain"></p>
                                 </div>
                             </div>
+                            
+                            <button @click="deleteSite(site.id)" 
+                                    class="text-gray-300 hover:text-black transition-colors p-2 rounded-xl hover:bg-gray-100" title="Remove Restriction">
+                                <i class="ri-delete-bin-line text-lg"></i>
+                            </button>
+                        </div>
+                    </template>
 
-                            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <!-- Empty State Configuration -->
+                    <div x-show="sessionSites.length === 0" class="text-center py-16 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                        <i class="ri-shield-check-line text-4xl mb-3 block text-gray-300"></i>
+                        <p class="text-xs font-black uppercase tracking-widest text-gray-400">No Custom Blocks Set</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 px-4">
+                            All standard web paths are accessible to students by default.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                                <div class="xl:col-span-1 space-y-6">
-
-                                    <div class="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm">
-                                        <h3
-                                            class="text-xs font-black text-[#383838] uppercase tracking-widest mb-6 flex items-center">
-                                            <i class="ri-global-line mr-2 text-lg"></i> Add Allowed Website
-                                        </h3>
-
-                                        <form @submit.prevent="addSite()" class="space-y-5">
-                                            <div>
-                                                <label
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">Domain
-                                                    *</label>
-                                                <input type="text" x-model="newSite.domain" placeholder="youtube.com"
-                                                    required
-                                                    class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-black outline-none transition-all">
-                                                <p
-                                                    class="text-[9px] text-gray-400 font-bold mt-2 px-1 uppercase tracking-widest">
-                                                    Exclude http:// or www.</p>
-                                            </div>
-
-                                            <div>
-                                                <label
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">Display
-                                                    Name *</label>
-                                                <input type="text" x-model="newSite.name" placeholder="YouTube" required
-                                                    class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-black outline-none transition-all">
-                                            </div>
-
-                                            <div>
-                                                <label
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">Access
-                                                    Scope</label>
-                                                <select x-model="newSite.scope"
-                                                    class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-black outline-none cursor-pointer transition-all">
-                                                    <option value="global">Global (All tasks)</option>
-                                                    <option value="task">Specific Task Only</option>
-                                                </select>
-                                            </div>
-
-                                            <div x-show="newSite.scope === 'task'" x-collapse>
-                                                <label
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">Target
-                                                    Task</label>
-                                                <select x-model="newSite.task_id"
-                                                    class="w-full border-none bg-gray-50 rounded-2xl p-4 text-sm font-bold text-[#383838] focus:ring-2 focus:ring-black outline-none cursor-pointer transition-all">
-                                                    <option value="">Select a task...</option>
-                                                    <template x-for="task in tasks" :key="task.id">
-                                                        <option :value="task.id" x-text="task.title"></option>
-                                                    </template>
-                                                </select>
-                                            </div>
-
-                                            <button type="submit" :disabled="adding"
-                                                class="w-full py-4 bg-[#383838] text-white rounded-2xl font-black uppercase text-[10px] hover:bg-black transition-all shadow-lg tracking-widest mt-2">
-                                                <span x-show="!adding">+ Whitelist Domain</span>
-                                                <span x-show="adding"><i class="ri-loader-4-line animate-spin"></i>
-                                                    Processing</span>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-
-                                <div class="xl:col-span-2 space-y-6">
-
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div class="bg-gray-50 rounded-[2rem] border border-gray-100 p-8">
-                                            <h3
-                                                class="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center">
-                                                <i class="ri-shield-check-line mr-2 text-lg"></i> System Approved
-                                            </h3>
-
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <template x-for="site in preApprovedSites" :key="site.id">
-                                                    <div
-                                                        class="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col justify-center">
-                                                        <span class="font-black text-[#383838] text-sm"
-                                                            x-text="site.name"></span>
-                                                        <span
-                                                            class="text-[10px] text-gray-400 font-bold tracking-widest mt-1"
-                                                            x-text="site.domain"></span>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                            <div x-show="preApprovedSites.length === 0"
-                                                class="text-center py-4 text-gray-400 text-[10px] uppercase font-bold tracking-widest">
-                                                Loading defaults...
-                                            </div>
-                                        </div>
-
-                                        <div class="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm">
-                                            <h3
-                                                class="text-xs font-black text-[#383838] uppercase tracking-widest mb-6 flex items-center">
-                                                <i class="ri-list-check-2 mr-2 text-lg"></i> Custom Allowed
-                                            </h3>
-
-                                            <div class="space-y-3 max-h-[250px] overflow-y-auto pr-2">
-                                                <template x-for="site in sessionSites" :key="site.id">
-                                                    <div
-                                                        class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl group transition-colors hover:bg-white hover:border hover:border-gray-200">
-                                                        <div>
-                                                            <h4 class="font-black text-sm text-[#383838]"
-                                                                x-text="site.name"></h4>
-                                                            <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-0.5"
-                                                                x-text="site.domain"></p>
-                                                        </div>
-                                                        <button @click="deleteSite(site.id)"
-                                                            class="text-gray-300 hover:text-red-500 transition p-2">
-                                                            <i class="ri-delete-bin-line text-lg"></i>
-                                                        </button>
-                                                    </div>
-                                                </template>
-                                                <div x-show="sessionSites.length === 0"
-                                                    class="text-center py-10 text-gray-400">
-                                                    <i class="ri-node-tree text-3xl mb-2 block text-gray-200"></i>
-                                                    <p class="text-[10px] uppercase font-bold tracking-widest">No custom
-                                                        rules</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm">
-                                        <div class="flex justify-between items-center mb-8">
-                                            <h3
-                                                class="text-xs font-black text-red-500 uppercase tracking-widest flex items-center">
-                                                <i class="ri-shield-cross-line mr-2 text-lg"></i> Blocked Attempts Log
-                                            </h3>
-                                            <button @click="refreshBlockedAttempts()"
-                                                class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#383838] transition">
-                                                <i class="ri-refresh-line mr-1"></i> Refresh
-                                            </button>
-                                        </div>
-
-                                        <div class="grid grid-cols-3 gap-4 mb-8">
-                                            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 text-center">
-                                                <p class="text-3xl font-black text-[#383838]"
-                                                    x-text="blockedStats.total || 0"></p>
-                                                <p
-                                                    class="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2">
-                                                    Total Blocked</p>
-                                            </div>
-                                            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 text-center">
-                                                <p class="text-3xl font-black text-[#383838]"
-                                                    x-text="blockedStats.by_domain?.length || 0"></p>
-                                                <p
-                                                    class="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2">
-                                                    Unique Sites</p>
-                                            </div>
-                                            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 text-center">
-                                                <p class="text-3xl font-black text-[#383838]"
-                                                    x-text="blockedStats.by_student?.length || 0"></p>
-                                                <p
-                                                    class="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2">
-                                                    Students Affected</p>
-                                            </div>
-                                        </div>
-
-                                        <div class="overflow-x-auto bg-gray-50 rounded-2xl border border-gray-100 p-4">
-                                            <table class="w-full text-left">
-                                                <thead>
-                                                    <tr
-                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                        <th class="px-5 pb-3 border-b border-gray-200">Student</th>
-                                                        <th class="px-5 pb-3 border-b border-gray-200">Target URL</th>
-                                                        <th class="px-5 pb-3 border-b border-gray-200 text-right">
-                                                            Timestamp</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <template x-for="attempt in blockedAttempts.slice(0, 10)"
-                                                        :key="attempt.id">
-                                                        <tr class="hover:bg-white transition-colors">
-                                                            <td class="px-5 py-4 text-sm font-bold text-[#383838]"
-                                                                x-text="attempt.user?.name"></td>
-                                                            <td class="px-5 py-4">
-                                                                <span class="text-xs font-black text-red-500"
-                                                                    x-text="attempt.blocked_domain"></span>
-                                                                <span
-                                                                    class="block text-[10px] text-gray-400 font-bold mt-1 truncate max-w-[200px]"
-                                                                    x-text="attempt.blocked_url"></span>
-                                                            </td>
-                                                            <td class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest"
-                                                                x-text="formatTime(attempt.attempted_at)"></td>
-                                                        </tr>
-                                                    </template>
-                                                </tbody>
-                                            </table>
-
-                                            <div x-show="blockedAttempts.length === 0"
-                                                class="text-center py-12 text-gray-400">
-                                                <i class="ri-shield-check-line text-4xl mb-3 block text-gray-200"></i>
-                                                <p class="text-[10px] font-black uppercase tracking-widest">Zero blocked
-                                                    attempts</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
+        </div>
+    </div>
+</div>
                             </div>
                         </div>
 
