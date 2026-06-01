@@ -63,10 +63,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/tasks/{taskId}/submit', [StudentClassController::class, 'submitTask'])->name('tasks.submit');
         Route::post('/tasks/{taskId}/delete', [StudentClassController::class, 'deleteTask'])->name('tasks.delete');
 
-       Route::get('/classroom/{id}/allowed-sites', [AllowedSiteController::class, 'index'])->name('allowed-sites.index');
-    Route::get('/classroom/{id}/browser-home', [StudentClassController::class, 'browserHome'])->name('classroom.browser-home');
-    Route::get('/classroom/{id}/search', [StudentClassController::class, 'customSearch'])->name('classroom.search');
-       
+        Route::get('/classroom/{id}/allowed-sites', [AllowedSiteController::class, 'index'])->name('allowed-sites.index');
+        Route::get('/classroom/{id}/browser-home', [StudentClassController::class, 'browserHome'])->name('classroom.browser-home');
+        Route::get('/classroom/{id}/search', [StudentClassController::class, 'customSearch'])->name('classroom.search');
+
         // ✅ NEW: Student views detailed grade feedback for a task
         Route::get('/tasks/{taskId}', [TaskController::class, 'show'])->name('tasks.show');
 
@@ -92,13 +92,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->map(function ($quiz) {
                 $attempt = $quiz->attempts->first();
                 return [
-                    'id'              => $quiz->id,
-                    'title'           => $quiz->title,
-                    'expires_at'      => $quiz->expires_at,
+                    'id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'expires_at' => $quiz->expires_at,
                     'questions_count' => $quiz->questions_count,
-                    'total_points'    => $quiz->total_points ?? $quiz->questions_count,
-                    'has_attempt'     => (bool) $attempt,
-                    'user_score'      => $attempt ? $attempt->score : null,
+                    'total_points' => $quiz->total_points ?? $quiz->questions_count,
+                    'has_attempt' => (bool) $attempt,
+                    'user_score' => $attempt ? $attempt->score : null,
                 ];
             });
     });
@@ -120,10 +120,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 }
 
                 return [
-                    'id'    => $m->id,
+                    'id' => $m->id,
                     'title' => $m->title,
-                    'type'  => $m->type,
-                    'url'   => $url,
+                    'type' => $m->type,
+                    'url' => $url,
                 ];
             });
     });
@@ -146,23 +146,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
         // Fetch student activity logs for the modal
-      Route::get('/students/{userId}/activity-logs/{classId}', [ClassroomController::class, 'getStudentLogs']);
+        Route::get('/students/{userId}/activity-logs/{classId}', [ClassroomController::class, 'getStudentLogs']);
 
         // Live task creation from classroom
         Route::post('/classroom/{id}/live-tasks', function (\Illuminate\Http\Request $request, $id) {
             $request->validate([
-                'title'       => 'required|string',
+                'title' => 'required|string',
                 'description' => 'required|string',
-                'deadline'    => 'required|date',
-                'points'      => 'required|integer|min:1',
+                'deadline' => 'required|date',
+                'points' => 'required|integer|min:1',
             ]);
 
             $task = \App\Models\Task::create([
-                'subject_id'  => $id,
-                'title'       => $request->title,
+                'subject_id' => $id,
+                'title' => $request->title,
                 'description' => $request->description,
-                'deadline'    => $request->deadline,
-                'points'      => $request->points,
+                'deadline' => $request->deadline,
+                'points' => $request->points,
             ]);
 
             return response()->json(['success' => true, 'task' => $task]);
@@ -175,7 +175,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // ✅ NEW: Add this line to handle editing/updating existing tasks
         Route::put('/tasks/{id}', [TaskController::class, 'update'])->name('tasks.update');
-        
+
         // ✅ NEW: Rubric Management Routes
         Route::get('/tasks/{taskId}/rubric', [RubricController::class, 'show'])->name('tasks.rubric.show');
         Route::get('/tasks/{taskId}/rubric/create', [RubricController::class, 'create'])->name('tasks.rubric.create');
@@ -210,7 +210,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
 
         Route::get('/classroom/{id}/active-students', function ($id) {
-            $session        = \App\Models\LabSession::findOrFail($id);
+            $session = \App\Models\LabSession::findOrFail($id);
             $activeStudents = $session->students()
                 ->wherePivot('is_present', true)
                 ->wherePivot('updated_at', '>=', now()->subMinutes(2))
@@ -243,6 +243,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
         Route::get('/users/{user}/activity-logs', [AdminController::class, 'getUserLogs']);
+        Route::get('/users/{user}/drive-files', [App\Http\Controllers\ClassroomController::class, 'getStudentDriveFiles'])
+            ->name('users.drive-files');
+
     });
 
     // =========================================================================

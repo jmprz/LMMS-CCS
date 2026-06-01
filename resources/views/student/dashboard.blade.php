@@ -294,7 +294,7 @@
 
             <div class="lg:col-span-1">
                 <div>
-                    <h2 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Class Schedule Registry</h2>
+                    <h2 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Class Schedule</h2>
                     <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                         <table class="w-full text-left border-collapse">
                             <thead class="bg-gray-50 text-gray-400 border-b border-gray-100">
@@ -308,7 +308,7 @@
                                     <tr class="hover:bg-gray-50/40 transition">
                                         <td class="px-4 py-3">
                                             <div class="flex flex-col min-w-0">
-                                                <span class="text-[11px] font-black text-gray-800 uppercase tracking-tight truncate" x-text="cls.code + ' | ' + cls.program + '-' + cls.section"></span>
+                                                <span class="text-[11px] font-black text-gray-800 uppercase tracking-tight truncate" x-text="cls.code + ' | ' + cls.program + '-' + cls.year + cls.section"></span>
                                                 <span class="text-[10px] font-bold text-gray-400 mt-0.5 truncate max-w-[180px]" x-text="cls.name"></span>
                                                 <span class="text-[9px] font-medium text-gray-400 mt-1" x-text="cls.day + ' • ' + cls.time"></span>
                                             </div>

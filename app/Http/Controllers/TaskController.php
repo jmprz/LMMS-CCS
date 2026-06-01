@@ -32,6 +32,15 @@ class TaskController extends Controller
                 ->first();
         }
 
+        // Return JSON response if requested by Alpine.js modal workspace
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'task' => $task,
+                'submission' => $submission,
+                'submissionGrade' => $submissionGrade
+            ]);
+        }
+
         return view('student.tasks.show', compact('task', 'submission', 'submissionGrade'));
     }
 
