@@ -147,6 +147,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Fetch student activity logs for the modal
         Route::get('/students/{userId}/activity-logs/{classId}', [ClassroomController::class, 'getStudentLogs']);
+        Route::get('/students/{userId}/files/{classId}', [ClassroomController::class, 'getStudentFilesForClass']);
 
         // Live task creation from classroom
         Route::post('/classroom/{id}/live-tasks', function (\Illuminate\Http\Request $request, $id) {

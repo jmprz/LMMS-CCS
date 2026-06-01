@@ -302,4 +302,32 @@ class ClassroomController extends Controller
 
         return response()->json($formattedFiles);
     }
+    // Add this method to your ClassroomController
+    public function getStudentFilesForClass($userId, $classId)
+    {
+        $submissions = \App\Models\Submission::where('user_id', $userId)
+            ->whereHas('task', function ($q) use ($classId) {
+                // Correctly matches the task to the current classroom
+                $q->where('id', $classId)
+                    ->orWhere('subject_id', $classId);
+            })
+            ->with('task')
+            ->latest('submitted_at') // Sorts by newest first in the database
+            ->get();
+
+        $formattedFiles = $submissions->map(function ($submission) {
+            return [
+                'id' => $submission->id,
+                'file_name' => $submission->original_filename ?? basename($submission->file_path) ?? 'Submission File',
+                'task_title' => $submission->task->title ?? 'Untitled Task',
+                // Formats with Date AND precise Time
+                'submitted_at' => $submission->submitted_at
+                    ? \Carbon\Carbon::parse($submission->submitted_at)->format('M d, Y • h:i A')
+                    : (\Carbon\Carbon::parse($submission->created_at)->format('M d, Y • h:i A')),
+                'file_url' => $submission->file_path ? asset($submission->file_path) : '#'
+            ];
+        });
+
+        return response()->json($formattedFiles);
+    }
 }

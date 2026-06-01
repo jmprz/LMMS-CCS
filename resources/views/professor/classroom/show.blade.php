@@ -786,8 +786,8 @@
                                             Manage activities, rubrics, and grades</p>
                                     </div>
                                     <button @click="openEditor()"
-                                        class="bg-[#383838] text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-black transition-all shadow-md active:scale-95 tracking-widest flex items-center gap-2">
-                                        <i class="ri-add-line text-sm"></i> Create New Task
+                                        class="bg-[#383838] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200 active:scale-95">
+                                        + Create New Task
                                     </button>
                                 </div>
 
@@ -807,7 +807,8 @@
                                                     </span>
                                                 </div>
                                                 <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight">
-                                                    {{ $task->title }}</h4>
+                                                    {{ $task->title }}
+                                                </h4>
                                                 <div class="space-y-2 mt-3 mb-6">
                                                     <div
                                                         class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
@@ -1315,7 +1316,7 @@
                                 </div>
                                 <a href="{{ route('professor.quizzes.create', ['session_id' => $session->id]) }}"
                                     target="_blank"
-                                    class="bg-[#383838] text-white px-6 py-2.5 rounded-xl font-bold uppercase text-xs hover:bg-black transition-all shadow-sm active:scale-95 inline-block">
+                                    class="bg-[#383838] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200 active:scale-95">
                                     + Create Quiz
                                 </a>
                             </div>
@@ -1338,7 +1339,8 @@
                                             </div>
 
                                             <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
-                                                {{ $quiz->title }}</h4>
+                                                {{ $quiz->title }}
+                                            </h4>
 
                                             <div class="space-y-2 mt-4">
                                                 <div class="flex items-center text-gray-500 text-[11px] font-medium">
@@ -1511,6 +1513,7 @@
                                         Monitor presence and activity history
                                     </p>
                                 </div>
+
                                 <div
                                     class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
                                     <i class="ri-team-line text-lg"></i>
@@ -1536,7 +1539,8 @@
                                                     class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
                                                     {{ strtoupper($student->last_name) }}, {{ $student->first_name }}
                                                     @if($student->middle_name)
-                                                    {{ strtoupper(substr($student->middle_name, 0, 1)) }}. @endif
+                                                        {{ strtoupper(substr($student->middle_name, 0, 1)) }}.
+                                                    @endif
                                                 </h4>
                                                 <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
                                                     {{ $student->school_id }}
@@ -1567,27 +1571,43 @@
                                     class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4 sm:p-6"
                                     x-transition.opacity x-cloak>
 
-                                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden transform transition-all"
+                                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden transform transition-all relative"
                                         @click.away="logModalOpen = false" x-transition:enter="ease-out duration-300"
                                         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
 
                                         <div
-                                            class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+                                            class="pl-8 pr-20 py-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between sm:items-center bg-white shrink-0 gap-5 relative">
                                             <div>
-                                                <h3 class="font-black text-2xl text-gray-900 uppercase tracking-tight">
-                                                    Activity Timeline</h3>
+                                                <h3
+                                                    class="font-black text-2xl text-gray-900 uppercase tracking-tight leading-none">
+                                                    Student Workspace</h3>
                                                 <p
-                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                    History for <span class="text-[#383838]"
-                                                        x-text="selectedUserName"></span></p>
+                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">
+                                                    Data for <span class="text-[#383838]"
+                                                        x-text="selectedUserName"></span>
+                                                </p>
                                             </div>
-                                            <button @click="logModalOpen = false"
-                                                class="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-all">
-                                                <i class="ri-close-line text-xl"></i>
-                                            </button>
+
+                                            <div
+                                                class="flex items-center gap-1 border border-gray-100 rounded-xl p-1 bg-gray-50 self-start sm:self-auto shrink-0">
+                                                <button @click="modalTab = 'logs'"
+                                                    :class="modalTab === 'logs' ? 'bg-white text-[#383838] shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-700 border border-transparent'"
+                                                    class="px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2">
+                                                    <i class="ri-history-line text-sm"></i> Timeline
+                                                </button>
+                                                <button @click="modalTab = 'files'"
+                                                    :class="modalTab === 'files' ? 'bg-white text-[#383838] shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-700 border border-transparent'"
+                                                    class="px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2">
+                                                    <i class="ri-folder-open-line text-sm"></i> Explorer
+                                                </button>
+                                            </div>
                                         </div>
 
+                                        <button @click="logModalOpen = false"
+                                            class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 border border-gray-200 rounded-xl transition-all z-10 shadow-sm">
+                                            <i class="ri-close-line text-xl"></i>
+                                        </button>
                                         <div class="p-6 md:p-8 overflow-y-auto bg-gray-50/50 flex-1">
                                             <template x-if="loading">
                                                 <div class="flex flex-col items-center justify-center py-24 gap-4">
@@ -1595,11 +1615,12 @@
                                                         class="ri-loader-4-line animate-spin text-5xl text-[#383838]"></i>
                                                     <p
                                                         class="text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                                                        Querying analytics logs...</p>
+                                                        Querying student records...</p>
                                                 </div>
                                             </template>
 
-                                            <div x-show="!loading" class="space-y-8 relative max-w-3xl mx-auto">
+                                            <div x-show="modalTab === 'logs' && !loading"
+                                                class="space-y-8 relative max-w-3xl mx-auto">
                                                 <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200">
                                                 </div>
 
@@ -1652,7 +1673,6 @@
                                                                                         x-text="log.duration_seconds + 's'"></span>
                                                                                 </span>
                                                                             </template>
-
                                                                             <span
                                                                                 class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg truncate max-w-[250px]">
                                                                                 <i
@@ -1682,8 +1702,61 @@
                                                             This student has no recorded logs.</p>
                                                     </div>
                                                 </template>
-
                                             </div>
+
+                                            <div x-show="modalTab === 'files' && !loading"
+                                                class="space-y-4 max-w-4xl mx-auto w-full">
+
+                                                <template x-if="studentFiles.length === 0">
+                                                    <div
+                                                        class="text-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center">
+                                                        <div
+                                                            class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
+                                                            <i class="ri-folder-open-line text-2xl text-gray-300"></i>
+                                                        </div>
+                                                        <h4 class="text-gray-900 font-bold mb-1">No Files Found</h4>
+                                                        <p
+                                                            class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
+                                                            This student hasn't submitted any files.</p>
+                                                    </div>
+                                                </template>
+
+                                                <template x-for="file in studentFiles" :key="file.id">
+                                                    <div
+                                                        class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-[#383838] transition-all duration-300">
+
+                                                        <div class="flex items-center gap-5 min-w-0">
+                                                            <div
+                                                                class="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                                                                <i class="ri-file-text-line text-2xl"></i>
+                                                            </div>
+                                                            <div class="min-w-0">
+                                                                <a :href="file.file_url" target="_blank" download
+                                                                    class="text-sm font-black text-gray-900 hover:text-blue-600 truncate block transition-colors"
+                                                                    x-text="file.file_name"></a>
+
+                                                                <div class="flex items-center flex-wrap gap-2 mt-1.5">
+                                                                    <span
+                                                                        class="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate max-w-[200px]"
+                                                                        x-text="file.task_title"></span>
+                                                                    <span class="text-gray-300">•</span>
+                                                                    <span
+                                                                        class="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                                                        <i class="ri-time-line text-xs"></i> <span
+                                                                            x-text="file.submitted_at"></span>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <a :href="file.file_url" target="_blank" download
+                                                            class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-100 hover:bg-[#383838] hover:text-white hover:border-[#383838] transition-all shrink-0 shadow-sm">
+                                                            <i class="ri-download-2-line text-xl"></i>
+                                                        </a>
+                                                    </div>
+                                                </template>
+                                            </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -2605,47 +2678,56 @@
                 loading: false,
                 selectedUserName: '',
                 logs: [],
+                studentFiles: [],
+                modalTab: 'logs', // Tracks 'logs' or 'files'
 
-                // Added classId parameter to the function
                 async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
                     this.selectedUserName = `${lastName}, ${firstName}`;
                     this.logModalOpen = true;
                     this.loading = true;
                     this.logs = [];
+                    this.studentFiles = [];
+                    this.modalTab = 'logs'; // Default to logs tab opening
 
                     try {
-                        // Fetch logs specifically for this student and this class
-                        // Make sure your route in web.php is: /professor/students/{userId}/activity-logs/{classId}
-                        const response = await fetch(`/professor/students/${userId}/activity-logs/${classId}`);
-                        let fetchedLogs = await response.json();
+                        // Fetch Logs and Files at the same time
+                        const [logsRes, filesRes] = await Promise.all([
+                            fetch(`/professor/students/${userId}/activity-logs/${classId}`),
+                            fetch(`/professor/students/${userId}/files/${classId}`)
+                        ]);
 
-                        // Inject attendance records into the timeline
-                        if (attendances && attendances.length > 0) {
-                            attendances.forEach(att => {
-                                fetchedLogs.push({
-                                    id: 'att-' + att.id,
-                                    log_type: 'attendance',
-                                    content: 'Official Attendance Marked',
-                                    class_name: (att.lab_session ? att.lab_session.subject_name : null) ||
-                                        (att.labSession ? att.labSession.subject_name : null) ||
-                                        'Academic Session',
-                                    duration_seconds: 0,
-                                    created_at: `${att.attendance_date} ${att.joined_at}`
+                        // 1. Compile Logs (Original Functionality preserved)
+                        if (logsRes.ok) {
+                            let fetchedLogs = await logsRes.json();
+                            if (attendances && attendances.length > 0) {
+                                attendances.forEach(att => {
+                                    fetchedLogs.push({
+                                        id: 'att-' + att.id,
+                                        log_type: 'attendance',
+                                        content: 'Official Attendance Marked',
+                                        class_name: (att.lab_session ? att.lab_session.subject_name : null) || (att.labSession ? att.labSession.subject_name : null) || 'Academic Session',
+                                        duration_seconds: 0,
+                                        created_at: `${att.attendance_date} ${att.joined_at}`
+                                    });
                                 });
-                            });
+                            }
+                            this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                         }
 
-                        // Sort chronologically (Newest first)
-                        this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        // 2. Compile Files (Sort recent uploads to top)
+                        if (filesRes.ok) {
+                            let fetchedFiles = await filesRes.json();
+                            this.studentFiles = fetchedFiles.sort((a, b) => b.id - a.id);
+                        }
 
                     } catch (e) {
-                        console.error("Log Fetch Failed", e);
+                        console.error("Fetch Execution Failed", e);
                     } finally {
                         this.loading = false;
                     }
                 },
 
-                // Keep all your existing helper methods below...
+                // Helper functions from the original script
                 get groupedLogs() {
                     return this.logs.reduce((groups, log) => {
                         const date = log.created_at.split(/[ T]/)[0];
