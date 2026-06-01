@@ -19,50 +19,79 @@ public function index(Request $request)
     $user = auth()->user();
 
     // --- PROFESSOR VIEW ---
-    // --- PROFESSOR VIEW ---
     if ($user->role === 'professor') {
-        // 1. Keep this to show only live classes on the main dashboard cards/tables
         $activeSessions = LabSession::where('faculty_id', $user->id)
             ->where('is_active', true)
             ->latest()
             ->get();
 
-        // 2. NEW QUERY: Fetch ALL classes (live or not) so the sidebar stays fully populated
         $sessions = LabSession::where('faculty_id', $user->id)
             ->latest()
             ->get();
 
-        // 3. Fallback logic to show the currently selected session or default to the first active one
         $selectedClassId = $request->query('session_id') ?? $activeSessions->first()?->id;
         
         $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
         $activeStudents = $class ? $class->students : collect();
 
-        // 4. Crucial: Add 'sessions' to your compact array so the view can read it!
         return view('professor.dashboard', compact('activeStudents', 'activeSessions', 'class', 'sessions'));
     }
 
     // --- ADMIN VIEW ---
     if ($user->role === 'admin') {
-        // 1. Get the lists/collections
         $allSessions = LabSession::with('faculty')->latest()->get();
         
-        // 2. Get the Specific Stats for your Dashboard cards
         $totalUsers = User::count();
         $totalStudents = User::where('role', 'student')->count();
         $totalProfessors = User::where('role', 'professor')->count();
         
         $activeClassesCount = LabSession::where('is_active', true)->count();
         
-        $upcomingClasses = LabSession::where('is_active', false)
-            ->orderBy('schedule_time', 'asc')
-            ->take(5)
-            ->get();
+        // 🟢 SMART CALENDAR TIMELINE: Sorts and grabs upcoming events relative to today
+        $todayDayOfWeek = now()->dayOfWeekIso; // 1 (Monday) to 7 (Sunday)
+        $daysOfWeekMap = [
+            'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3, 
+            'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6, 'Sunday' => 7
+        ];
 
-        // 3. Activity Logs (Ensure you have an ActivityLog model/table)
-        $logs = \App\Models\ActivityLog::latest()->take(10)->get(); 
+        $upcomingClasses = LabSession::all()->map(function ($session) use ($todayDayOfWeek, $daysOfWeekMap) {
+            $sessionDay = ucfirst(strtolower(trim($session->schedule_day)));
+            $sessionDayNumber = $daysOfWeekMap[$sessionDay] ?? null;
+            
+            if (!$sessionDayNumber) return null;
 
-        // Return EVERYTHING in one compact or array
+            // Extract the start time out of the range text (e.g. "9:00 AM" from "9:00 AM - 12:00 PM")
+            $timeParts = explode(' - ', $session->schedule_time);
+            $startTimeStr = $timeParts[0] ?? null;
+
+            if (!$startTimeStr) return null;
+
+            try {
+                // Calculate the difference in calendar days to place it accurately this week
+                $daysDifference = $sessionDayNumber - $todayDayOfWeek;
+                $classDateTime = now()->addDays($daysDifference);
+                
+                $parsedTime = \Carbon\Carbon::parse($startTimeStr);
+                $classDateTime->setTime($parsedTime->hour, $parsedTime->minute, 0);
+
+                // If the class occurrence has already passed for today/this week, move it to next week's sequence
+                if ($classDateTime->isPast()) {
+                    $classDateTime->addWeeks(1);
+                }
+
+                $session->minutes_until = now()->diffInMinutes($classDateTime, false);
+                return $session;
+            } catch (\Exception $e) {
+                return null;
+            }
+        })
+        ->filter() // Clear out invalid entries
+        ->sortBy('minutes_until') // Prioritize closest upcoming schedule first
+        ->take(5)
+        ->values();
+
+     $logs = \App\Models\ActivityLog::with(['user', 'labSession'])->latest()->take(10)->get();
+
         return view('admin.dashboard', compact(
             'allSessions', 
             'totalStudents', 
@@ -74,9 +103,9 @@ public function index(Request $request)
         ));
     }
 
-    // If neither, go home
     return redirect('/');
 }
+
 public function toggleSession($id)
 {
     $session = LabSession::findOrFail($id);
@@ -86,10 +115,9 @@ public function toggleSession($id)
         $session->is_broadcasting = false;
     }
 
-    // GET: List of everyone who marked attendance TODAY
     $presentToday = \App\Models\Attendance::where('lab_session_id', $id)
         ->where('attendance_date', now()->toDateString())
-        ->with('student') // Loads the User model info
+        ->with('student')
         ->get();
         
     $session->save();
@@ -104,9 +132,9 @@ public function toggleBroadcast($id)
     
     return back()->with('success', 'Broadcast Status Updated');
 }
+
 public function getActiveStatus()
 {
-    // Only check students present in the current active session
     $activeSessionId = LabSession::where('is_active', true)->value('id');
 
     $presentIds = DB::table('class_student')
@@ -117,10 +145,11 @@ public function getActiveStatus()
 
     return response()->json(['present_ids' => $presentIds]);
 }
- public function generateCode(Request $request) 
+
+public function generateCode(Request $request) 
 {
     $request->validate([
-        'class_code'    => 'required|string|max:20|unique:lab_sessions,class_code', // Manual input validation
+        'class_code'    => 'required|string|max:20|unique:lab_sessions,class_code',
         'faculty_id'    => 'required|exists:users,id',
         'subject_name'  => 'required|string|max:255',
         'semester'      => 'required|string',
@@ -133,11 +162,10 @@ public function getActiveStatus()
         'section'       => 'required',
     ]);
     
-    
     $formattedTime = date("g:i A", strtotime($request->start_time)) . ' - ' . date("g:i A", strtotime($request->end_time));
 
     LabSession::create([
-        'class_code'    => strtoupper(trim($request->class_code)), // Use the input, forced to UPPERCASE
+        'class_code'    => strtoupper(trim($request->class_code)),
         'subject_name'  => $request->subject_name,
         'semester'      => $request->semester,
         'school_year'   => $request->school_year,
@@ -147,7 +175,7 @@ public function getActiveStatus()
         'year_level'    => $request->year_level, 
         'section'       => $request->section,    
         'faculty_id'    => $request->faculty_id,
-        'is_active'     => true,
+        'is_active'     => false, // 🟢 FIXED: Classes now start inactive until toggled live
     ]);
 
     return back()->with('success', 'Academic session created successfully with code: ' . strtoupper($request->class_code));
@@ -157,7 +185,6 @@ public function statusCheck(Request $request)
 {
     $sessionId = $request->query('session_id');
 
-    // If no session is selected, return empty to avoid errors
     if (!$sessionId) {
         return response()->json(['present_ids' => []]);
     }
@@ -165,7 +192,6 @@ public function statusCheck(Request $request)
     $presentIds = DB::table('class_student')
         ->where('lab_session_id', $sessionId)
         ->where('is_present', true)
-        // Students who sent a heartbeat in the last 60 seconds
         ->where('updated_at', '>=', now()->subSeconds(60)) 
         ->pluck('user_id');
 
@@ -188,20 +214,16 @@ public function userIndex()
 {
     $user = auth()->user();
 
-    // --- ADMIN VIEW ---
     if ($user->role === 'admin') {
-        // Fetch everyone with their attendance records for the timeline
         $users = User::with('attendances.labSession')
             ->orderBy('role', 'desc')
-            ->orderBy('last_name', 'asc') // Better sorting for school records
+            ->orderBy('last_name', 'asc')
             ->get();
 
         return view('admin.users.index', compact('users'));
     }
 
-    // --- PROFESSOR VIEW ---
     if ($user->role === 'professor') {
-        // Professor only sees students from their lab sessions
         $users = User::with('attendances')
             ->whereHas('joinedClasses', function($query) use ($user) {
                 $query->where('faculty_id', $user->id); 
@@ -216,9 +238,7 @@ public function userIndex()
 
     return redirect()->route('dashboard');
 }
-/**
- * Fetches JSON for the Activity Log Modal
- */
+
 public function getUserLogs(User $user)
 {
     try {
@@ -250,7 +270,7 @@ public function getUserLogs(User $user)
                 'log_type'         => $log->log_type ?? 'navigation',
                 'content'          => $log->content ?? 'Interacted with workspace',
                 'class_name'       => $sessionName,
-                'duration_seconds' => $log->duration_seconds ?? 0, // 🟢 FIXED: Ensures duration passes to AlpineJS
+                'duration_seconds' => $log->duration_seconds ?? 0,
                 'created_at'       => $log->created_at ? $log->created_at->toIso8601String() : now()->toIso8601String()
             ];
         });
@@ -285,16 +305,14 @@ public function updateUser(Request $request, User $user)
         'section' => 'nullable',
     ]);
 
-    // Manually sync the 'name' field if your app uses it elsewhere
     $validated['name'] = $validated['first_name'] . ' ' . $validated['last_name'];
-
     $user->update($validated);
 
     return back()->with('success', 'User updated successfully!');
 }
+
 public function destroyUser(User $user)
 {
-    // Prevent admin from deleting themselves
     if (auth()->id() === $user->id) {
         return back()->with('error', 'You cannot delete your own account.');
     }
@@ -302,5 +320,4 @@ public function destroyUser(User $user)
     $user->delete();
     return back()->with('success', 'User deleted successfully');
 }
-
 }
