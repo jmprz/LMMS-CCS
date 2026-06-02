@@ -353,49 +353,83 @@
     </script>
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script type="module">
-        document.addEventListener('DOMContentLoaded', () => {
-            const studentId = '{{ auth()->user()->id ?? "default-id" }}'; 
-            
-            // 🟢 FIXED: Uppercase STUDENT_ prefix (so it matches the Professor's target) 
-            // 🟢 FIXED: Configured to use a stable, global custom server
-            const peer = new Peer('STUDENT_' + studentId, {
-                // 👇 Replace this placeholder URL with your actual deployed Render or Railway app domain!
-                host: 'your-app-name.onrender.com', 
-                port: 443,
-                path: '/screen-stream',
-                secure: true
-            }); 
-
-            peer.on('call', (call) => {
-                call.answer(); 
-                call.on('stream', (professorStream) => {
-                    const videoElement = document.getElementById('professor-screen');
-                    if(videoElement) {
-                        videoElement.srcObject = professorStream;
-                        videoElement.play().catch(err => console.warn("Video blocked by browser:", err));
-                    }
-                    if (window.electronAPI) { window.electronAPI.lockScreen(); }
-                    const ui = document.getElementById('lockdown-ui');
-                    if(ui) ui.classList.remove('hidden');
-                });
-            });
-
-            // 🟢 Catch errors immediately and print them to the console
-            peer.on('error', (err) => {
-                console.error('PeerJS Error:', err.type, err.message);
-            });
-
-            if (window.Echo) {
-                window.Echo.channel('lab-session-1') 
-                    .listen('ProfessorStoppedSharing', (e) => {
-                        if (window.electronAPI) { window.electronAPI.unlockScreen(); }
-                        const ui = document.getElementById('lockdown-ui');
-                        if(ui) ui.classList.add('hidden');
-                    });
-            } else {
-                console.warn("Laravel Echo is not initialized.");
+ <script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+        const studentId = '{{ auth()->user()->id ?? "default-id" }}'; 
+        
+        // Uniform local server configuration options object (Matches your local server!)
+        const localPeerOptions = {
+            host: window.location.hostname,                 // Dynamically uses your local machine's IP
+            port: 9000,                                     // Your running local PeerJS port
+            path: '/myapp',                                 // Your uniform local path setting
+            secure: window.location.protocol === 'https:',
+            config: {
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             }
+        };
+
+        // Initialize peer using the local configuration options
+        const peer = new Peer('STUDENT_' + studentId, localPeerOptions); 
+
+        peer.on('open', (id) => {
+            console.log("✅ Student dashboard link registered locally with ID:", id);
         });
-    </script>
+
+        peer.on('call', (call) => {
+            console.log("📞 Incoming downstream stream feed from professor...");
+            call.answer(); 
+            
+            call.on('stream', (professorStream) => {
+                console.log("🟢 Live lecture frame buffers received!");
+                const videoElement = document.getElementById('professor-screen');
+                if(videoElement) {
+                    videoElement.srcObject = professorStream;
+                    
+                    // Electron playback engine wake-up wrapper
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play()
+                            .catch(err => console.warn("Video playback blocked:", err));
+                    };
+                }
+                
+                // Keep your custom Electron frame lockdown functionality intact
+                if (window.electronAPI) { 
+                    window.electronAPI.lockScreen(); 
+                }
+                
+                const ui = document.getElementById('lockdown-ui');
+                if(ui) ui.classList.remove('hidden');
+                
+                const normalView = document.getElementById('normal-view');
+                if(normalView) normalView.classList.add('hidden');
+            });
+        });
+
+        // Catch errors immediately and print them to the console
+        peer.on('error', (err) => {
+            console.error('PeerJS Connection Error:', err.type, err.message);
+        });
+
+        // Laravel Echo dynamic listener state
+        if (window.Echo) {
+            // Using template variables for the class session channel ensures flexibility
+            const channelId = '{{ $class->id ?? "1" }}'; 
+            window.Echo.channel(`lab-session-${channelId}`) 
+                .listen('ProfessorStoppedSharing', (e) => {
+                    console.log("🔴 Echo received 'ProfessorStoppedSharing' broadcast.");
+                    if (window.electronAPI) { 
+                        window.electronAPI.unlockScreen(); 
+                    }
+                    
+                    const ui = document.getElementById('lockdown-ui');
+                    if(ui) ui.classList.add('hidden');
+                    
+                    const normalView = document.getElementById('normal-view');
+                    if(normalView) normalView.classList.remove('hidden');
+                });
+        } else {
+            console.warn("Laravel Echo is not initialized yet.");
+        }
+    });
+</script>
 </x-app-layout>

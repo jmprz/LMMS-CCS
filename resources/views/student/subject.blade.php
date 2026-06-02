@@ -35,10 +35,7 @@
 
                             <div class="md:col-span-1">
                                 @if(!$class->is_active)
-                                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 h-full flex flex-col justify-center items-center text-center">
-                                        <i class="ri-error-warning-line text-3xl text-amber-500 mb-2"></i>
-                                        <p class="font-black text-amber-900">Session Offline</p>
-                                    </div>
+                                    <div></div>
                                 @else
                                     <div x-show="isSharing" x-cloak class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-6 h-full flex flex-col justify-center items-center text-center animate-fade-in">
                                         <div class="ri-broadcast-line text-3xl text-green-500 animate-pulse mb-2"></div>
@@ -54,6 +51,10 @@
                                 <i class="ri-error-warning-line text-5xl text-amber-500 mb-4 block"></i>
                                 <p class="font-black text-amber-900 text-xl">Session Offline</p>
                                 <p class="text-amber-700 font-medium">The instructor has not initialized the laboratory session yet.</p>
+                                 <a href="{{ route('dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 hover:text-gray-800 uppercase tracking-widest transition duration-150 group">
+                                        <i class="ri-arrow-left-line mr-2 text-sm transition-transform group-hover:-translate-x-1"></i>
+                                        Back to Dashboard
+                                    </a>
                             </div>
                         @else
                             <div x-show="!isSharing" class="flex flex-col items-center justify-center bg-white p-12 rounded-[40px] border border-gray-200 shadow-sm text-center">
@@ -94,7 +95,7 @@
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <template x-for="task in filteredTasks" :key="task.id">
-                                            <div @click="openTaskModal(task)" class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in">
+                                          <div @click="$dispatch('open-task', task)" class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in">
                                                 <div class="space-y-4">
                                                     <div class="flex items-start gap-3">
                                                         <div class="mt-1 w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors">
@@ -288,7 +289,7 @@
 
     <!-- Modals and script architectures remain below -->
    <!-- Modals and script architectures remain below -->
-   <div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" x-data="taskModal()" @click.self="closeModal()">
+  <div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" x-data="taskModal()" @open-task.window="openModal($event.detail)" @click.self="closeModal()">
     <div class="bg-white rounded-[40px] shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-fade-in border border-zinc-100/80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors" @click.stop>
         
         <div class="border-b border-zinc-100 p-8 flex justify-between items-start bg-gradient-to-b from-zinc-50/50 to-white rounded-t-[40px]">
@@ -527,33 +528,176 @@
     </div>
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script>
-        const classId = {{ $class->id }};
-        const profPeerId = 'PROF_{{ $class->faculty_id }}';
-        const csrfToken = '{{ csrf_token() }}';
-        let studentPeer = null;
+<script>
+    const classId = '{{ $class->id }}';
+    const profPeerId = 'PROF_{{ $class->faculty_id }}';
+    const csrfToken = '{{ csrf_token() }}';
+    let studentPeer = null;
+    let localScreenStream = null;
+    let isCheckingStatus = false;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            studentPeer = new Peer('STUDENT_{{ auth()->id() }}');
+    const localPeerOptions = {
+        host: window.location.hostname, 
+        port: 9000,                     
+        path: '/myapp',                 
+        secure: window.location.protocol === 'https:',
+        config: {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
+        }
+    };
 
-            studentPeer.on('call', (call) => {
-                call.answer();
-                call.on('stream', (stream) => {
-                    document.getElementById('lockdown-ui').classList.remove('hidden');
-                    document.getElementById('normal-view').classList.add('hidden');
-                    document.getElementById('professor-screen').srcObject = stream;
-                    document.getElementById('professor-screen').play();
-                });
-                call.on('close', () => {
-                    document.getElementById('lockdown-ui').classList.add('hidden');
-                    document.getElementById('normal-view').classList.remove('hidden');
-                });
+    // Helper function to check session status immediately if a stream changes state
+    function verifySessionStatus() {
+        if (isCheckingStatus) return;
+        isCheckingStatus = true;
+
+        fetch(`/student/heartbeat/${classId}`, { 
+            method: 'POST', 
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' } 
+        })
+        .then(res => res.json())
+        .then(data => {
+            isCheckingStatus = false;
+            // If the backend returns that the class session is no longer active
+            if (data && (data.is_active === false || data.status === 'inactive' || data.session_active === false)) {
+                console.log("⚠️ Backend confirmed session is offline. Reloading workspace view...");
+                cleanupHardwareAndReload();
+            }
+        })
+        .catch(err => {
+            isCheckingStatus = false;
+            console.error("Status synchronization verification check failed:", err);
+        });
+    }
+
+    function cleanupHardwareAndReload() {
+        if (localScreenStream) {
+            localScreenStream.getTracks().forEach(track => track.stop());
+        }
+        if (studentPeer) {
+            studentPeer.destroy();
+        }
+        // Forces Electron to refresh the view to trigger the 'Session Offline' screen state
+        window.location.reload();
+    }
+
+    async function startScreenShareToProfessor() {
+        try {
+            console.log("📹 Accessing student display media for monitoring...");
+            localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 15 } },
+                audio: false
             });
 
-            setInterval(() => {
-                fetch(`/student/heartbeat/${classId}`, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' } });
-            }, 30000);
+            console.log("📡 Streaming monitor feed to professor:", profPeerId);
+            
+            const call = studentPeer.call(profPeerId, localScreenStream, {
+                metadata: { studentName: '{{ auth()->user()->name ?? "Student" }}' }
+            });
+
+            if (call) {
+                call.on('error', err => {
+                    console.error("Student monitor call error:", err);
+                    verifySessionStatus(); // Check if professor went offline
+                });
+                call.on('close', () => {
+                    console.log("🔴 Student monitor call link disconnected by host destination.");
+                    verifySessionStatus(); // Verify if it was closed because class ended
+                });
+            }
+
+            localScreenStream.getVideoTracks()[0].onended = function () {
+                console.warn("⚠️ Student manually interrupted screen capture. Re-engaging...");
+                verifySessionStatus();
+            };
+
+        } catch (err) {
+            console.error("Screen capture engagement failed:", err);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        studentPeer = new Peer('STUDENT_{{ auth()->id() }}', localPeerOptions);
+
+        studentPeer.on('open', (id) => {
+            console.log("✅ Student connected to local PeerJS server with ID:", id);
+            startScreenShareToProfessor();
         });
+
+        studentPeer.on('call', (call) => {
+            console.log("📞 Incoming lecture stream call from professor...");
+            call.answer();
+
+            call.on('stream', (stream) => {
+                console.log("🟢 Lecture stream frame buffers received!");
+                const videoElement = document.getElementById('professor-screen');
+                
+                if (videoElement) {
+                    videoElement.srcObject = stream;
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play()
+                            .then(() => {
+                                document.getElementById('lockdown-ui').classList.remove('hidden');
+                                document.getElementById('normal-view').classList.add('hidden');
+                            })
+                            .catch(err => console.error("Playback engine engagement failed:", err));
+                    };
+                }
+            });
+
+            const clearBroadcastView = () => {
+                console.log("🔴 Screen share session terminated.");
+                const videoElement = document.getElementById('professor-screen');
+                if (videoElement) {
+                    videoElement.srcObject = null;
+                }
+                document.getElementById('lockdown-ui').classList.add('hidden');
+                document.getElementById('normal-view').classList.remove('hidden');
+                verifySessionStatus();
+            };
+
+            call.on('close', clearBroadcastView);
+            call.on('error', clearBroadcastView);
+        });
+
+        studentPeer.on('error', (err) => {
+            console.error("Student Peer Connection Error:", err);
+            verifySessionStatus();
+        });
+
+        // ⏱️ HIGH-FREQUENCY HEARTBEAT TRACKER (Reduced to 4 seconds for rapid state responsiveness)
+    setInterval(() => {
+    fetch(`/student/heartbeat/${classId}`, { 
+        method: 'POST', 
+        headers: { 
+            'X-CSRF-TOKEN': csrfToken, 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        } 
+    })
+    .then(res => res.json())
+    .then(data => {
+        // 🔒 If the backend signals that the session is no longer active
+        if (data && data.is_active === false) {
+            console.log("⚡ Session has been terminated by the instructor. Refreshing UI...");
+            
+            // Clean up active hardware media captures to avoid memory leaks
+            if (localScreenStream) {
+                localScreenStream.getTracks().forEach(track => track.stop());
+            }
+            if (studentPeer) {
+                studentPeer.destroy();
+            }
+
+            // Force Electron window context to refresh itself
+            window.location.reload();
+        }
+    })
+    .catch(err => console.error("Heartbeat communication sync error:", err));
+}, 4000);
+    });
+</script>
+<script>
 
         async function enterClassroom() {
             try {
@@ -575,7 +719,6 @@
                     if (this.filter === 'missing') return this.tasks.filter(t => t.current_user_submission === null);
                     return this.tasks;
                 },
-                openTaskModal(task) { Alpine.$data(document.querySelector('[x-data*="taskModal"]')).openModal(task); },
                 formatDeadline(deadline) { 
                     if (!deadline) return 'No deadline';
                     const date = new Date(deadline);
@@ -622,23 +765,51 @@
             });
         @endphp
 
-        function classroomMaterials() {
-            return {
-                materials: @json($initialMaterials), showViewer: false, currentMaterial: { title: '', type: '', url: '', id: null }, startTime: null,
-                init() { setInterval(() => this.fetchMaterials(), 5000); },
-                fetchMaterials() { fetch(`/student/classroom/${classId}/live-materials`).then(res => res.json()).then(data => { this.materials = data; }).catch(err => console.error(err)); },
-                openMaterial(material) {
-                    this.currentMaterial = material; this.showViewer = true; this.startTime = new Date();
-                    fetch(`/student/materials/${material.id}/log-start`, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
-                },
-                closeMaterial() {
-                    let endTime = new Date(); let duration = Math.round((endTime - this.startTime) / 1000);
-                    fetch(`/student/materials/${this.currentMaterial.id}/log-end`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ duration: duration }) }).then(() => {
-                        this.showViewer = false; this.currentMaterial = { title: '', type: '', url: '', id: null };
-                    });
-                }
-            };
+       function classroomMaterials() {
+    return {
+        materials: @json($initialMaterials),
+        init() { setInterval(() => this.fetchMaterials(), 5000); },
+        fetchMaterials() { 
+            fetch(`/student/classroom/${classId}/live-materials`)
+                .then(res => res.json())
+                .then(data => { this.materials = data; })
+                .catch(err => console.error(err)); 
         }
+    };
+}
+
+function materialViewer() {
+    return {
+        showViewer: false, 
+        currentMaterial: { title: '', type: '', url: '', id: null }, 
+        startTime: null,
+        openMaterial(material) {
+            this.currentMaterial = material; 
+            this.showViewer = true; 
+            this.startTime = new Date();
+            fetch(`/student/materials/${material.id}/log-start`, { 
+                method: 'POST', 
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } 
+            });
+        },
+        closeMaterial() {
+            let endTime = new Date(); 
+            let duration = Math.round((endTime - this.startTime) / 1000);
+            fetch(`/student/materials/${this.currentMaterial.id}/log-end`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRF-TOKEN': csrfToken, 
+                    'Accept': 'application/json' 
+                }, 
+                body: JSON.stringify({ duration: duration }) 
+            }).then(() => {
+                this.showViewer = false; 
+                this.currentMaterial = { title: '', type: '', url: '', id: null };
+            });
+        }
+    };
+}
 
        function taskModal() {
             return {
