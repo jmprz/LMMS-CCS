@@ -17,8 +17,7 @@ class AdminController extends Controller
 public function index(Request $request)
 {
     $user = auth()->user();
-
-    // --- PROFESSOR VIEW ---
+// --- PROFESSOR VIEW ---
     if ($user->role === 'professor') {
         $activeSessions = LabSession::where('faculty_id', $user->id)
             ->where('is_active', true)
@@ -34,7 +33,55 @@ public function index(Request $request)
         $class = $selectedClassId ? LabSession::with('students')->find($selectedClassId) : null;
         $activeStudents = $class ? $class->students : collect();
 
-        return view('professor.dashboard', compact('activeStudents', 'activeSessions', 'class', 'sessions'));
+        // Get all session IDs belonging to this professor
+        $professorSessionIds = $sessions->pluck('id')->toArray();
+
+        // Fetch active student count assigned specifically to this professor's classes
+        $totalStudentsCount = User::where('role', 'student')
+            ->whereHas('joinedClasses', function($query) use ($user) {
+                $query->where('faculty_id', $user->id); 
+            })
+            ->count();
+
+        // Fetch recent logs scoped strictly to this professor's sections
+        $logs = ActivityLog::whereIn('lab_session_id', $professorSessionIds)
+            ->with(['user', 'labSession'])
+            ->latest()
+            ->take(15)
+            ->get();
+
+        // 📊 DYNAMIC CHART DATA 1: Count activity log types for this professor's classes
+        $navigationLogsCount = ActivityLog::whereIn('lab_session_id', $professorSessionIds)->where('log_type', 'navigation')->count();
+        $quizLogsCount = ActivityLog::whereIn('lab_session_id', $professorSessionIds)->where('log_type', 'quiz')->count();
+        $submissionLogsCount = ActivityLog::whereIn('lab_session_id', $professorSessionIds)->where('log_type', 'submission')->count();
+
+        // 🟢 FIX: Automatically detect whatever pivot table name is defined in your relationship configuration
+        $pivotTable = (new \App\Models\LabSession)->students()->getTable();
+
+        // 📊 DYNAMIC CHART DATA 2: Count attendance distribution using the auto-detected table
+        $presentCount = \DB::table($pivotTable)
+            ->whereIn('lab_session_id', $professorSessionIds)
+            ->where('is_present', true)
+            ->count();
+
+        $absentCount = \DB::table($pivotTable)
+            ->whereIn('lab_session_id', $professorSessionIds)
+            ->where('is_present', false)
+            ->count();
+
+        return view('professor.dashboard', compact(
+            'activeStudents', 
+            'activeSessions', 
+            'class', 
+            'sessions', 
+            'totalStudentsCount', 
+            'logs',
+            'navigationLogsCount',
+            'quizLogsCount',
+            'submissionLogsCount',
+            'presentCount',
+            'absentCount'
+        ));
     }
 
     // --- ADMIN VIEW ---

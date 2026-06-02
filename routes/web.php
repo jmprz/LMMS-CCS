@@ -149,6 +149,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/students/{userId}/activity-logs/{classId}', [ClassroomController::class, 'getStudentLogs']);
         Route::get('/students/{userId}/files/{classId}', [ClassroomController::class, 'getStudentFilesForClass']);
 
+        Route::get('/classroom/{classId}/activity-logs', [ClassroomController::class, 'getClassActivityLogs'])
+     ->name('classroom.activity-logs');
         // Live task creation from classroom
         Route::post('/classroom/{id}/live-tasks', function (\Illuminate\Http\Request $request, $id) {
             $request->validate([

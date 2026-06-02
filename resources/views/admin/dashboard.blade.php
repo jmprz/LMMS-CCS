@@ -181,7 +181,7 @@
                         <div>
                             <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                                 <div>
-                                    <h2 class="font-bold text-lg text-gray-800">Upcoming Class Schedule</h2>
+                                    <h2 class="font-bold text-lg text-gray-800 uppercase">Upcoming Class Schedule</h2>
                                     <p class="text-xs text-gray-400 font-medium">Chronological roadmap of incoming lab periods</p>
                                 </div>
                                 <span class="self-start text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wider">Pending Pipeline</span>
@@ -197,8 +197,7 @@
                                     <select x-model="programFilter" class="w-full py-1.5 px-3 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 font-bold text-gray-600">
                                         <option value="">All Programs / Courses</option>
                                         <option value="BSCS">BSCS (Computer Science)</option>
-                                        <option value="BSIT">BSIT (Information Tech)</option>
-                                        <option value="BSCPE">BSCPE (Computer Eng)</option>
+                                        <option value="BSIT">BSIT (Information Technology)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -286,7 +285,7 @@
                         <div>
                             <div class="flex justify-between items-start gap-2 mb-4">
                                 <div>
-                                    <h2 class="font-bold text-lg text-gray-800">Student Monitoring Feed</h2>
+                                    <h2 class="font-bold text-lg text-gray-800 uppercase">Student Monitoring Feed</h2>
                                     <p class="text-xs text-gray-400 font-medium">Real-time behavior tracking telemetry</p>
                                 </div>
                                 <select x-model="timeframe" class="py-1 px-2 text-[10px] font-black bg-gray-50 border border-gray-200 rounded-md uppercase tracking-wider text-gray-500 focus:outline-none">

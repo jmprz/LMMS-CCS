@@ -204,13 +204,6 @@
                                         class="w-12 h-12 rounded-full flex items-center justify-center text-white bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-100 transition-all duration-200 transform hover:scale-105 text-xl">
                                         <i class="ri-broadcast-line animate-pulse"></i>
                                     </button>
-
-                                    <button type="button" title="Assign Live Task"
-                                        @click.prevent="$dispatch('open-task-modal')"
-                                        class="w-12 h-12 rounded-full flex items-center justify-center text-gray-600 bg-gray-50 hover:bg-purple-50 border border-gray-200 hover:border-purple-300 hover:text-purple-600 transition-all duration-200 transform hover:scale-105 text-xl">
-                                        <i class="ri-add-line"></i>
-                                    </button>
-
                                 </div>
                             </div>
                         </div>
@@ -241,115 +234,218 @@
                     </div>
 
                     <div class="mt-6">
-                        <div x-show="activeTab === 'monitoring'">
-                            <div x-data="{ 
-                                     showTaskModal: false,
-                                     taskTitle: '',
-                                     taskDesc: '',
-                                     taskDeadline: '',
-                                     taskPoints: 100,
-                                     submitTask() {
-                                         fetch('/professor/classroom/{{ $class->id }}/live-tasks', {
-                                             method: 'POST',
-                                             headers: {
-                                                 'Content-Type': 'application/json',
-                                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                             },
-                                             body: JSON.stringify({ 
-                                                 title: this.taskTitle, 
-                                                 description: this.taskDesc,
-                                                 deadline: this.taskDeadline,
-                                                 points: this.taskPoints
-                                             })
-                                         })
-                                         .then(res => {
-                                             if(res.ok) {
-                                                 this.showTaskModal = false; 
-                                                 this.taskTitle = ''; 
-                                                 this.taskDesc = '';
-                                                 this.taskDeadline = '';
-                                                 this.taskPoints = 100;
-                                                 alert('Task pushed to all students instantly!');
-                                                 silentRefresh();
-                                             }
-                                         })
-                                         .catch(err => console.error('Failed to assign task:', err));
-                                     }
-                                 }" @open-task-modal.window="showTaskModal = true">
+                     <div x-show="activeTab === 'monitoring'" 
+     x-data="{
+        searchQuery: '',
+        statusFilter: 'all',
+        gridCols: 'lg:grid-cols-4 md:grid-cols-3 grid-cols-2',
+        perPage: 12,
+        currentPage: 1,
+        
+        // Evaluates visibility without breaking PeerJS bindings
+        shouldShow(studentId, isPresent, nameSearch) {
+            // 1. Search filter
+            if (this.searchQuery && !nameSearch.toLowerCase().includes(this.searchQuery.toLowerCase())) {
+                return false;
+            }
+            // 2. Status filter
+            if (this.statusFilter === 'active' && !isPresent) return false;
+            if (this.statusFilter === 'offline' && isPresent) return false;
+            
+            return true;
+        }
+     }">
+     
+    @if(isset($class) && $class->is_active)
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 px-4">
+            <div>
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">LIVE MONITORING</h2>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Manage student screens</p>
+            </div>
 
-                                <div x-show="showTaskModal" style="display: none;"
-                                    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
-                                    <div class="bg-white w-1/3 p-6 rounded-2xl shadow-2xl"
-                                        @click.away="showTaskModal = false">
-                                        <h2 class="text-2xl font-black text-gray-800 mb-4">Assign Live Task</h2>
+            <div class="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+                <div class="relative">
+                    <i class="ri-search-line absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                    <input x-model="searchQuery" type="text" placeholder="Search student..." 
+                           class="pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-black w-44">
+                </div>
 
-                                        <div class="space-y-4">
-                                            <div>
-                                                <label class="block text-sm font-bold text-gray-700 mb-1">Task
-                                                    Title</label>
-                                                <input type="text" x-model="taskTitle"
-                                                    placeholder="e.g. Create a Laravel Route"
-                                                    class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500">
-                                            </div>
+                <select x-model="statusFilter" class="bg-white border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 focus:outline-none">
+                    <option value="all">All Statuses</option>
+                    <option value="active">🟢 Active Only</option>
+                    <option value="offline">⚪ Offline Only</option>
+                </select>
 
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label
-                                                        class="block text-sm font-bold text-gray-700 mb-1">Deadline</label>
-                                                    <input type="datetime-local" x-model="taskDeadline"
-                                                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500"
-                                                        required>
-                                                </div>
-                                                <div>
-                                                    <label class="block text-sm font-bold text-gray-700 mb-1">Max
-                                                        Points</label>
-                                                    <input type="number" x-model="taskPoints"
-                                                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500"
-                                                        required>
-                                                </div>
-                                            </div>
+                <div class="flex items-center border-l border-gray-200 pl-2 gap-1">
+                    <button @click="gridCols = 'lg:grid-cols-2 md:grid-cols-2 grid-cols-1'" 
+                            :class="gridCols.includes('lg:grid-cols-2') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                            class="p-1.5 rounded-lg text-sm transition" title="Focus Mode (Large)">
+                        <i class="ri-layout-grid-line"></i>
+                    </button>
+                    <button @click="gridCols = 'lg:grid-cols-4 md:grid-cols-3 grid-cols-2'" 
+                            :class="gridCols.includes('lg:grid-cols-4') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                            class="p-1.5 rounded-lg text-sm transition" title="Standard View">
+                        <i class="ri-grid-fill"></i>
+                    </button>
+                    <button @click="gridCols = 'lg:grid-cols-6 md:grid-cols-4 grid-cols-3'" 
+                            :class="gridCols.includes('lg:grid-cols-6') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                            class="p-1.5 rounded-lg text-sm transition" title="Compact View (Small)">
+                        <i class="ri-apps-2-line"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                                            <div>
-                                                <label
-                                                    class="block text-sm font-bold text-gray-700 mb-1">Instructions</label>
-                                                <textarea x-model="taskDesc"
-                                                    placeholder="Describe what the students need to do..."
-                                                    class="w-full border border-gray-300 rounded-lg p-3 h-28 focus:ring-purple-500 focus:border-purple-500"></textarea>
-                                            </div>
-                                        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4">
+            
+            <div class="lg:col-span-3">
+                <div class="grid gap-4 transition-all duration-300" :class="gridCols" id="student-grid">
+                    @forelse($activeStudents as $student)
+                        @php
+                            $fullNameFormat = strtoupper($student->last_name) . ', ' . $student->first_name . ($student->middle_name ? ' ' . strtoupper(substr($student->middle_name, 0, 1)) . '.' : '');
+                            $isPresent = ($student->pivot && $student->pivot->is_present) ? 'true' : 'false';
+                        @endphp
 
-                                        <div class="flex justify-end gap-3 mt-6">
-                                            <button @click.prevent="showTaskModal = false" type="button"
-                                                class="px-5 py-2 font-bold text-gray-500 hover:text-gray-800">Cancel</button>
-                                            <button @click.prevent="submitTask()" type="button"
-                                                class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all">Push
-                                                to Students</button>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div x-show="shouldShow({{ $student->id }}, {{ $isPresent }}, '{{ addslashes($fullNameFormat) }}')"
+                             class="border bg-white rounded-[24px] p-4 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between" 
+                             id="student-card-{{ $student->id }}" 
+                             data-student-id="{{ $student->id }}">
+                            
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="font-bold text-xs text-gray-800 truncate pr-2" title="{{ $fullNameFormat }}">
+                                    {{ $fullNameFormat }}
+                                </span>
+                                <div class="w-2.5 h-2.5 rounded-full {{ ($student->pivot && $student->pivot->is_present) ? 'bg-green-500 animate-pulse' : 'bg-gray-300' }}" 
+                                     id="status-dot-{{ $student->id }}"></div>
                             </div>
 
-                            @if($session->is_active)
-                                <div class="flex justify-between items-center mb-8 ms-4 me-4">
-                                    <div>
-                                        <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">LIVE
-                                            MONITORING</h2>
-                                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Manage
-                                            student's screen</p>
-                                    </div>
-                                    <button id="refresh-monitor-btn" class="p-2 hover:bg-gray-100 rounded-lg transition"
-                                        title="Refresh student list">
-                                        <i class="ri-refresh-line text-xl"></i>
+                            <div class="bg-gray-100 aspect-video rounded-xl flex items-center justify-center mb-4 relative overflow-hidden" 
+                                 id="video-container-{{ $student->id }}">
+                                <video id="video-{{ $student->id }}" class="w-full h-full object-cover hidden" muted playsinline></video>
+                                <span class="text-[11px] font-bold text-gray-400 tracking-wide uppercase" id="video-overlay-{{ $student->id }}">
+                                    {{ ($student->pivot && $student->pivot->is_present) ? 'Connecting...' : 'Offline' }}
+                                </span>
+                            </div>
+
+                            <div class="flex" id="btn-container-{{ $student->id }}">
+                                @if($student->pivot && $student->pivot->is_present)
+                                    <button onclick="openFullscreenViewer('{{ $student->id }}', '{{ addslashes($fullNameFormat) }}')" 
+                                            class="w-full text-[11px] bg-[#383838] text-white py-2 rounded-xl font-bold hover:bg-black transition shadow-sm tracking-wide uppercase">
+                                        View Screen
                                     </button>
-                                </div>
-                                @include('professor.partials.monitor-grid', ['activeStudents' => $activeStudents])
-                            @else
-                                <div class="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed">
-                                    <p class="text-gray-500 font-bold">Session is currently offline. Click "Start Session"
-                                        to allow students to join.</p>
-                                </div>
-                            @endif
+                                @else
+                                    <button disabled class="w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase">
+                                        Waiting...
+                                    </button>
+                                @endif
+                            </div>
                         </div>
+                    @empty
+                        <div class="col-span-full py-20 text-center">
+                            <p class="text-gray-400 italic">No students are currently active in this session.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="lg:col-span-1" x-data="{
+                logs: [],
+                loading: false,
+                fetchSessionLogs() {
+                    this.loading = true;
+                    fetch('/professor/classroom/{{ $class->id }}/activity-logs')
+                        .then(res => res.json())
+                        .then(data => { this.logs = data; this.loading = false; })
+                        .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
+                },
+                init() {
+                    this.fetchSessionLogs();
+                    setInterval(() => this.fetchSessionLogs(), 10000);
+                },
+                getIcon(type) {
+                    const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
+                    return icons[type] || 'ri-cursor-line';
+                },
+                getIconClass(type) {
+                    const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
+                    return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                },
+                formatTime(dateStr) {
+                    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                }
+            }">
+                <div class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-280px)] min-h-[500px]">
+                    <div class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
+                        <div>
+                            <h3 class="font-black text-xs text-gray-800 uppercase tracking-wider">Activity Stream</h3>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wide">Real-time session logs</p>
+                        </div>
+                        <button @click="fetchSessionLogs()" class="text-gray-400 hover:text-black transition">
+                            <i class="ri-refresh-line text-lg" :class="loading ? 'animate-spin block' : ''"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto pr-1 space-y-3.5 custom-scrollbar">
+                        <template x-if="loading && logs.length === 0">
+                            <div class="text-center py-8 text-gray-400 text-xs font-bold uppercase tracking-widest animate-pulse">Syncing logs...</div>
+                        </template>
+                        <template x-if="!loading && logs.length === 0">
+                            <div class="text-center py-12 text-gray-400 text-xs font-bold uppercase tracking-wider italic">No activity recorded yet</div>
+                        </template>
+
+                        <template x-for="log in logs" :key="log.id">
+                            <div class="flex gap-3 items-start relative group">
+                                <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm" :class="getIconClass(log.log_type)">
+                                    <i :class="getIcon(log.log_type)"></i>
+                                </div>
+                                <div class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
+                                    <div class="flex justify-between items-start gap-1">
+                                        <span class="text-[11px] font-black text-gray-800 truncate" x-text="log.student_name"></span>
+                                        <span class="text-[9px] font-bold text-gray-400 whitespace-nowrap" x-text="formatTime(log.created_at)"></span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-600 font-bold mt-0.5 leading-tight" x-text="log.content"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @elseif(isset($class) && !$class->is_active)
+        <div class="col-span-full py-20 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 mx-4">
+            <div class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="ri-shield-user-line text-3xl text-gray-400"></i>
+            </div>
+            <h3 class="text-gray-600 font-bold">Proctoring Paused</h3>
+            <p class="text-gray-400 text-sm">Monitoring is disabled. Click "Start Lab Session" to begin.</p>
+        </div>
+    @endif
+</div>
+
+{{-- Fullscreen Modal Viewer (Kept outside main layout wrapper for z-index protection) --}}
+<div x-data="{ open: false, studentName: '' }" 
+     @open-modal.window="open = true; studentName = $event.detail.name"
+     x-show="open" 
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+     x-cloak>
+    <div class="relative w-full max-w-4xl bg-white rounded-2xl overflow-hidden shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
+            <h3 class="font-bold text-gray-900 flex items-center">
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></span>
+                Monitoring: <span x-text="studentName" class="ml-1"></span>
+            </h3>
+            <button @click="open = false; document.getElementById('modal-video').srcObject = null" 
+                    class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="aspect-video bg-black flex items-center justify-center">
+            <video id="modal-video" autoplay playsinline class="w-full h-full object-contain"></video>
+        </div>
+    </div>
+</div>
 
                         <div x-show="activeTab === 'materials'" x-cloak class="animate-fade-in" x-data="{
         // Central Modal Variables Control Blocks
@@ -2775,5 +2871,123 @@
             }
         }
     </script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+    let adminPeer;
+    const connectedStudents = new Set();
 
+    function initAdminPeer() {
+        if (adminPeer) {
+            adminPeer.destroy();
+        }
+
+        adminPeer = new Peer('PROF_{{ auth()->id() }}');
+
+        adminPeer.on('open', (id) => {
+            console.log('✅ Professor Peer ready: ' + id);
+        });
+
+        adminPeer.on('call', (call) => {
+            const studentId = call.peer.replace('STUDENT_', '');
+            console.log("📞 Incoming feed from student:", studentId);
+            
+            call.answer(); 
+            
+            call.on('stream', (remoteStream) => {
+                console.log("🎥 Stream received from student:", studentId);
+                updateVideoUI(studentId, remoteStream);
+                connectedStudents.add(String(studentId));
+            });
+
+            call.on('close', () => resetStudentUI(studentId));
+            call.on('error', () => resetStudentUI(studentId));
+        });
+
+        adminPeer.on('error', (err) => {
+            if (err.type === 'unavailable-id') {
+                console.warn("⚠️ Professor ID taken! Retrying connection cleanup...");
+            }
+        });
+    }
+
+    window.addEventListener('beforeunload', () => {
+        if (adminPeer) {
+            adminPeer.destroy();
+        }
+    });
+
+    function updateVideoUI(studentId, remoteStream) {
+        const video = document.getElementById('video-' + studentId);
+        const overlay = document.getElementById('video-overlay-' + studentId);
+        const btn = document.querySelector(`#btn-container-${studentId} button`);
+        
+        if (video) {
+            video.srcObject = remoteStream;
+            video.classList.remove('hidden');
+            if (overlay) overlay.classList.add('hidden');
+            
+            video.play().catch(e => console.log("Play error:", e));
+            
+            if (btn) {
+                btn.innerText = "View Screen";
+                btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btn.classList.add('bg-[#383838]', 'text-white', 'hover:bg-black');
+                btn.disabled = false;
+
+                // Dynamically fetch the correct formal name rendered in the student card layout
+                const card = document.getElementById(`student-card-${studentId}`);
+                const studentName = card ? card.querySelector('span[title]').getAttribute('title') : 'Enrolled Student';
+
+                btn.onclick = function() {
+                    openFullscreenViewer(studentId, studentName);
+                };
+            }
+        }
+    }
+
+    function resetStudentUI(studentId) {
+        const video = document.getElementById('video-' + studentId);
+        const overlay = document.getElementById('video-overlay-' + studentId);
+        const btn = document.querySelector(`#btn-container-${studentId} button`);
+
+        if (video) { 
+            video.srcObject = null; 
+            video.classList.add('hidden'); 
+        }
+        
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.innerText = "Offline";
+        }
+        
+        if (btn) { 
+            btn.innerText = "Waiting..."; 
+            btn.classList.remove('bg-[#383838]', 'text-white', 'hover:bg-black');
+            btn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            btn.disabled = true;
+            btn.onclick = null;
+        }
+
+        connectedStudents.delete(String(studentId));
+    }
+
+    function openFullscreenViewer(studentId, studentName) {
+        const gridVideo = document.getElementById(`video-${studentId}`);
+        const modalVideo = document.getElementById('modal-video');
+
+        if (gridVideo && gridVideo.srcObject) {
+            modalVideo.srcObject = gridVideo.srcObject;
+            
+            window.dispatchEvent(new CustomEvent('open-modal', { 
+                detail: { name: studentName } 
+            }));
+        } else {
+            alert("No active screen share to view.");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initAdminPeer();
+    });
+</script>
 </x-app-layout>
