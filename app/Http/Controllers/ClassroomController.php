@@ -161,10 +161,17 @@ class ClassroomController extends Controller
     // Delete - Remove from DB
     public function destroy(LabSession $classroom)
     {
+        // 1. Detach all students enrolled in this session to prevent constraint errors
+        $classroom->students()->detach();
+
+        // 2. Clear any other dependencies if necessary (e.g., tasks, materials)
+        // $classroom->tasks()->delete(); 
+
+        // 3. Delete the parent classroom instance safely
         $classroom->delete();
+
         return back()->with('success', 'Classroom deleted successfully.');
     }
-
     // 🟢 1. Handles the "Start / Stop Lab Session" Button
     public function toggleSession(Request $request, $id)
     {
@@ -332,31 +339,31 @@ class ClassroomController extends Controller
     }
 
     // Add this to ClassroomController.php or AdminController.php
-public function getClassActivityLogs($classId)
-{
-    try {
-        // Fetch the latest 50 logs matching this specific lab session
-        $logs = \App\Models\ActivityLog::where('lab_session_id', $classId) // Adjust foreign key column name if needed
-            ->with('user') // Eager load student profiles to avoid N+1 issues
-            ->latest()
-            ->take(50)
-            ->get();
+    public function getClassActivityLogs($classId)
+    {
+        try {
+            // Fetch the latest 50 logs matching this specific lab session
+            $logs = \App\Models\ActivityLog::where('lab_session_id', $classId) // Adjust foreign key column name if needed
+                ->with('user') // Eager load student profiles to avoid N+1 issues
+                ->latest()
+                ->take(50)
+                ->get();
 
-        $formattedLogs = $logs->map(function ($log) {
-            return [
-                'id'           => $log->id,
-                'log_type'     => $log->log_type,
-                'content'      => $log->content,
-                'student_name' => $log->user ? $log->user->name : 'System',
-                'created_at'   => $log->created_at->toIso8601String()
-            ];
-        });
+            $formattedLogs = $logs->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'log_type' => $log->log_type,
+                    'content' => $log->content,
+                    'student_name' => $log->user ? $log->user->name : 'System',
+                    'created_at' => $log->created_at->toIso8601String()
+                ];
+            });
 
-        return response()->json($formattedLogs);
+            return response()->json($formattedLogs);
 
-    } catch (\Exception $e) {
-        \Log::error('Class logs fetch failed: ' . $e->getMessage());
-        return response()->json([]);
+        } catch (\Exception $e) {
+            \Log::error('Class logs fetch failed: ' . $e->getMessage());
+            return response()->json([]);
+        }
     }
-}
 }
