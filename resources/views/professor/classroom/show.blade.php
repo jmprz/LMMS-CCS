@@ -255,228 +255,235 @@
         }
      }">
 
-                            @if(isset($class) && $class->is_active)
-                                                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 px-4">
-                                                    <div>
-                                                        <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">LIVE
-                                                            MONITORING</h2>
-                                                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Manage
-                                                            student screens</p>
-                                                    </div>
-
-                                                    <div
-                                                        class="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
-                                                        <div class="relative">
-                                                            <i class="ri-search-line absolute left-3 top-2.5 text-gray-400 text-sm"></i>
-                                                            <input x-model="searchQuery" type="text" placeholder="Search student..."
-                                                                class="pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-black w-44">
-                                                        </div>
-
-                                                        <select x-model="statusFilter"
-                                                            class="bg-white border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 focus:outline-none">
-                                                            <option value="all">All Statuses</option>
-                                                            <option value="active">🟢 Active Only</option>
-                                                            <option value="offline">⚪ Offline Only</option>
-                                                        </select>
-
-                                                        <div class="flex items-center border-l border-gray-200 pl-2 gap-1">
-                                                            <button @click="gridCols = 'lg:grid-cols-2 md:grid-cols-2 grid-cols-1'"
-                                                                :class="gridCols.includes('lg:grid-cols-2') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
-                                                                class="p-1.5 rounded-lg text-sm transition" title="Focus Mode (Large)">
-                                                                <i class="ri-layout-grid-line"></i>
-                                                            </button>
-                                                            <button @click="gridCols = 'lg:grid-cols-4 md:grid-cols-3 grid-cols-2'"
-                                                                :class="gridCols.includes('lg:grid-cols-4') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
-                                                                class="p-1.5 rounded-lg text-sm transition" title="Standard View">
-                                                                <i class="ri-grid-fill"></i>
-                                                            </button>
-                                                            <button @click="gridCols = 'lg:grid-cols-6 md:grid-cols-4 grid-cols-3'"
-                                                                :class="gridCols.includes('lg:grid-cols-6') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
-                                                                class="p-1.5 rounded-lg text-sm transition" title="Compact View (Small)">
-                                                                <i class="ri-apps-2-line"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4">
-
-                                                    <div class="lg:col-span-3">
-                                                        <div class="grid gap-4 transition-all duration-300" :class="gridCols"
-                                                            id="student-grid">
-                                                            @forelse($activeStudents as $student)
-                                                                @php
-                                                                    $fullNameFormat = strtoupper($student->last_name) . ', ' . $student->first_name . ($student->middle_name ? ' ' . strtoupper(substr($student->middle_name, 0, 1)) . '.' : '');
-                                                                    $isPresent = ($student->pivot && $student->pivot->is_present) ? 'true' : 'false';
-                                                                @endphp
-
-                                                                <div x-show="shouldShow({{ $student->id }}, {{ $isPresent }}, '{{ addslashes($fullNameFormat) }}')"
-                                                                    class="border bg-white rounded-[24px] p-4 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between"
-                                                                    id="student-card-{{ $student->id }}" data-student-id="{{ $student->id }}">
-
-                                                                    <div class="flex items-center justify-between mb-3">
-                                                                        <span class="font-bold text-xs text-gray-800 truncate pr-2"
-                                                                            title="{{ $fullNameFormat }}">
-                                                                            {{ $fullNameFormat }}
-                                                                        </span>
-                                                                        <div class="w-2.5 h-2.5 rounded-full {{ ($student->pivot && $student->pivot->is_present) ? 'bg-green-500 animate-pulse' : 'bg-gray-300' }}"
-                                                                            id="status-dot-{{ $student->id }}"></div>
-                                                                    </div>
-
-                                                                    <div class="bg-gray-100 aspect-video rounded-xl flex items-center justify-center mb-4 relative overflow-hidden"
-                                                                        id="video-container-{{ $student->id }}">
-                                                                        <video id="video-{{ $student->id }}"
-                                                                            class="w-full h-full object-cover hidden" muted playsinline></video>
-                                                                        <span
-                                                                            class="text-[11px] font-bold text-gray-400 tracking-wide uppercase"
-                                                                            id="video-overlay-{{ $student->id }}">
-                                                                            {{ ($student->pivot && $student->pivot->is_present) ? 'Connecting...' : 'Offline' }}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div class="flex" id="btn-container-{{ $student->id }}">
-                                                                        @if($student->pivot && $student->pivot->is_present)
-                                                                            <button
-                                                                                onclick="openFullscreenViewer('{{ $student->id }}', '{{ addslashes($fullNameFormat) }}')"
-                                                                                class="w-full text-[11px] bg-[#383838] text-white py-2 rounded-xl font-bold hover:bg-black transition shadow-sm tracking-wide uppercase">
-                                                                                View Screen
-                                                                            </button>
-                                                                        @else
-                                                                            <button disabled
-                                                                                class="w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase">
-                                                                                Waiting...
-                                                                            </button>
-                                                                        @endif
-                                                                    </div>
-                                                                </div>
-                                                            @empty
-                                                                <div class="col-span-full py-20 text-center">
-                                                                    <p class="text-gray-400 italic">No students are currently active in this
-                                                                        session.</p>
-                                                                </div>
-                                                            @endforelse
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="lg:col-span-1" x-data="{
-                                    logs: [],
-                                    loading: false,
-                                    fetchSessionLogs() {
-                                        this.loading = true;
-                                        fetch('/professor/classroom/{{ $class->id }}/activity-logs')
-                                            .then(res => res.json())
-                                            .then(data => { this.logs = data; this.loading = false; })
-                                            .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
-                                    },
-                                    init() {
-                                        this.fetchSessionLogs();
-                                        setInterval(() => this.fetchSessionLogs(), 10000);
-                                    },
-                                    getIcon(type) {
-                                        const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
-                                        return icons[type] || 'ri-cursor-line';
-                                    },
-                                    getIconClass(type) {
-                                        const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
-                                        return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
-                                    },
-                                    formatTime(dateStr) {
-                                        return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                                    }
-                                }">
-                                                        <div
-                                                            class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-280px)] min-h-[500px]">
-                                                            <div
-                                                                class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
-                                                                <div>
-                                                                    <h3 class="font-black text-xs text-gray-800 uppercase tracking-wider">
-                                                                        Activity Stream</h3>
-                                                                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wide">
-                                                                        Real-time session logs</p>
-                                                                </div>
-                                                                <button @click="fetchSessionLogs()"
-                                                                    class="text-gray-400 hover:text-black transition">
-                                                                    <i class="ri-refresh-line text-lg"
-                                                                        :class="loading ? 'animate-spin block' : ''"></i>
-                                                                </button>
-                                                            </div>
-
-                                                            <div class="flex-grow overflow-y-auto pr-1 space-y-3.5 custom-scrollbar">
-                                                                <template x-if="loading && logs.length === 0">
-                                                                    <div
-                                                                        class="text-center py-8 text-gray-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-                                                                        Syncing logs...</div>
-                                                                </template>
-                                                                <template x-if="!loading && logs.length === 0">
-                                                                    <div
-                                                                        class="text-center py-12 text-gray-400 text-xs font-bold uppercase tracking-wider italic">
-                                                                        No activity recorded yet</div>
-                                                                </template>
-
-                                                                <template x-for="log in logs" :key="log.id">
-                                                                    <div class="flex gap-3 items-start relative group">
-                                                                        <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm"
-                                                                            :class="getIconClass(log.log_type)">
-                                                                            <i :class="getIcon(log.log_type)"></i>
-                                                                        </div>
-                                                                        <div
-                                                                            class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
-                                                                            <div class="flex justify-between items-start gap-1">
-                                                                                <span class="text-[11px] font-black text-gray-800 truncate"
-                                                                                    x-text="log.student_name"></span>
-                                                                                <span
-                                                                                    class="text-[9px] font-bold text-gray-400 whitespace-nowrap"
-                                                                                    x-text="formatTime(log.created_at)"></span>
-                                                                            </div>
-                                                                            <p class="text-[11px] text-gray-600 font-bold mt-0.5 leading-tight"
-                                                                                x-text="log.content"></p>
-                                                                        </div>
-                                                                    </div>
-                                                                </template>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                            @elseif(isset($class) && !$class->is_active)
-                                <div
-                                    class="col-span-full py-20 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 mx-4">
-                                    <div
-                                        class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <i class="ri-shield-user-line text-3xl text-gray-400"></i>
-                                    </div>
-                                    <h3 class="text-gray-600 font-bold">Proctoring Paused</h3>
-                                    <p class="text-gray-400 text-sm">Monitoring is disabled. Click "Start Lab Session" to
-                                        begin.</p>
-                                </div>
-                            @endif
+            @if(isset($class) && $class->is_active)
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 px-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col">
+                            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">
+                                LIVE MONITORING
+                            </h2>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+                                Manage student screens
+                            </p>
                         </div>
 
-                        {{-- Fullscreen Modal Viewer (Kept outside main layout wrapper for z-index protection) --}}
-                        <div x-data="{ open: false, studentName: '' }"
-                            @open-modal.window="open = true; studentName = $event.detail.name" x-show="open"
-                            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
-                            x-cloak>
-                            <div class="relative w-full max-w-4xl bg-white rounded-2xl overflow-hidden shadow-2xl">
-                                <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
-                                    <h3 class="font-bold text-gray-900 flex items-center">
-                                        <span class="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></span>
-                                        Monitoring: <span x-text="studentName" class="ml-1"></span>
-                                    </h3>
-                                    <button
-                                        @click="open = false; document.getElementById('modal-video').srcObject = null"
-                                        class="text-gray-400 hover:text-gray-600 transition">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
+                        <span
+                            class="inline-flex items-center bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-black px-2.5 py-1 rounded-xl uppercase tracking-wider shadow-sm">
+                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5 animate-pulse"></span>
+                            Connected: <span id="connected-counter"
+                                class="ml-0.5 font-black">0</span>/{{ count($activeStudents) }}
+                        </span>
+                    </div>
+
+                    <div
+                        class="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+                        <div class="relative">
+                            <i class="ri-search-line absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                            <input x-model="searchQuery" type="text" placeholder="Search student..."
+                                class="pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-black w-44">
+                        </div>
+
+                        <select x-model="statusFilter"
+                            class="bg-white border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 focus:outline-none">
+                            <option value="all">All Statuses</option>
+                            <option value="active">🟢 Active Only</option>
+                            <option value="offline">⚪ Offline Only</option>
+                        </select>
+
+                        <div class="flex items-center border-l border-gray-200 pl-2 gap-1">
+                            <button @click="gridCols = 'lg:grid-cols-2 md:grid-cols-2 grid-cols-1'"
+                                :class="gridCols.includes('lg:grid-cols-2') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                                class="p-1.5 rounded-lg text-sm transition" title="Focus Mode (Large)">
+                                <i class="ri-layout-grid-line"></i>
+                            </button>
+                            <button @click="gridCols = 'lg:grid-cols-4 md:grid-cols-3 grid-cols-2'"
+                                :class="gridCols.includes('lg:grid-cols-4') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                                class="p-1.5 rounded-lg text-sm transition" title="Standard View">
+                                <i class="ri-grid-fill"></i>
+                            </button>
+                            <button @click="gridCols = 'lg:grid-cols-6 md:grid-cols-4 grid-cols-3'"
+                                :class="gridCols.includes('lg:grid-cols-6') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                                class="p-1.5 rounded-lg text-sm transition" title="Compact View (Small)">
+                                <i class="ri-apps-2-line"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4 items-start">
+
+                    <div class="lg:col-span-3 h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar pb-10">
+                        <div class="grid gap-4 transition-all duration-300" :class="gridCols"
+                            id="student-grid">
+                            @forelse($activeStudents as $student)
+                                @php
+                                    $fullNameFormat = strtoupper($student->last_name) . ', ' . $student->first_name . ($student->middle_name ? ' ' . strtoupper(substr($student->middle_name, 0, 1)) . '.' : '');
+                                    $isPresent = ($student->pivot && $student->pivot->is_present) ? 'true' : 'false';
+                                @endphp
+
+                                <div x-show="shouldShow({{ $student->id }}, {{ $isPresent }}, '{{ addslashes($fullNameFormat) }}')"
+                                    class="border bg-white rounded-[24px] p-4 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between"
+                                    id="student-card-{{ $student->id }}" data-student-id="{{ $student->id }}">
+
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="font-bold text-xs text-gray-800 truncate pr-2"
+                                            title="{{ $fullNameFormat }}">
+                                            {{ $fullNameFormat }}
+                                        </span>
+                                        <div class="w-2.5 h-2.5 rounded-full bg-gray-300"
+                                            id="status-dot-{{ $student->id }}"></div>
+                                    </div>
+
+                                    <div class="bg-gray-100 aspect-video rounded-xl flex items-center justify-center mb-4 relative overflow-hidden"
+                                        id="video-container-{{ $student->id }}">
+                                        <video id="video-{{ $student->id }}"
+                                            class="w-full h-full object-cover hidden z-10" muted
+                                            playsinline></video>
+                                        <span
+                                            class="text-[11px] font-bold text-gray-400 tracking-wide uppercase absolute text-center z-0"
+                                            id="video-overlay-{{ $student->id }}">
+                                            Offline
+                                        </span>
+                                    </div>
+
+                                    <div class="flex" id="btn-container-{{ $student->id }}">
+                                        <button id="btn-{{ $student->id }}" disabled
+                                            onclick="openFullscreenViewer('{{ $student->id }}', '{{ addslashes($fullNameFormat) }}')"
+                                            class="w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase transition shadow-sm">
+                                            Waiting...
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="aspect-video bg-black flex items-center justify-center">
-                                    <video id="modal-video" autoplay playsinline
-                                        class="w-full h-full object-contain"></video>
+                            @empty
+                                <div class="col-span-full py-20 text-center">
+                                    <p class="text-gray-400 italic">No students are currently active in this
+                                        session.</p>
                                 </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-1" x-data="{
+                                                    logs: [],
+                                                    loading: false,
+                                                    fetchSessionLogs() {
+                                                        this.loading = true;
+                                                        fetch('/professor/classroom/{{ $class->id }}/activity-logs')
+                                                            .then(res => res.json())
+                                                            .then(data => { this.logs = data; this.loading = false; })
+                                                            .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
+                                                    },
+                                                    init() {
+                                                        this.fetchSessionLogs();
+                                                        setInterval(() => this.fetchSessionLogs(), 10000);
+                                                    },
+                                                    getIcon(type) {
+                                                        const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
+                                                        return icons[type] || 'ri-cursor-line';
+                                                    },
+                                                    getIconClass(type) {
+                                                        const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
+                                                        return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                                                    },
+                                                    formatTime(dateStr) {
+                                                        return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                                                    }
+                                                }">
+                        <div
+                            class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-250px)]">
+                            <div
+                                class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
+                                <div>
+                                    <h3 class="font-black text-xs text-gray-800 uppercase tracking-wider">
+                                        Activity Stream</h3>
+                                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wide">
+                                        Real-time session logs</p>
+                                </div>
+                                <button @click="fetchSessionLogs()"
+                                    class="text-gray-400 hover:text-black transition">
+                                    <i class="ri-refresh-line text-lg"
+                                        :class="loading ? 'animate-spin block' : ''"></i>
+                                </button>
+                            </div>
+
+                            <div class="flex-grow overflow-y-auto pr-1 space-y-3.5 custom-scrollbar">
+                                <template x-if="loading && logs.length === 0">
+                                    <div
+                                        class="text-center py-8 text-gray-400 text-xs font-bold uppercase tracking-widest animate-pulse">
+                                        Syncing logs...</div>
+                                </template>
+                                <template x-if="!loading && logs.length === 0">
+                                    <div
+                                        class="text-center py-12 text-gray-400 text-xs font-bold uppercase tracking-wider italic">
+                                        No activity recorded yet</div>
+                                </template>
+
+                                <template x-for="log in logs" :key="log.id">
+                                    <div class="flex gap-3 items-start relative group">
+                                        <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm"
+                                            :class="getIconClass(log.log_type)">
+                                            <i :class="getIcon(log.log_type)"></i>
+                                        </div>
+                                        <div
+                                            class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
+                                            <div class="flex justify-between items-start gap-1">
+                                                <span class="text-[11px] font-black text-gray-800 truncate"
+                                                    x-text="log.student_name.trim().includes(' ') ? log.student_name.trim().split(' ').pop() + ', ' + log.student_name.trim().split(' ').slice(0, -1).join(' ') : log.student_name">
+                                                </span>
+                                                <span
+                                                    class="text-[9px] font-bold text-gray-400 whitespace-nowrap"
+                                                    x-text="formatTime(log.created_at)"></span>
+                                            </div>
+                                            <p class="text-[11px] text-gray-600 font-bold mt-0.5 leading-tight"
+                                                x-text="log.content"></p>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
+                    </div>
+                </div>
+            @elseif(isset($class) && !$class->is_active)
+                <div
+                    class="col-span-full py-20 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 mx-4">
+                    <div
+                        class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="ri-shield-user-line text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-gray-600 font-bold">Proctoring Paused</h3>
+                    <p class="text-gray-400 text-sm">Monitoring is disabled. Click "Start Lab Session" to begin.</p>
+                </div>
+            @endif
+        </div>
+
+                        {{-- Fullscreen Modal Viewer (Kept outside main layout wrapper for z-index protection) --}}
+                        <template x-teleport="body">
+                            <div x-data="{ open: false, studentName: '' }"
+                                @open-modal.window="open = true; studentName = $event.detail.name" x-show="open"
+                                class="fixed inset-0  z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+                                x-cloak>
+                                <div class="relative w-full max-w-7xl bg-white rounded-2xl overflow-hidden shadow-2xl">
+                                    <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
+                                        <h3 class="font-bold text-gray-900 flex items-center">
+                                            <span class="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></span>
+                                            Monitoring: <span x-text="studentName" class="ml-1"></span>
+                                        </h3>
+                                        <button
+                                            @click="open = false; document.getElementById('modal-video').srcObject = null"
+                                            class="text-gray-400 hover:text-gray-600 transition">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="aspect-video bg-black flex items-center justify-center">
+                                        <video id="modal-video" autoplay playsinline
+                                            class="w-full h-full object-contain"></video>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
 
                         <div x-show="activeTab === 'materials'" x-cloak class="animate-fade-in" x-data="{
         // Central Modal Variables Control Blocks
@@ -532,7 +539,8 @@
                                 <div>
                                     <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">LEARNING
                                         MATERIALS MANAGEMENT</h2>
-                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Manage
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                        Manage
                                         academic resources</p>
                                 </div>
                                 <button @click="$dispatch('open-material-modal')"
@@ -612,7 +620,8 @@
                                     <div
                                         class="col-span-full py-20 bg-white border-2 border-dashed border-gray-100 rounded-[32px] text-center">
                                         <i class="ri-folder-open-line text-4xl text-gray-200 mb-3 block"></i>
-                                        <p class="text-gray-400 font-bold text-sm">No learning materials have been posted
+                                        <p class="text-gray-400 font-bold text-sm">No learning materials have been
+                                            posted
                                             yet.</p>
                                     </div>
                                 @endforelse
@@ -809,12 +818,15 @@
                                                         class="text-center p-8 bg-white max-w-md rounded-2xl border border-gray-100 shadow-sm">
                                                         <i
                                                             class="ri-presentation-line text-6xl text-gray-300 mb-4 block"></i>
-                                                        <p class="text-sm font-bold text-gray-800 mb-4">Direct inline
-                                                            web rendering is unavailable for direct PowerPoint formats.
+                                                        <p class="text-sm font-bold text-gray-800 mb-4">Direct
+                                                            inline
+                                                            web rendering is unavailable for direct PowerPoint
+                                                            formats.
                                                         </p>
                                                         <a :href="previewUrl" download
                                                             class="inline-block px-6 py-3 bg-[#383838] text-white font-black silverware uppercase text-[10px] tracking-widest rounded-xl hover:bg-black transition-all">
-                                                            <i class="ri-download-cloud-line mr-1 text-sm"></i> Download
+                                                            <i class="ri-download-cloud-line mr-1 text-sm"></i>
+                                                            Download
                                                             Presentation
                                                         </a>
                                                     </div>
@@ -980,13 +992,13 @@
                                                 <button
                                                     @click="openEditor({{ json_encode($task) }}, {{ json_encode($task->rubric) }}, {{ json_encode($alpineCriteria) }})"
                                                     class="w-full bg-white border-2 border-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-black uppercase hover:border-[#383838] hover:text-[#383838] transition-all tracking-widest flex items-center justify-center gap-1.5">
-                                                    <i class="ri-pencil-line text-sm"></i> Edit Setup
+                                                    <i class="ri-pencil-line text-sm"></i> Edit
                                                 </button>
 
                                                 <button
                                                     @click="openGrading({{ json_encode($task) }}, {{ json_encode($task->submissions()->with(['user', 'submissionGrade.criterionScores.criterion'])->get()) }})"
                                                     class="w-full bg-[#383838] text-white py-3 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all tracking-widest shadow-sm flex items-center justify-center gap-1.5">
-                                                    <i class="ri-check-double-line text-sm"></i> Grade
+                                                    <i class="ri-check-double-line text-sm"></i> Submissions
                                                 </button>
                                             </div>
                                         </div>
@@ -1208,7 +1220,7 @@
                                                     class="flex items-center gap-3 bg-white border border-gray-200 px-4 py-2.5 rounded-2xl shadow-sm">
                                                     <p
                                                         class="text-xs font-black text-[#383838] uppercase tracking-widest">
-                                                        Gemini Auto-Grader</p>
+                                                        Auto-Checker</p>
                                                     <button @click="aiGradingEnabled = !aiGradingEnabled"
                                                         :class="aiGradingEnabled ? 'bg-[#383838]' : 'bg-gray-200'"
                                                         class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
@@ -1292,13 +1304,13 @@
                                                                                 class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Grading
                                                                                 Status</span>
                                                                             <p class="text-xs font-black mt-1 text-[#383838]"
-                                                                                x-text="sub.auto_graded ? '🤖 AI Evaluated' : (sub.grade !== null ? '✍️ Manual Entry' : '⏳ Pending')">
+                                                                                x-text="sub.auto_graded ? 'Auto Evaluated' : (sub.grade !== null ? '✍️ Manual Entry' : '⏳ Pending')">
                                                                             </p>
                                                                         </div>
                                                                         <button x-show="aiGradingEnabled"
                                                                             @click="regradeSubmission(sub, $event)"
                                                                             class="ml-2 bg-gray-100 hover:bg-gray-200 text-[#383838] text-[9px] font-black px-3 py-2 rounded-xl transition flex items-center gap-1.5 uppercase tracking-widest border border-gray-200">
-                                                                            <i class="ri-magic-line text-sm"></i> AI
+                                                                            <i class="ri-magic-line text-sm"></i> Auto
                                                                             Grade
                                                                         </button>
                                                                     </div>
@@ -1497,7 +1509,8 @@
                                     <div
                                         class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
                                         <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
-                                        <p class="text-gray-400 italic text-sm">No quizzes available for this session.</p>
+                                        <p class="text-gray-400 italic text-sm">No quizzes available for this session.
+                                        </p>
                                     </div>
                                 @endforelse
                             </div>
@@ -1688,7 +1701,8 @@
                                     <div
                                         class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
                                         <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
-                                        <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.</p>
+                                        <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.
+                                        </p>
                                     </div>
                                 @endforelse
                             </div>
@@ -1823,7 +1837,8 @@
                                                             class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
                                                             <i class="ri-history-line text-2xl text-gray-300"></i>
                                                         </div>
-                                                        <h4 class="text-gray-900 font-bold mb-1">No Activity Found</h4>
+                                                        <h4 class="text-gray-900 font-bold mb-1">No Activity Found
+                                                        </h4>
                                                         <p
                                                             class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
                                                             This student has no recorded logs.</p>
@@ -1927,7 +1942,8 @@
                                         class="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm sticky top-6">
                                         <h3
                                             class="text-xs font-black text-[#383838] uppercase tracking-widest mb-6 flex items-center">
-                                            <i class="ri-forbid-2-line mr-2 text-lg text-[#383838]"></i> Block a Website
+                                            <i class="ri-forbid-2-line mr-2 text-lg text-[#383838]"></i> Block a
+                                            Website
                                         </h3>
 
                                         <form @submit.prevent="addSite()" class="space-y-5">
@@ -2063,7 +2079,8 @@
                                             <div x-show="sessionSites.length === 0"
                                                 class="text-center py-16 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                                                 <i class="ri-shield-check-line text-4xl mb-3 block text-gray-300"></i>
-                                                <p class="text-xs font-black uppercase tracking-widest text-gray-400">No
+                                                <p class="text-xs font-black uppercase tracking-widest text-gray-400">
+                                                    No
                                                     Custom Blocks Set</p>
                                                 <p
                                                     class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 px-4">
@@ -2255,13 +2272,15 @@
     <script type="module">
         // Shared local server configuration options
         const localPeerOptions = {
-            host: window.location.hostname, // Dynamically targets your local host/IP
-            port: 9000,
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
-            secure: window.location.protocol === 'https:',
+            secure: false,
             config: {
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Fallback STUN
-            }
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            },
+            pingInterval: 5000,
+            debug: 3
         };
 
         let receiverPeer = null;         // Phone 1: For receiving student screens
@@ -2275,17 +2294,37 @@
             if (broadcastPeer) { broadcastPeer.disconnect(); broadcastPeer.destroy(); }
         });
 
-        function handleEndSession() {
+        // Explicitly exposed to window scope to fix ReferenceError
+        window.openFullscreenViewer = function (studentId, fullNameFormat) {
+            console.log("Opening custom proctoring modal for student ID:", studentId);
+
+            const cardVideo = document.getElementById(`video-${studentId}`);
+            const modalVideo = document.getElementById('modal-video');
+
+            if (cardVideo && cardVideo.srcObject) {
+                if (modalVideo) {
+                    modalVideo.srcObject = cardVideo.srcObject;
+                }
+
+                window.dispatchEvent(new CustomEvent('open-modal', {
+                    detail: { name: fullNameFormat }
+                }));
+            } else {
+                console.error(`No active proctoring stream found for: video-${studentId}`);
+                alert("Cannot view screen: This student is currently connecting or offline.");
+            }
+        };
+
+        // 🛠️ FIXED: Exposed to window scope to prevent ReferenceError if called from an HTML onclick button
+        window.handleEndSession = function () {
             console.log("🔴 Terminating lab session. Disconnecting all local student monitors...");
 
-            // Explicitly destroy the receiver peer instance
             if (receiverPeer) {
                 receiverPeer.disconnect();
                 receiverPeer.destroy();
                 receiverPeer = null;
             }
 
-            // Explicitly destroy the lecture broadcast peer instance
             if (broadcastPeer) {
                 if (profLocalStream) {
                     profLocalStream.getTracks().forEach(track => track.stop());
@@ -2297,10 +2336,23 @@
                 broadcastPeer = null;
             }
 
+            // Reset whole grid counter state
+            connectedStudents.clear();
+            updateConnectedCounter();
             console.log("✅ Local peer hardware links closed successfully.");
         }
 
-        // 🟢 RECEIVER: Listens for incoming student monitoring streams
+        // Global set to keep track of actively streaming student IDs
+        let connectedStudents = new Set();
+
+        // Helper to push counter values to view element safely
+        function updateConnectedCounter() {
+            const counterEl = document.getElementById('connected-counter');
+            if (counterEl) {
+                counterEl.innerText = connectedStudents.size;
+            }
+        }
+
         function initReceiverPeer() {
             if (receiverPeer) {
                 receiverPeer.destroy();
@@ -2313,60 +2365,85 @@
             receiverPeer.on('open', (id) => console.log("✅ Local Receiver Peer Ready (Fixed ID):", id));
 
             receiverPeer.on('call', (call) => {
-                const studentId = call.peer.replace('STUDENT_', '');
+                const studentId = call.metadata?.studentId || call.peer.replace('STUDENT_', '');
                 console.log("📞 Incoming student monitor from:", studentId);
 
-                call.answer(); // Accept the student's stream feed
+                call.answer();
 
-                call.on('stream', (remoteStream) => {
+                call.on('stream', (stream) => {
                     console.log("🟢 Stream received for student ID:", studentId);
-                    const studentName = call.metadata?.studentName || 'Student ' + studentId;
+                    const videoElement = document.getElementById(`video-${studentId}`);
+                    const videoOverlay = document.getElementById(`video-overlay-${studentId}`);
 
-                    // ⚡ BULLETPROOF FALLBACK: Bypass Alpine race-conditions and bind directly to HTML elements
-                    const videoEl = document.getElementById('video-' + studentId);
-                    const overlayEl = document.getElementById('video-overlay-' + studentId);
-                    const btnEl = document.querySelector(`#btn-container-${studentId} button`);
+                    if (videoElement) {
+                        videoElement.srcObject = stream;
+                        videoElement.classList.remove('hidden');
 
-                    if (videoEl) {
-                        console.log(`📺 Directly attaching stream to HTML video component: video-${studentId}`);
-                        videoEl.srcObject = remoteStream;
-                        videoEl.classList.remove('hidden');
-                        videoEl.muted = true; // Prevents microphone audio looping feedback loops in laboratory rooms
+                        if (videoOverlay) {
+                            videoOverlay.classList.add('hidden');
+                        }
 
-                        videoEl.play().catch(err => {
-                            console.warn("Autoplay interaction blocked by browser security engine:", err);
+                        const statusDot = document.getElementById(`status-dot-${studentId}`);
+                        if (statusDot) {
+                            statusDot.classList.remove('bg-gray-300', 'bg-red-500');
+                            statusDot.classList.add('bg-green-500', 'animate-pulse');
+                        }
+
+                        // UPGRADE BUTTON STATE TO ACTIVE
+                        const btn = document.getElementById(`btn-${studentId}`);
+                        if (btn) {
+                            btn.innerText = "View Screen";
+                            btn.disabled = false;
+                            btn.className = "w-full text-[11px] bg-[#383838] text-white py-2 rounded-xl font-bold hover:bg-black transition shadow-sm tracking-wide uppercase cursor-pointer";
+                        }
+
+                        // UPDATE STREAM TRACKING COUNTER
+                        connectedStudents.add(studentId);
+                        updateConnectedCounter();
+
+                        videoElement.play().catch(err => {
+                            console.error("Video playback failed:", err);
                         });
-
-                        if (overlayEl) {
-                            overlayEl.classList.add('hidden');
-                        }
-
-                        if (btnEl) {
-                            btnEl.innerText = "View Screen";
-                            btnEl.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-                            btnEl.classList.add('bg-[#383838]', 'text-white', 'hover:bg-black');
-                            btnEl.disabled = false;
-                            btnEl.onclick = () => openFullscreenViewer(studentId, studentName);
-                        }
-                    } else {
-                        console.warn(`⚠️ HTML video element 'video-${studentId}' was not found in the grid DOM.`);
-                    }
-
-                    // Cleanly update your Alpine monitor manager instance state data if it becomes ready later
-                    if (window.liveMonitorInstance) {
-                        window.liveMonitorInstance.addStream(studentId, studentName, call, remoteStream);
                     }
                 });
 
-                call.on('close', () => {
-                    console.log("🔴 Stream closed for student", studentId);
-                    if (window.liveMonitorInstance) {
-                        window.liveMonitorInstance.removeStream(studentId);
-                    }
-                    resetStudentUI(studentId);
-                });
+                const handleStudentDisconnect = () => {
+                    console.log(`🔴 Student ${studentId} has disconnected.`);
 
-                call.on('error', (err) => console.error("Call object error:", err));
+                    const videoElement = document.getElementById(`video-${studentId}`);
+                    const videoOverlay = document.getElementById(`video-overlay-${studentId}`);
+
+                    if (videoElement) {
+                        videoElement.srcObject = null;
+                        videoElement.classList.add('hidden');
+                    }
+
+                    if (videoOverlay) {
+                        videoOverlay.classList.remove('hidden');
+                        videoOverlay.innerText = "Offline";
+                    }
+
+                    const statusDot = document.getElementById(`status-dot-${studentId}`);
+                    if (statusDot) {
+                        statusDot.classList.remove('bg-green-500', 'animate-pulse');
+                        statusDot.classList.add('bg-gray-300');
+                    }
+
+                    // REVERT BUTTON TO WAITING STATE
+                    const btn = document.getElementById(`btn-${studentId}`);
+                    if (btn) {
+                        btn.innerText = "Waiting...";
+                        btn.disabled = true;
+                        btn.className = "w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase transition shadow-sm";
+                    }
+
+                    // REMOVE FROM STREAM TRACKING COUNTER
+                    connectedStudents.delete(studentId);
+                    updateConnectedCounter();
+                };
+
+                call.on('close', handleStudentDisconnect);
+                call.on('error', handleStudentDisconnect);
             });
 
             receiverPeer.on('error', (err) => {
@@ -2393,22 +2470,21 @@
         function resetStudentUI(studentId) {
             const video = document.getElementById('video-' + studentId);
             const overlay = document.getElementById('video-overlay-' + studentId);
-            const btn = document.querySelector(`#btn-container-${studentId} button`);
+            const btn = document.getElementById('btn-' + studentId);
 
             if (video) { video.srcObject = null; video.classList.add('hidden'); }
-            if (overlay) overlay.classList.remove('hidden');
+            if (overlay) { overlay.classList.remove('hidden'); overlay.innerText = "Offline"; }
+
+            // Reset Button
             if (btn) {
                 btn.innerText = "Waiting...";
-                btn.classList.remove('bg-[#383838]', 'text-white', 'hover:bg-black');
-                btn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
                 btn.disabled = true;
+                btn.className = "w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase transition shadow-sm";
             }
-        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initReceiverPeer();
-            initBroadcastPeer();
-        });
+            connectedStudents.delete(studentId);
+            updateConnectedCounter();
+        }
 
         // 🟢 BROADCASTING ACTIONS (Professor -> Everyone)
         window.toggleBroadcast = async function () {
@@ -2469,7 +2545,10 @@
                 });
         }
 
-
+        // 🛠️ FIXED: Added page-load initialization trigger.
+        // Since modules are deferred by default, we can trigger initialization immediately.
+        initReceiverPeer();
+        initBroadcastPeer();
 
     </script>
 

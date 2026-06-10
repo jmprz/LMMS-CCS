@@ -537,16 +537,17 @@
     let isCheckingStatus = false;
 
     const localPeerOptions = {
-        host: window.location.hostname, 
-        port: 9000,                     
-        path: '/myapp',                 
-        secure: window.location.protocol === 'https:',
-        config: {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
-        }
-    };
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
+            path: '/myapp',
+            secure: false,      
+            config: {
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            },
+            pingInterval: 5000,
+            debug: 3             
+        };
 
-    // Helper function to check session status immediately if a stream changes state
     function verifySessionStatus() {
         if (isCheckingStatus) return;
         isCheckingStatus = true;
@@ -558,7 +559,6 @@
         .then(res => res.json())
         .then(data => {
             isCheckingStatus = false;
-            // If the backend returns that the class session is no longer active
             if (data && (data.is_active === false || data.status === 'inactive' || data.session_active === false)) {
                 console.log("⚠️ Backend confirmed session is offline. Reloading workspace view...");
                 cleanupHardwareAndReload();
@@ -577,53 +577,71 @@
         if (studentPeer) {
             studentPeer.destroy();
         }
-        // Forces Electron to refresh the view to trigger the 'Session Offline' screen state
         window.location.reload();
     }
+    
 
-    async function startScreenShareToProfessor() {
+    // ⚡ UNIFIED ENTRYPOINT: Triggered only when the student explicitly clicks the interface button.
+    async function enterClassroom() {
         try {
             console.log("📹 Accessing student display media for monitoring...");
+            // Request the feed using high-performance constraints suited for production
             localScreenStream = await navigator.mediaDevices.getDisplayMedia({
                 video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 15 } },
                 audio: false
             });
 
-            console.log("📡 Streaming monitor feed to professor:", profPeerId);
-            
+            // Unlock and swap out the onboarding placeholder card for the operational workspace layout grid
+            window.dispatchEvent(new CustomEvent('screen-shared'));
+
+            console.log("📡 Dialing professor monitoring node:", profPeerId);
             const call = studentPeer.call(profPeerId, localScreenStream, {
-                metadata: { studentName: '{{ auth()->user()->name ?? "Student" }}' }
+                metadata: { 
+                    studentId: {{ auth()->id() }}, 
+                    studentName: '{{ auth()->user()->name ?? "Student" }}' 
+                }
+            });
+
+            // Log present attendance row metrics to server storage
+            fetch("{{ route('student.mark-present', $class->id) }}", { 
+                method: 'POST', 
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' } 
             });
 
             if (call) {
                 call.on('error', err => {
-                    console.error("Student monitor call error:", err);
-                    verifySessionStatus(); // Check if professor went offline
+                    console.error("Student monitor call link connection error:", err);
+                    verifySessionStatus();
                 });
                 call.on('close', () => {
-                    console.log("🔴 Student monitor call link disconnected by host destination.");
-                    verifySessionStatus(); // Verify if it was closed because class ended
+                    console.log("🔴 Student monitor link terminated by target server.");
+                    verifySessionStatus();
                 });
             }
 
+            // Track if the student manually closes screen capture using browser navigation overlays
             localScreenStream.getVideoTracks()[0].onended = function () {
-                console.warn("⚠️ Student manually interrupted screen capture. Re-engaging...");
-                verifySessionStatus();
+                console.warn("⚠️ Screen capture tracking disconnected by user.");
+                window.dispatchEvent(new CustomEvent('screen-stopped'));
+                cleanupHardwareAndReload();
             };
 
         } catch (err) {
-            console.error("Screen capture engagement failed:", err);
+            console.error("Screen capture engagement process cancelled or failed:", err);
+            alert("Screen sharing authentication is mandatory to gain entrance inside this laboratory room workspace environment.");
         }
     }
+
 
     document.addEventListener('DOMContentLoaded', () => {
         studentPeer = new Peer('STUDENT_{{ auth()->id() }}', localPeerOptions);
 
         studentPeer.on('open', (id) => {
             console.log("✅ Student connected to local PeerJS server with ID:", id);
-            startScreenShareToProfessor();
+            // 🛑 REMOVED: startScreenShareToProfessor() call. No more automatic prompts on load!
         });
 
+        // Listen for the incoming broadcast lecture channel feed from the instructor panel context 
         studentPeer.on('call', (call) => {
             console.log("📞 Incoming lecture stream call from professor...");
             call.answer();
@@ -648,9 +666,7 @@
             const clearBroadcastView = () => {
                 console.log("🔴 Screen share session terminated.");
                 const videoElement = document.getElementById('professor-screen');
-                if (videoElement) {
-                    videoElement.srcObject = null;
-                }
+                if (videoElement) videoElement.srcObject = null;
                 document.getElementById('lockdown-ui').classList.add('hidden');
                 document.getElementById('normal-view').classList.remove('hidden');
                 verifySessionStatus();
@@ -665,36 +681,21 @@
             verifySessionStatus();
         });
 
-        // ⏱️ HIGH-FREQUENCY HEARTBEAT TRACKER (Reduced to 4 seconds for rapid state responsiveness)
-    setInterval(() => {
-    fetch(`/student/heartbeat/${classId}`, { 
-        method: 'POST', 
-        headers: { 
-            'X-CSRF-TOKEN': csrfToken, 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        } 
-    })
-    .then(res => res.json())
-    .then(data => {
-        // 🔒 If the backend signals that the session is no longer active
-        if (data && data.is_active === false) {
-            console.log("⚡ Session has been terminated by the instructor. Refreshing UI...");
-            
-            // Clean up active hardware media captures to avoid memory leaks
-            if (localScreenStream) {
-                localScreenStream.getTracks().forEach(track => track.stop());
-            }
-            if (studentPeer) {
-                studentPeer.destroy();
-            }
-
-            // Force Electron window context to refresh itself
-            window.location.reload();
-        }
-    })
-    .catch(err => console.error("Heartbeat communication sync error:", err));
-}, 4000);
+        // High-frequency active heartbeat pooling task tracker to watch for structural session state kills
+        setInterval(() => {
+            fetch(`/student/heartbeat/${classId}`, { 
+                method: 'POST', 
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' } 
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.is_active === false) {
+                    console.log("⚡ Session has been terminated by the instructor. Refreshing UI...");
+                    cleanupHardwareAndReload();
+                }
+            })
+            .catch(err => console.error("Heartbeat communication sync error:", err));
+        }, 4000);
     });
 </script>
 <script>
