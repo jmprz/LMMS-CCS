@@ -49,10 +49,13 @@
                         <x-input-error :messages="$errors->get('password')" class="mt-2" />
                     </div>
 
-                    <div class="pt-2">
+                    <div class="pt-2 text-center">
                         <button type="submit" class="w-full py-4 bg-[#383838] text-white font-bold rounded-xl hover:bg-black transition-all shadow-md uppercase tracking-wider text-sm">
                             Sign In
                         </button>
+                        <a href="{{ route('password.request') }}" class="inline-block mt-4 text-xs font-bold text-gray-500 hover:text-black uppercase tracking-widest transition-all outline-none">
+                            Forgot your password?
+                        </a>
                     </div>
                 </form>
             </div>
