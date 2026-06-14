@@ -32,12 +32,41 @@ class MaterialController extends Controller
         $contentPath = 'materials/' . $filename;
     }
 
-    \App\Models\Material::create([
-        'lab_session_id' => $labSessionId,
-        'title' => $request->title,
-        'type' => $request->type,
-        'content' => $contentPath,
-    ]);
+    $material = \App\Models\Material::create([
+            'lab_session_id' => $labSessionId,
+            'title' => $request->title,
+            'type' => $request->type,
+            'content' => $contentPath,
+        ]);
+
+    // =========================================================================
+        // LIVE PRODUCTION EMAIL ALERTS FOR MATERIALS (SYNCHRONOUS TRANSMISSION)
+        // =========================================================================
+        try {
+            // Find the lab session info to grab the actual class name safely
+            $labSession = \App\Models\LabSession::find($labSessionId);
+
+            // Query student users who have joined this active LabSession ID via pivot setup
+            $students = \App\Models\User::whereHas('joinedClasses', function ($query) use ($labSessionId) {
+                $query->where('lab_sessions.id', $labSessionId);
+            })->get();
+
+            // Fire the direct inline mailer distribution loop
+            foreach ($students as $student) {
+                \Illuminate\Support\Facades\Mail::send('emails.new_material_notification', [
+                    'student' => $student, 
+                    'material' => $material,
+                    'labSession' => $labSession
+                ], function ($message) use ($student, $material) {
+                    $message->to($student->email)
+                            ->subject('LMMS - New Learning Material Posted: ' . $material->title);
+                });
+            }
+        } catch (\Exception $e) {
+            // Log any mail server connection anomalies securely without halting database records
+            \Log::error('Material Email Distribution Encountered an Error: ' . $e->getMessage());
+        }
+        // =========================================================================
 
     if ($request->ajax() || $request->wantsJson()) {
         return response()->json([

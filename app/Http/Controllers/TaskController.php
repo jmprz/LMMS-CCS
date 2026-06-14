@@ -7,6 +7,8 @@ use App\Models\SubmissionGrade;
 use App\Models\Task;
 use App\Models\Rubric;
 use App\Models\RubricCriterion;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
@@ -113,6 +115,24 @@ class TaskController extends Controller
                     'order_index'    => $index,
                 ]);
             }
+
+            // DISTRIBUTE EMAIL ALERTS TO ALL ENROLLED STUDENTS USING EXISTING MODELS
+            // =========================================================================
+            // Query users who have joined this active LabSession ID via 'joinedClasses'
+           $task->load('labSession');
+
+            // Query users who have joined this active LabSession ID via 'joinedClasses'
+            $students = User::whereHas('joinedClasses', function ($query) use ($request) {
+                $query->where('lab_sessions.id', $request->subject_id);
+            })->get();
+
+            foreach ($students as $student) {
+                Mail::send('emails.new_task_notification', ['student' => $student, 'task' => $task], function ($message) use ($student, $task) {
+                    $message->to($student->email)
+                            ->subject('LMMS - New Task Assigned: ' . $task->title);
+                });
+            }
+            // =========================================================================
 
             DB::commit();
             return response()->json(['success' => true, 'task' => $task]);

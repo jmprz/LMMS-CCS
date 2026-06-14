@@ -14,7 +14,7 @@
                 <h1 style="color: #ffffff; font-size: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">
                     Learning and Monitoring Management System
                 </h1>
-                <div style="width: 60px; height: 2px; background-color: #cbd5e1; margin: 12px auto; border-radius: 9999px;"></div>
+                <div style="width: 60px; height: 2px; background-color: #ffffff; margin: 12px auto; border-radius: 9999px;"></div>
                 <p style="color: #ffffff; font-size: 11px; font-weight: 600; text-transform: uppercase; margin: 0; letter-spacing: 0.15em;">
                     College of Computing Studies
                 </p>
