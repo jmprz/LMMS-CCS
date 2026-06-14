@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'   => \App\Http\Middleware\IsAdmin::class,
             'student' => \App\Http\Middleware\IsStudent::class,
             'professor' => \App\Http\Middleware\IsProfessor::class,
+            'activated' => \App\Http\Middleware\EnsureAccountIsActivated::class,
         ]);
 
         // 2. Disable CSRF for Electron Logging

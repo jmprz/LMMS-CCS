@@ -10,30 +10,49 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\RubricController;
 use App\Http\Controllers\AllowedSiteController;
+use App\Http\Controllers\ActivationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('auth.login');
 });
 
+// All routes inside here require the user to be logged in
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 1. DASHBOARD SWITCHER
-    Route::get('/dashboard', function () {
-        $role = auth()->user()->role;
-        if ($role === 'admin')
-            return redirect()->route('admin.dashboard');
-        if ($role === 'professor')
-            return redirect()->route('professor.dashboard');
-        if ($role === 'student')
-            return redirect()->route('student.dashboard');
-        return redirect('/');
-    })->name('dashboard');
+    // =========================================================================
+    // 1. ACCOUNT ACTIVATION ROUTES (Must be OUTSIDE the 'activated' middleware)
+    // =========================================================================
+    Route::prefix('activate-account')->name('activation.')->group(function () {
+        Route::get('/', [ActivationController::class, 'index'])->name('index');
+        Route::post('/send-otp', [ActivationController::class, 'sendOtp'])->name('send_otp');
+        Route::get('/verify', [ActivationController::class, 'otpView'])->name('otp_view');
+        Route::post('/verify', [ActivationController::class, 'verifyOtp'])->name('verify_otp');
+        Route::get('/new-password', [ActivationController::class, 'passwordView'])->name('password_view');
+        Route::post('/new-password', [ActivationController::class, 'updatePassword'])->name('update_password');
+    });
 
-    Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
+   // =========================================================================
+    // 2. PROTECTED SYSTEM ENVIRONMENT (Must be INSIDE the 'activated' middleware)
+    // =========================================================================
+    Route::middleware(['activated'])->group(function () {
+
+        // DASHBOARD SWITCHER
+        Route::get('/dashboard', function () {
+            $role = auth()->user()->role;
+            if ($role === 'admin')
+                return redirect()->route('admin.dashboard');
+            if ($role === 'professor')
+                return redirect()->route('professor.dashboard');
+            if ($role === 'student')
+                return redirect()->route('student.dashboard');
+            return redirect('/');
+        })->name('dashboard');
+
+        Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
 
     // =========================================================================
-    // 2. STUDENT ROUTES
+    // STUDENT ROUTES
     // =========================================================================
     Route::middleware(['student'])->prefix('student')->name('student.')->group(function () {
         Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
@@ -130,7 +149,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     // =========================================================================
-    // 3. PROFESSOR ROUTES
+    // PROFESSOR ROUTES
     // =========================================================================
     Route::middleware(['professor'])->prefix('professor')->name('professor.')->group(function () {
         Route::get('/classroom/{id}/tasks', [ClassroomController::class, 'getTasks'])->name('classroom.tasks');
@@ -229,7 +248,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =========================================================================
-    // 4. ADMIN ROUTES
+    // ADMIN ROUTES
     // =========================================================================
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
@@ -254,11 +273,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =========================================================================
-    // 5. PROFILE ROUTES
+    // PROFILE ROUTES
     // =========================================================================
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
 });
 
 require __DIR__ . '/auth.php';

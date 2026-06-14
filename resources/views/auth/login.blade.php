@@ -4,7 +4,7 @@
     <div class="min-h-screen flex flex-col md:flex-row bg-white">
         <div class="hidden md:flex md:w-2/5 bg-[#383838] items-center justify-center p-12 relative">
             <div class="text-white text-center">
-               <img src="{{ ('img/ccs_logo.png') }}" class="h-[350px] mx-auto mb-8 filter drop-shadow-lg">
+               <img src="{{ asset('img/ccs_logo.png') }}" class="h-[350px] mx-auto mb-8 filter drop-shadow-lg">
                 <h1 class="text-3xl font-bold uppercase tracking-tight mb-4">Learning and Monitoring Management System</h1>
                 <div class="mt-8 w-56 h-1 bg-gray-100 mx-auto rounded-full"></div>
                 <p class="font-medium tracking-widest uppercase text-lg mt-8">College of Computing Studies</p>
@@ -30,14 +30,13 @@
 
                     <div class="relative">
                         <input :type="showPass ? 'text' : 'password'" name="password" 
-                               class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all" 
+                               class="w-full px-5 py-3.5 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all"
                                placeholder="Password" required>
                         
-                        <button type="button" @click="showPass = !showPass" 
-                                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <button type="button" @click="showPass = !showPass" class="absolute right-4 top-4 text-gray-500">
                             <template x-if="!showPass">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.644C3.67 8.5 7.652 5 12 5c4.348 0 8.331 3.5 9.964 6.678.14.272.14.578 0 .85C20.33 15.5 16.348 19 12 19c-4.348 0-8.331-3.5-9.964-6.678z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.644a11.042 11.042 0 0111.963-7.078a10.054 10.054 0 0111.963 7.078a1.012 1.012 0 010 .644a11.043 11.043 0 01-11.963 7.078a10.054 10.054 0 01-11.963-7.078z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                             </template>
@@ -47,19 +46,14 @@
                                 </svg>
                             </template>
                         </button>
+                        <x-input-error :messages="$errors->get('password')" class="mt-2" />
                     </div>
 
-                    <div class="flex items-center justify-between px-1">
-                        <label for="remember_me" class="inline-flex items-center">
-                            <input id="remember_me" type="checkbox" name="remember" class="rounded border-gray-300 text-[#383838] shadow-sm focus:ring-[#383838]">
-                            <span class="ms-2 text-sm text-gray-600">Remember me</span>
-                        </label>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full py-4 bg-[#383838] text-white font-bold rounded-xl hover:bg-black transition-all shadow-md uppercase tracking-wider text-sm">
+                            Sign In
+                        </button>
                     </div>
-                    
-                    <button type="submit" 
-                            class="w-full bg-[#383838] text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all duration-300 shadow-lg shadow-gray-200 active:scale-[0.99] uppercase tracking-wide mt-2">
-                        LOGIN
-                    </button>
                 </form>
             </div>
         </div>
