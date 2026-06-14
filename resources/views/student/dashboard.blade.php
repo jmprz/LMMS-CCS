@@ -270,12 +270,7 @@
                                                             x-text="new Date(task.submission.updated_at).toLocaleDateString()">
                                                         </p>
                                                     </div>
-                                                    {{-- ✅ NEW: View Detailed Feedback link --}}
-                                                    <a :href="`/student/tasks/${task.id}`"
-                                                        class="mt-3 flex items-center justify-center gap-1.5 w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-black text-[9px] uppercase tracking-widest rounded-lg border border-blue-200 transition">
-                                                        <i class="ri-file-chart-line text-xs"></i> View Detailed
-                                                        Feedback
-                                                    </a>
+
                                                 </div>
                                             </div>
                                         </template>
@@ -405,18 +400,18 @@
             const studentId = '{{ auth()->user()->id ?? "default-id" }}';
 
             // Uniform local server configuration options object (Matches your local server!)
-            const localPeerOptions = {
-                host: 'localhost',
-                port: 9000,          // Default port for local PeerJS server
-                path: '/myapp',
-                secure: false,
-                config: {
-                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-                },
-                pingInterval: 5000,
-                debug: 3
-            };
-
+         
+     const localPeerOptions = {
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
+            path: '/myapp',
+            secure: false,      
+            config: {
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            },
+            pingInterval: 5000,
+            debug: 3             
+        };
             // Initialize peer using the local configuration options
             const peer = new Peer('STUDENT_' + studentId, localPeerOptions);
 

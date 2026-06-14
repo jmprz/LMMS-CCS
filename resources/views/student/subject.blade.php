@@ -536,6 +536,7 @@
     let localScreenStream = null;
     let isCheckingStatus = false;
 
+    
     const localPeerOptions = {
             host: 'localhost',
             port: 9000,          // Default port for local PeerJS server

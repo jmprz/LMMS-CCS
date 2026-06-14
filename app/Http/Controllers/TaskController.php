@@ -202,4 +202,31 @@ class TaskController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to update.'], 500);
         }
     }
+    public function destroy($id)
+{
+    try {
+        DB::beginTransaction();
+
+        $task = Task::findOrFail($id);
+
+        // Optional: Manual cleanup if DB cascade is not set up
+        if ($task->rubric) {
+            $task->rubric->criteria()->delete();
+            $task->rubric->delete();
+        }
+        
+        // Clean up submissions linked to this task
+        $task->submissions()->delete();
+
+        // Delete the main task record
+        $task->delete();
+
+        DB::commit();
+        return redirect()->back()->with('success', 'Task and all related student submissions were successfully deleted.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()->with('error', 'Failed to delete task: ' . $e->getMessage());
+    }
+}
 }

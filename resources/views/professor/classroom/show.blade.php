@@ -255,206 +255,208 @@
         }
      }">
 
-            @if(isset($class) && $class->is_active)
-                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 px-4">
-                    <div class="flex items-center gap-3">
-                        <div class="flex flex-col">
-                            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">
-                                LIVE MONITORING
-                            </h2>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                                Manage student screens
-                            </p>
-                        </div>
+                            @if(isset($class) && $class->is_active)
+                                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 px-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex flex-col">
+                                            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">
+                                                LIVE MONITORING
+                                            </h2>
+                                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+                                                Manage student screens
+                                            </p>
+                                        </div>
 
-                        <span
-                            class="inline-flex items-center bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-black px-2.5 py-1 rounded-xl uppercase tracking-wider shadow-sm">
-                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5 animate-pulse"></span>
-                            Connected: <span id="connected-counter"
-                                class="ml-0.5 font-black">0</span>/{{ count($activeStudents) }}
-                        </span>
-                    </div>
-
-                    <div
-                        class="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
-                        <div class="relative">
-                            <i class="ri-search-line absolute left-3 top-2.5 text-gray-400 text-sm"></i>
-                            <input x-model="searchQuery" type="text" placeholder="Search student..."
-                                class="pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-black w-44">
-                        </div>
-
-                        <select x-model="statusFilter"
-                            class="bg-white border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 focus:outline-none">
-                            <option value="all">All Statuses</option>
-                            <option value="active">🟢 Active Only</option>
-                            <option value="offline">⚪ Offline Only</option>
-                        </select>
-
-                        <div class="flex items-center border-l border-gray-200 pl-2 gap-1">
-                            <button @click="gridCols = 'lg:grid-cols-2 md:grid-cols-2 grid-cols-1'"
-                                :class="gridCols.includes('lg:grid-cols-2') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
-                                class="p-1.5 rounded-lg text-sm transition" title="Focus Mode (Large)">
-                                <i class="ri-layout-grid-line"></i>
-                            </button>
-                            <button @click="gridCols = 'lg:grid-cols-4 md:grid-cols-3 grid-cols-2'"
-                                :class="gridCols.includes('lg:grid-cols-4') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
-                                class="p-1.5 rounded-lg text-sm transition" title="Standard View">
-                                <i class="ri-grid-fill"></i>
-                            </button>
-                            <button @click="gridCols = 'lg:grid-cols-6 md:grid-cols-4 grid-cols-3'"
-                                :class="gridCols.includes('lg:grid-cols-6') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
-                                class="p-1.5 rounded-lg text-sm transition" title="Compact View (Small)">
-                                <i class="ri-apps-2-line"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4 items-start">
-
-                    <div class="lg:col-span-3 h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar pb-10">
-                        <div class="grid gap-4 transition-all duration-300" :class="gridCols"
-                            id="student-grid">
-                            @forelse($activeStudents as $student)
-                                @php
-                                    $fullNameFormat = strtoupper($student->last_name) . ', ' . $student->first_name . ($student->middle_name ? ' ' . strtoupper(substr($student->middle_name, 0, 1)) . '.' : '');
-                                    $isPresent = ($student->pivot && $student->pivot->is_present) ? 'true' : 'false';
-                                @endphp
-
-                                <div x-show="shouldShow({{ $student->id }}, {{ $isPresent }}, '{{ addslashes($fullNameFormat) }}')"
-                                    class="border bg-white rounded-[24px] p-4 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between"
-                                    id="student-card-{{ $student->id }}" data-student-id="{{ $student->id }}">
-
-                                    <div class="flex items-center justify-between mb-3">
-                                        <span class="font-bold text-xs text-gray-800 truncate pr-2"
-                                            title="{{ $fullNameFormat }}">
-                                            {{ $fullNameFormat }}
-                                        </span>
-                                        <div class="w-2.5 h-2.5 rounded-full bg-gray-300"
-                                            id="status-dot-{{ $student->id }}"></div>
-                                    </div>
-
-                                    <div class="bg-gray-100 aspect-video rounded-xl flex items-center justify-center mb-4 relative overflow-hidden"
-                                        id="video-container-{{ $student->id }}">
-                                        <video id="video-{{ $student->id }}"
-                                            class="w-full h-full object-cover hidden z-10" muted
-                                            playsinline></video>
                                         <span
-                                            class="text-[11px] font-bold text-gray-400 tracking-wide uppercase absolute text-center z-0"
-                                            id="video-overlay-{{ $student->id }}">
-                                            Offline
+                                            class="inline-flex items-center bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-black px-2.5 py-1 rounded-xl uppercase tracking-wider shadow-sm">
+                                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5 animate-pulse"></span>
+                                            Connected: <span id="connected-counter"
+                                                class="ml-0.5 font-black">0</span>/{{ count($activeStudents) }}
                                         </span>
                                     </div>
 
-                                    <div class="flex" id="btn-container-{{ $student->id }}">
-                                        <button id="btn-{{ $student->id }}" disabled
-                                            onclick="openFullscreenViewer('{{ $student->id }}', '{{ addslashes($fullNameFormat) }}')"
-                                            class="w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase transition shadow-sm">
-                                            Waiting...
-                                        </button>
+                                    <div
+                                        class="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+                                        <div class="relative">
+                                            <i class="ri-search-line absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                                            <input x-model="searchQuery" type="text" placeholder="Search student..."
+                                                class="pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-black w-44">
+                                        </div>
+
+                                        <select x-model="statusFilter"
+                                            class="bg-white border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-bold text-gray-700 focus:outline-none">
+                                            <option value="all">All Statuses</option>
+                                            <option value="active">🟢 Active Only</option>
+                                            <option value="offline">⚪ Offline Only</option>
+                                        </select>
+
+                                        <div class="flex items-center border-l border-gray-200 pl-2 gap-1">
+                                            <button @click="gridCols = 'lg:grid-cols-2 md:grid-cols-2 grid-cols-1'"
+                                                :class="gridCols.includes('lg:grid-cols-2') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                                                class="p-1.5 rounded-lg text-sm transition" title="Focus Mode (Large)">
+                                                <i class="ri-layout-grid-line"></i>
+                                            </button>
+                                            <button @click="gridCols = 'lg:grid-cols-4 md:grid-cols-3 grid-cols-2'"
+                                                :class="gridCols.includes('lg:grid-cols-4') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                                                class="p-1.5 rounded-lg text-sm transition" title="Standard View">
+                                                <i class="ri-grid-fill"></i>
+                                            </button>
+                                            <button @click="gridCols = 'lg:grid-cols-6 md:grid-cols-4 grid-cols-3'"
+                                                :class="gridCols.includes('lg:grid-cols-6') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
+                                                class="p-1.5 rounded-lg text-sm transition" title="Compact View (Small)">
+                                                <i class="ri-apps-2-line"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            @empty
-                                <div class="col-span-full py-20 text-center">
-                                    <p class="text-gray-400 italic">No students are currently active in this
-                                        session.</p>
-                                </div>
-                            @endforelse
-                        </div>
-                    </div>
 
-                    <div class="lg:col-span-1" x-data="{
-                                                    logs: [],
-                                                    loading: false,
-                                                    fetchSessionLogs() {
-                                                        this.loading = true;
-                                                        fetch('/professor/classroom/{{ $class->id }}/activity-logs')
-                                                            .then(res => res.json())
-                                                            .then(data => { this.logs = data; this.loading = false; })
-                                                            .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
-                                                    },
-                                                    init() {
-                                                        this.fetchSessionLogs();
-                                                        setInterval(() => this.fetchSessionLogs(), 10000);
-                                                    },
-                                                    getIcon(type) {
-                                                        const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
-                                                        return icons[type] || 'ri-cursor-line';
-                                                    },
-                                                    getIconClass(type) {
-                                                        const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
-                                                        return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
-                                                    },
-                                                    formatTime(dateStr) {
-                                                        return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                                                    }
-                                                }">
-                        <div
-                            class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-250px)]">
-                            <div
-                                class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
-                                <div>
-                                    <h3 class="font-black text-xs text-gray-800 uppercase tracking-wider">
-                                        Activity Stream</h3>
-                                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wide">
-                                        Real-time session logs</p>
-                                </div>
-                                <button @click="fetchSessionLogs()"
-                                    class="text-gray-400 hover:text-black transition">
-                                    <i class="ri-refresh-line text-lg"
-                                        :class="loading ? 'animate-spin block' : ''"></i>
-                                </button>
-                            </div>
+                                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4 items-start">
 
-                            <div class="flex-grow overflow-y-auto pr-1 space-y-3.5 custom-scrollbar">
-                                <template x-if="loading && logs.length === 0">
                                     <div
-                                        class="text-center py-8 text-gray-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-                                        Syncing logs...</div>
-                                </template>
-                                <template x-if="!loading && logs.length === 0">
-                                    <div
-                                        class="text-center py-12 text-gray-400 text-xs font-bold uppercase tracking-wider italic">
-                                        No activity recorded yet</div>
-                                </template>
+                                        class="lg:col-span-3 h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar pb-10">
+                                        <div class="grid gap-4 transition-all duration-300" :class="gridCols"
+                                            id="student-grid">
+                                            @forelse($activeStudents as $student)
+                                                @php
+                                                    $fullNameFormat = strtoupper($student->last_name) . ', ' . $student->first_name . ($student->middle_name ? ' ' . strtoupper(substr($student->middle_name, 0, 1)) . '.' : '');
+                                                    $isPresent = ($student->pivot && $student->pivot->is_present) ? 'true' : 'false';
+                                                @endphp
 
-                                <template x-for="log in logs" :key="log.id">
-                                    <div class="flex gap-3 items-start relative group">
-                                        <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm"
-                                            :class="getIconClass(log.log_type)">
-                                            <i :class="getIcon(log.log_type)"></i>
+                                                <div x-show="shouldShow({{ $student->id }}, {{ $isPresent }}, '{{ addslashes($fullNameFormat) }}')"
+                                                    class="border bg-white rounded-[24px] p-4 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between"
+                                                    id="student-card-{{ $student->id }}" data-student-id="{{ $student->id }}">
+
+                                                    <div class="flex items-center justify-between mb-3">
+                                                        <span class="font-bold text-xs text-gray-800 truncate pr-2"
+                                                            title="{{ $fullNameFormat }}">
+                                                            {{ $fullNameFormat }}
+                                                        </span>
+                                                        <div class="w-2.5 h-2.5 rounded-full bg-gray-300"
+                                                            id="status-dot-{{ $student->id }}"></div>
+                                                    </div>
+
+                                                    <div class="bg-gray-100 aspect-video rounded-xl flex items-center justify-center mb-4 relative overflow-hidden"
+                                                        id="video-container-{{ $student->id }}">
+                                                        <video id="video-{{ $student->id }}"
+                                                            class="w-full h-full object-cover hidden z-10" muted
+                                                            playsinline></video>
+                                                        <span
+                                                            class="text-[11px] font-bold text-gray-400 tracking-wide uppercase absolute text-center z-0"
+                                                            id="video-overlay-{{ $student->id }}">
+                                                            Offline
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="flex" id="btn-container-{{ $student->id }}">
+                                                        <button id="btn-{{ $student->id }}" disabled
+                                                            onclick="openFullscreenViewer('{{ $student->id }}', '{{ addslashes($fullNameFormat) }}')"
+                                                            class="w-full text-[11px] bg-gray-100 text-gray-400 py-2 rounded-xl font-bold cursor-not-allowed tracking-wide uppercase transition shadow-sm">
+                                                            Waiting...
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @empty
+                                                <div class="col-span-full py-20 text-center">
+                                                    <p class="text-gray-400 italic">No students are currently active in this
+                                                        session.</p>
+                                                </div>
+                                            @endforelse
                                         </div>
+                                    </div>
+
+                                    <div class="lg:col-span-1" x-data="{
+                                                        logs: [],
+                                                        loading: false,
+                                                        fetchSessionLogs() {
+                                                            this.loading = true;
+                                                            fetch('/professor/classroom/{{ $class->id }}/activity-logs')
+                                                                .then(res => res.json())
+                                                                .then(data => { this.logs = data; this.loading = false; })
+                                                                .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
+                                                        },
+                                                        init() {
+                                                            this.fetchSessionLogs();
+                                                            setInterval(() => this.fetchSessionLogs(), 10000);
+                                                        },
+                                                        getIcon(type) {
+                                                            const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
+                                                            return icons[type] || 'ri-cursor-line';
+                                                        },
+                                                        getIconClass(type) {
+                                                            const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
+                                                            return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                                                        },
+                                                        formatTime(dateStr) {
+                                                            return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                                                        }
+                                                    }">
                                         <div
-                                            class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
-                                            <div class="flex justify-between items-start gap-1">
-                                                <span class="text-[11px] font-black text-gray-800 truncate"
-                                                    x-text="log.student_name.trim().includes(' ') ? log.student_name.trim().split(' ').pop() + ', ' + log.student_name.trim().split(' ').slice(0, -1).join(' ') : log.student_name">
-                                                </span>
-                                                <span
-                                                    class="text-[9px] font-bold text-gray-400 whitespace-nowrap"
-                                                    x-text="formatTime(log.created_at)"></span>
+                                            class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-250px)]">
+                                            <div
+                                                class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
+                                                <div>
+                                                    <h3 class="font-black text-xs text-gray-800 uppercase tracking-wider">
+                                                        Activity Stream</h3>
+                                                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wide">
+                                                        Real-time session logs</p>
+                                                </div>
+                                                <button @click="fetchSessionLogs()"
+                                                    class="text-gray-400 hover:text-black transition">
+                                                    <i class="ri-refresh-line text-lg"
+                                                        :class="loading ? 'animate-spin block' : ''"></i>
+                                                </button>
                                             </div>
-                                            <p class="text-[11px] text-gray-600 font-bold mt-0.5 leading-tight"
-                                                x-text="log.content"></p>
+
+                                            <div class="flex-grow overflow-y-auto pr-1 space-y-3.5 custom-scrollbar">
+                                                <template x-if="loading && logs.length === 0">
+                                                    <div
+                                                        class="text-center py-8 text-gray-400 text-xs font-bold uppercase tracking-widest animate-pulse">
+                                                        Syncing logs...</div>
+                                                </template>
+                                                <template x-if="!loading && logs.length === 0">
+                                                    <div
+                                                        class="text-center py-12 text-gray-400 text-xs font-bold uppercase tracking-wider italic">
+                                                        No activity recorded yet</div>
+                                                </template>
+
+                                                <template x-for="log in logs" :key="log.id">
+                                                    <div class="flex gap-3 items-start relative group">
+                                                        <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm"
+                                                            :class="getIconClass(log.log_type)">
+                                                            <i :class="getIcon(log.log_type)"></i>
+                                                        </div>
+                                                        <div
+                                                            class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
+                                                            <div class="flex justify-between items-start gap-1">
+                                                                <span class="text-[11px] font-black text-gray-800 truncate"
+                                                                    x-text="log.student_name.trim().includes(' ') ? log.student_name.trim().split(' ').pop() + ', ' + log.student_name.trim().split(' ').slice(0, -1).join(' ') : log.student_name">
+                                                                </span>
+                                                                <span
+                                                                    class="text-[9px] font-bold text-gray-400 whitespace-nowrap"
+                                                                    x-text="formatTime(log.created_at)"></span>
+                                                            </div>
+                                                            <p class="text-[11px] text-gray-600 font-bold mt-0.5 leading-tight"
+                                                                x-text="log.content"></p>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
                                         </div>
                                     </div>
-                                </template>
-                            </div>
+                                </div>
+                            @elseif(isset($class) && !$class->is_active)
+                                <div
+                                    class="col-span-full py-20 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 mx-4">
+                                    <div
+                                        class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i class="ri-shield-user-line text-3xl text-gray-400"></i>
+                                    </div>
+                                    <h3 class="text-gray-600 font-bold">Proctoring Paused</h3>
+                                    <p class="text-gray-400 text-sm">Monitoring is disabled. Click "Start Lab Session" to
+                                        begin.</p>
+                                </div>
+                            @endif
                         </div>
-                    </div>
-                </div>
-            @elseif(isset($class) && !$class->is_active)
-                <div
-                    class="col-span-full py-20 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 mx-4">
-                    <div
-                        class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ri-shield-user-line text-3xl text-gray-400"></i>
-                    </div>
-                    <h3 class="text-gray-600 font-bold">Proctoring Paused</h3>
-                    <p class="text-gray-400 text-sm">Monitoring is disabled. Click "Start Lab Session" to begin.</p>
-                </div>
-            @endif
-        </div>
 
                         {{-- Fullscreen Modal Viewer (Kept outside main layout wrapper for z-index protection) --}}
                         <template x-teleport="body">
@@ -932,76 +934,120 @@
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                     @forelse($tasks as $task)
-                                        <div
-                                            class="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-[#383838] transition-all group">
-                                            <div>
-                                                <div class="flex justify-between items-start mb-5">
-                                                    <div
-                                                        class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors duration-300">
-                                                        <i class="ri-flask-line text-xl"></i>
-                                                    </div>
-                                                    <span
-                                                        class="bg-gray-100 text-[#383838] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200">
-                                                        {{ $task->points ?? 0 }} PTS
-                                                    </span>
-                                                </div>
-                                                <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight">
-                                                    {{ $task->title }}
-                                                </h4>
-                                                <div class="space-y-2 mt-3 mb-6">
-                                                    <div
-                                                        class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
-                                                        <i class="ri-time-line mr-2 text-gray-300"></i>
-                                                        {{ \Carbon\Carbon::parse($task->deadline)->format('M d, Y h:i A') }}
-                                                    </div>
-                                                    <div
-                                                        class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
-                                                        <i class="ri-group-line mr-2 text-gray-300"></i>
-                                                        {{ $task->submissions->count() }} Submissions
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                    <div x-data="{ isDeleted: false, deleting: false }" x-show="!isDeleted"
+                                                        x-transition:leave="transition ease-in duration-300 transform opacity-0 scale-95"
+                                                        class="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-[#383838] transition-all group">
 
-                                            <div class="mt-auto grid grid-cols-2 gap-3">
-                                                @php
-                                                    // 🟢 Reconstruct relational DB rules into Alpine JSON map
-                                                    $alpineCriteria = [];
-                                                    if ($task->rubric && $task->rubric->criteria) {
-                                                        $uid = 1;
-                                                        $levelUid = 1000;
-                                                        foreach ($task->rubric->criteria as $c) {
-                                                            $levelsWithUids = [];
-                                                            foreach ($c->checking_rules['levels'] ?? [] as $lvl) {
-                                                                $levelsWithUids[] = [
-                                                                    'uid' => $levelUid++,
-                                                                    'label' => $lvl['label'] ?? 'Level',
-                                                                    'points' => (int) ($lvl['points'] ?? 0),
-                                                                    'description' => $lvl['description'] ?? '',
-                                                                ];
+                                                        <div>
+                                                            <div class="flex justify-between items-start mb-5">
+                                                                <div
+                                                                    class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors duration-300">
+                                                                    <i class="ri-flask-line text-xl"></i>
+                                                                </div>
+                                                                <span
+                                                                    class="bg-gray-100 text-[#383838] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200">
+                                                                    {{ $task->points ?? 0 }} PTS
+                                                                </span>
+                                                            </div>
+
+                                                            <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight">
+                                                                {{ $task->title }}
+                                                            </h4>
+
+                                                            <div class="space-y-2 mt-3 mb-6">
+                                                                <div
+                                                                    class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                                                                    <i class="ri-time-line mr-2 text-gray-300"></i>
+                                                                    {{ \Carbon\Carbon::parse($task->deadline)->format('M d, Y h:i A') }}
+                                                                </div>
+                                                                <div
+                                                                    class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                                                                    <i class="ri-group-line mr-2 text-gray-300"></i>
+                                                                    {{ $task->submissions->count() }} Submissions
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        @php
+                                                            $alpineCriteria = [];
+                                                            if ($task->rubric && $task->rubric->criteria) {
+                                                                $uid = 1;
+                                                                $levelUid = 1000;
+                                                                foreach ($task->rubric->criteria as $c) {
+                                                                    $levelsWithUids = [];
+                                                                    foreach ($c->checking_rules['levels'] ?? [] as $lvl) {
+                                                                        $levelsWithUids[] = [
+                                                                            'uid' => $levelUid++,
+                                                                            'label' => $lvl['label'] ?? 'Level',
+                                                                            'points' => (int) ($lvl['points'] ?? 0),
+                                                                            'description' => $lvl['description'] ?? '',
+                                                                        ];
+                                                                    }
+                                                                    $alpineCriteria[] = [
+                                                                        'uid' => $uid++,
+                                                                        'name' => $c->criterion_name,
+                                                                        'description' => $c->description ?? '',
+                                                                        'levels' => $levelsWithUids,
+                                                                    ];
+                                                                }
                                                             }
-                                                            $alpineCriteria[] = [
-                                                                'uid' => $uid++,
-                                                                'name' => $c->criterion_name,
-                                                                'description' => $c->description ?? '',
-                                                                'levels' => $levelsWithUids,
-                                                            ];
-                                                        }
+                                                        @endphp
+
+                                                        <div
+                                                            class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                                                            <div class="flex items-center gap-3">
+                                                                {{-- Edit Trigger Option Link --}}
+                                                                <button type="button"
+                                                                    @click="openEditor({{ json_encode($task) }}, {{ json_encode($task->rubric) }}, {{ json_encode($alpineCriteria) }})"
+                                                                    class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                                    <i class="ri-pencil-line text-xs"></i> Edit
+                                                                </button>
+
+                                                                {{-- Submissions Panel Trigger Link --}}
+                                                                <button type="button"
+                                                                    @click="openGrading({{ json_encode($task) }}, {{ json_encode($task->submissions()->with(['user', 'submissionGrade.criterionScores.criterion'])->get()) }})"
+                                                                    class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                                    <i class="ri-check-double-line text-xs"></i> Submissions
+                                                                </button>
+                                                            </div>
+
+                                                            {{-- Non-Refreshing Async Destructive Action Link --}}
+                                                            <button type="button" @click="
+                                            if (confirm('Are you sure you want to delete this task? All student submissions associated with it will be permanently removed.')) {
+                                                deleting = true;
+                                                fetch('{{ route('professor.tasks.destroy', $task->id) }}', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                        'Content-Type': 'application/json',
+                                                        'Accept': 'application/json'
+                                                    },
+                                                    body: JSON.stringify({ _method: 'DELETE' })
+                                                })
+                                                .then(response => {
+                                                    if (response.ok || response.redirected) {
+                                                        isDeleted = true;
+                                                    } else {
+                                                        alert('Failed to drop task registry instance.');
+                                                        deleting = false;
                                                     }
-                                                @endphp
+                                                })
+                                                .catch(err => {
+                                                    console.error(err);
+                                                    alert('A terminal transport connection exception was caught.');
+                                                    deleting = false;
+                                                });
+                                            }
+                                        " :disabled="deleting"
+                                                                class="text-red-500 hover:text-red-700 disabled:opacity-40 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                                <i class="ri-delete-bin-line text-xs" x-show="!deleting"></i>
+                                                                <i class="ri-loader-4-line animate-spin text-xs" x-show="deleting"
+                                                                    x-cloak></i>
+                                                                <span x-text="deleting ? 'Deleting...' : 'Delete'"></span>
+                                                            </button>
+                                                        </div>
 
-                                                <button
-                                                    @click="openEditor({{ json_encode($task) }}, {{ json_encode($task->rubric) }}, {{ json_encode($alpineCriteria) }})"
-                                                    class="w-full bg-white border-2 border-gray-100 text-gray-600 py-3 rounded-xl text-[10px] font-black uppercase hover:border-[#383838] hover:text-[#383838] transition-all tracking-widest flex items-center justify-center gap-1.5">
-                                                    <i class="ri-pencil-line text-sm"></i> Edit
-                                                </button>
-
-                                                <button
-                                                    @click="openGrading({{ json_encode($task) }}, {{ json_encode($task->submissions()->with(['user', 'submissionGrade.criterionScores.criterion'])->get()) }})"
-                                                    class="w-full bg-[#383838] text-white py-3 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all tracking-widest shadow-sm flex items-center justify-center gap-1.5">
-                                                    <i class="ri-check-double-line text-sm"></i> Submissions
-                                                </button>
-                                            </div>
-                                        </div>
+                                                    </div>
                                     @empty
                                         <div
                                             class="col-span-full py-24 border-2 border-dashed border-gray-200 rounded-[2rem] text-center bg-gray-50/50">
@@ -1460,60 +1506,95 @@
                                 </a>
                             </div>
 
-                            <div id="quizzes-list-container"
-                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                @forelse($session->quizzes ?? [] as $quiz)
-                                    <div
-                                        class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all shadow-sm">
-                                        <div>
-                                            <div class="flex justify-between items-start mb-4">
-                                                <div
-                                                    class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
-                                                    <i class="ri-timer-line text-lg"></i>
-                                                </div>
-                                                <span
-                                                    class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                                                    {{ $quiz->questions->count() }} PTS
-                                                </span>
-                                            </div>
+                         <div id="quizzes-list-container" 
+     class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+     x-data="{ 
+        deletedQuizzes: [],
+        async removeQuiz(quizId, routeUrl) {
+            if (!confirm('Are you sure you want to permanently wipe this quiz and all logged student attempts? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                let response = await fetch(routeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ _method: 'DELETE' })
+                });
+                
+                let data = await response.json();
+                this.deletedQuizzes.push(quizId);
+            } catch (error) {
+                console.error('Quiz destruction failed:', error);
+                this.deletedQuizzes.push(quizId);
+            }
+        }
+     }">
+     
+    @forelse($session->quizzes ?? [] as $quiz)
+        <div class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all duration-300 shadow-sm"
+             x-show="!deletedQuizzes.includes({{ $quiz->id }})"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
+             
+            <div>
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
+                        <i class="ri-timer-line text-lg"></i>
+                    </div>
+                    <span class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                        {{ $quiz->questions->count() }} PTS
+                    </span>
+                </div>
 
-                                            <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
-                                                {{ $quiz->title }}
-                                            </h4>
+                <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
+                    {{ $quiz->title }}
+                </h4>
 
-                                            <div class="space-y-2 mt-4">
-                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                                                    <i class="ri-calendar-todo-line mr-2"></i>
-                                                    {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}
-                                                </div>
-                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                                                    <i class="ri-time-line mr-2"></i>
-                                                    {{ $quiz->time_limit }} Mins Duration
-                                                </div>
-                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                                                    <i class="ri-group-line mr-2"></i>
-                                                    {{ $quiz->attempts->count() }} Answered
-                                                </div>
-                                            </div>
-                                        </div>
+                <div class="space-y-2 mt-4">
+                    <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                        <i class="ri-calendar-todo-line mr-2"></i>
+                        {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}
+                    </div>
+                    <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                        <i class="ri-time-line mr-2"></i>
+                        {{ $quiz->time_limit }} Mins Duration
+                    </div>
+                    <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                        <i class="ri-group-line mr-2"></i>
+                        {{ $quiz->attempts->count() }} Answered
+                    </div>
+                </div>
+            </div>
 
-                                        <div class="mt-6">
-                                            <button
-                                                @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
-                                                class="w-full bg-gray-50 text-[#383838] border border-gray-200 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest">
-                                                View Results
-                                            </button>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div
-                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
-                                        <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
-                                        <p class="text-gray-400 italic text-sm">No quizzes available for this session.
-                                        </p>
-                                    </div>
-                                @endforelse
-                            </div>
+            <div class="mt-6 flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
+                {{-- View Results Button (Placed prominently on the left side) --}}
+                <button type="button"
+                        @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
+                        class="flex-1 bg-gray-50 text-[#383838] border border-gray-200 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest cursor-pointer text-center">
+                    View Results
+                </button>
+
+                {{-- Inline Asynchronous Delete Control (Aligned right) --}}
+                <button type="button"
+                        @click="removeQuiz({{ $quiz->id }}, '{{ route('professor.quizzes.destroy', $quiz->id) }}')"
+                        class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 bg-transparent border-0 cursor-pointer p-2 rounded-lg hover:bg-red-50/50 flex-shrink-0">
+                    <i class="ri-delete-bin-line text-xs"></i> Delete
+                </button>
+            </div>
+        </div>
+    @empty
+        <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
+            <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
+            <p class="text-gray-400 italic text-sm">No quizzes available for this session.</p>
+        </div>
+    @endforelse
+</div>
 
                             <template x-teleport="body">
                                 <div x-show="selectedQuiz"
@@ -2271,16 +2352,17 @@
 
     <script type="module">
         // Shared local server configuration options
-        const localPeerOptions = {
+        
+     const localPeerOptions = {
             host: 'localhost',
             port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
-            secure: false,
+            secure: false,      
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
             pingInterval: 5000,
-            debug: 3
+            debug: 3             
         };
 
         let receiverPeer = null;         // Phone 1: For receiving student screens

@@ -191,6 +191,84 @@ class QuizController extends Controller
         return redirect()->back()->with('success', 'Quiz deleted successfully!');
     }
 
+    public function edit($id)
+{
+    // Eager load questions and options to populate your form fields cleanly
+    $quiz = Quiz::with('questions.options')->findOrFail($id);
+    
+    // Pass the quiz context to your modification view
+    return view('professor.quizzes.edit', compact('quiz'));
+}
+
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'time_limit' => 'required|integer|min:1',
+        'questions' => 'required|array|min:1',
+        'questions.*.text' => 'required|string',
+        'questions.*.type' => 'required|string',
+        'questions.*.points' => 'required|integer|min:1',
+        'published_at' => 'nullable|date',
+        'expires_at' => 'nullable|date|after_or_equal:published_at',
+    ]);
+
+    try {
+        return DB::transaction(function () use ($request, $id) {
+            $quiz = Quiz::findOrFail($id);
+            
+            // 1. Update general configurations
+            $quiz->update([
+                'title' => $request->title,
+                'time_limit' => $request->time_limit,
+                'published_at' => $request->published_at ?? $quiz->published_at,
+                'expires_at' => $request->expires_at,
+            ]);
+
+            // 2. Clear old relational records to update with new structures cleanly
+            foreach ($quiz->questions as $oldQuestion) {
+                $oldQuestion->options()->delete();
+            }
+            $quiz->questions()->delete();
+
+            // 3. Re-populate the questions & choices payload
+            foreach ($request->questions as $qData) {
+                $question = $quiz->questions()->create([
+                    'question_text' => $qData['text'],
+                    'points' => $qData['points'],
+                    'type' => $qData['type'],
+                ]);
+
+                if ($qData['type'] === 'multiple' || $qData['type'] === 'true_false') {
+                    foreach ($qData['options'] as $index => $oText) {
+                        $question->options()->create([
+                            'option_text' => $oText,
+                            'is_correct' => $index == ($qData['correct_option'] ?? null),
+                        ]);
+                    }
+                } elseif ($qData['type'] === 'select_all') {
+                    foreach ($qData['options'] as $index => $oText) {
+                        $question->options()->create([
+                            'option_text' => $oText,
+                            'is_correct' => in_array($index, $qData['correct_options'] ?? []),
+                        ]);
+                    }
+                } elseif ($qData['type'] === 'identification') {
+                    $question->options()->create([
+                        'option_text' => $qData['answer'],
+                        'is_correct' => true,
+                    ]);
+                }
+            }
+
+            return redirect()->route('professor.classroom.show', $quiz->subject_id)
+                             ->with('success', 'Quiz structural updates committed successfully!');
+        });
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Error applying quiz changes: ' . $e->getMessage());
+    }
+}
+
     public function show($id)
     {
         // Eager load labSession to get the subject_name
