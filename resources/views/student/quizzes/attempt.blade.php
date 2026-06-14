@@ -125,7 +125,10 @@
         }
     </style>
 
-    <div x-data="{ state: 'pre-start', score: 0 }" x-cloak>
+    <div x-data="{ 
+    state: '{{ $completed ? 'results' : 'pre-start' }}', 
+    score: {{ $studentScore ?? 0 }} 
+}" x-cloak>
 
         <div x-show="state === 'pre-start'" class="min-h-screen flex items-center justify-center bg-[#f4f7f9] p-6">
             <div class="bg-white p-10 rounded-[32px] shadow-xl border border-gray-100 max-w-lg w-full text-center">
@@ -297,11 +300,6 @@
                         <span class="text-2xl font-bold text-gray-300">/ {{ $quiz->questions->count() }}</span>
                     </div>
                 </div>
-
-                <button onclick="window.parent.postMessage('close-modal', '*')"
-                    class="w-full text-[#383838] font-black text-xs uppercase tracking-widest hover:text-black transition-colors">
-                    Return to Dashboard
-                </button>
             </div>
         </div>
     </div>

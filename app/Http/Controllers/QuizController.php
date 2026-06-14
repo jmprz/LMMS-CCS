@@ -113,10 +113,20 @@ class QuizController extends Controller
 
     public function attempt($id)
     {
-        // Load the quiz with its questions
-        $quiz = Quiz::with('questions')->findOrFail($id);
+        // 1. Load the quiz with its questions and choices
+        $quiz = Quiz::with('questions.options')->findOrFail($id);
 
-        return view('student.quizzes.attempt', compact('quiz'));
+        // 2. Check if this specific student has already completed the assessment
+        $attempt = \App\Models\QuizAttempt::where('quiz_id', $id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        // 3. Set up the flags to control the modal screen
+        $completed = $attempt ? true : false;
+        $studentScore = $attempt ? $attempt->score : 0;
+
+        // 4. Send the scoring context straight down to the view template
+        return view('student.quizzes.attempt', compact('quiz', 'completed', 'studentScore'));
     }
 
     public function submit(Request $request, $quizId)
@@ -298,9 +308,18 @@ class QuizController extends Controller
         }
     }
 
-    public function show($id)
+   public function show($id)
     {
-        // Eager load labSession to get the subject_name
+        // 1. SECURE LOCK: Check if this user already has a recorded attempt for this quiz
+        $alreadyAttempted = \App\Models\QuizAttempt::where('quiz_id', $id)
+            ->where('user_id', auth()->id())
+            ->exists();
+
+        if ($alreadyAttempted) {
+            return redirect()->back()->with('error', 'Access Denied: You have already completed this quiz assessment.');
+        }
+
+        // 2. If no attempt exists, load the questions normally
         $quiz = Quiz::with(['labSession', 'questions.options'])->findOrFail($id);
 
         return view('student.quizzes.show', compact('quiz'));

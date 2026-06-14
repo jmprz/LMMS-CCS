@@ -14,7 +14,7 @@
             </div>
 
             <!-- Removed local isSharing from this scope so it inherits from the root -->
-            <div id="normal-view" class="w-full h-full overflow-y-auto flex-col flex-1" x-data="{ activeTab: 'activities' }">
+            <div id="normal-view" class="w-full h-full overflow-y-auto flex-col flex-1" x-data="{ activeTab: 'tasks' }">
                 <main class="flex-1 p-8">
                     <div class="max-w-7xl mx-auto space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -80,14 +80,14 @@
 
                             <div x-show="isSharing" x-cloak class="animate-fade-in">
                                 <div class="flex border-b border-gray-200 mb-8">
-                                    <template x-for="t in ['activities', 'quizzes', 'materials']">
+                                    <template x-for="t in ['materials', 'tasks', 'quizzes',]">
                                         <button @click="activeTab = t"
                                             :class="activeTab === t ? 'border-b-2 border-black text-black font-black' : 'text-gray-400 hover:text-gray-600 font-bold'"
                                             class="px-8 py-4 text-[10px] uppercase tracking-widest transition" x-text="t"></button>
                                     </template>
                                 </div>
 
-                                <div x-show="activeTab === 'activities'" x-data="classroomTasks()" class="space-y-6" @task-updated.window="fetchTasks()">
+                                <div x-show="activeTab === 'tasks'" x-data="classroomTasks()" class="space-y-6" @task-updated.window="fetchTasks()">
                                     <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-fit">
                                         <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all">All Tasks</button>
                                         <button @click="filter = 'submitted'" :class="filter === 'submitted' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"><i class="ri-checkbox-circle-line"></i> Submitted</button>
@@ -129,37 +129,49 @@
                                 </div>
 
                                 <div x-show="activeTab === 'quizzes'" x-data="classroomQuizzes()" class="space-y-6">
-                                    <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-fit">
-                                        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all">All Quizzes</button>
-                                        <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all"><i class="ri-checkbox-circle-line"></i> Completed</button>
-                                        <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all"><i class="ri-error-warning-line"></i> Pending</button>
-                                    </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <template x-for="quiz in filteredQuizzes" :key="quiz.id">
-                                            <div @click="handleQuizClick(quiz)" class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in min-h-[220px]">
-                                                <div class="space-y-4">
-                                                    <div class="flex items-start gap-3">
-                                                        <div class="mt-1 w-8 h-8 shrink-0 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors"><i class="ri-survey-line text-sm"></i></div>
-                                                        <div class="flex-1 min-w-0">
-                                                            <h4 class="font-black text-[#383838] text-base tracking-tight leading-tight group-hover:text-black transition-colors truncate" x-text="quiz.title"></h4>
-                                                            <div class="mt-1 flex items-center gap-1.5"><i class="ri-calendar-todo-line text-gray-400 text-[10px]"></i><span class="text-[9px] font-bold text-gray-400 uppercase tracking-wide" x-text="formatDeadline(quiz.expires_at)"></span></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="py-3 border-y border-gray-50">
-                                                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Score:</span>
-                                                        <div class="flex items-baseline gap-1"><span class="text-2xl font-black text-[#383838]" x-text="quiz.user_score !== undefined && quiz.user_score !== null ? quiz.user_score : '--'"></span><span class="text-xs font-bold text-gray-300" x-text="'/ ' + (quiz.total_points || quiz.questions_count)"></span></div>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center justify-between pt-3">
-                                                    <template x-if="quiz.has_attempt"><span class="flex items-center gap-1 text-[9px] font-black text-black uppercase tracking-tighter"><i class="ri-checkbox-circle-fill text-base text-[#383838]"></i> Completed</span></template>
-                                                    <template x-if="!quiz.has_attempt"><button @click.stop="$dispatch('open-quiz', { id: quiz.id })" class="bg-[#383838] text-white text-[10px] font-black px-4 py-1.5 rounded-lg hover:bg-black transition-all">TAKE QUIZ</button></template>
-                                                    <i class="ri-arrow-right-line text-gray-300 group-hover:text-[#383838] group-hover:translate-x-1 transition-all"></i>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-                                    <div x-show="filteredQuizzes.length === 0" class="py-20 text-center"><i class="ri-survey-line text-4xl text-gray-200"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-4">No quizzes found</p></div>
-                                </div>
+    <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-fit">
+        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all">All Quizzes</button>
+        <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all"><i class="ri-checkbox-circle-line"></i> Completed</button>
+        <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all"><i class="ri-error-warning-line"></i> Pending</button>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <template x-for="quiz in filteredQuizzes" :key="quiz.id">
+            <div @click="$dispatch('open-quiz', { id: quiz.id })" 
+     class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in min-h-[220px]">
+                <div class="space-y-4">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-1 w-8 h-8 shrink-0 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors"><i class="ri-survey-line text-sm"></i></div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-black text-[#383838] text-base tracking-tight leading-tight group-hover:text-black transition-colors truncate" x-text="quiz.title"></h4>
+                            <div class="mt-1 flex items-center gap-1.5"><i class="ri-calendar-todo-line text-gray-400 text-[10px]"></i><span class="text-[9px] font-bold text-gray-400 uppercase tracking-wide" x-text="formatDeadline(quiz.expires_at)"></span></div>
+                        </div>
+                    </div>
+                    <div class="py-3 border-y border-gray-50">
+                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Score:</span>
+                        <div class="flex items-baseline gap-1"><span class="text-2xl font-black text-[#383838]" x-text="quiz.user_score !== undefined && quiz.user_score !== null ? quiz.user_score : '--'"></span><span class="text-xs font-bold text-gray-300" x-text="'/ ' + (quiz.total_points || quiz.questions_count)"></span></div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between pt-3">
+                    <template x-if="quiz.has_attempt">
+                        <span class="flex items-center gap-1 text-[9px] font-black text-black uppercase tracking-tighter">
+                            <i class="ri-checkbox-circle-fill text-base text-[#383838]"></i> Completed
+                        </span>
+                    </template>
+                    <template x-if="!quiz.has_attempt">
+                        <span class="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                            <i class="ri-error-warning-fill text-base text-gray-400"></i> Pending
+                        </span>
+                    </template>
+                    <i class="ri-arrow-right-line text-gray-300 group-hover:text-[#383838] group-hover:translate-x-1 transition-all"></i>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <div x-show="filteredQuizzes.length === 0" class="py-20 text-center"><i class="ri-survey-line text-4xl text-gray-200"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-4">No quizzes found</p></div>
+</div>
                                 
                                 <div x-show="activeTab === 'materials'" x-data="classroomMaterials()" class="space-y-6 animate-fade-in">
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -503,7 +515,7 @@
                     <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" x-show="isLocked"></div>
                     <h3 class="font-black text-gray-900 tracking-tight">QUIZ WORKSPACE</h3>
                 </div>
-                <button x-show="!isLocked" @click="showQuizModal = false" class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all uppercase tracking-widest">Cancel / Close</button>
+                <button x-show="!isLocked" @click="showQuizModal = false" class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all uppercase tracking-widest">Close</button>
                 <span x-show="isLocked" class="text-[10px] font-black text-red-500 uppercase tracking-widest"><i class="ri-lock-fill mr-1"></i> Quiz in Progress (Locked)</span>
             </div>
             <div class="flex-grow bg-gray-50"><iframe :src="quizUrl" class="w-full h-full border-none shadow-inner"></iframe></div>
@@ -752,8 +764,15 @@
                     return isNaN(date.getTime()) ? 'No Deadline' : date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
                 },
                 handleQuizClick(quiz) {
-                    if (quiz.has_attempt) alert('You have already completed this quiz.');
-                    else if (confirm('Start this quiz? Timer will begin immediately.')) window.location.href = `/student/quizzes/${quiz.id}/attempt`;
+                    // If the student already completed it, stop them right here!
+                    if (quiz.has_attempt) {
+                        alert("You have already completed this quiz! You cannot retake it.");
+                        return;
+                    }
+
+                    // Otherwise, open the modal normally
+                    this.selectedQuiz = quiz; 
+                    this.quizModalOpen = true;
                 }
             }
         }
