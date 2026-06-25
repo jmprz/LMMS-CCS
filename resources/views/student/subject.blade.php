@@ -549,7 +549,7 @@
     let isCheckingStatus = false;
 
     
-    const localPeerOptions = {
+  const localPeerOptions = {
             host: 'localhost',
             port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
@@ -560,6 +560,7 @@
             pingInterval: 5000,
             debug: 3             
         };
+
 
     function verifySessionStatus() {
         if (isCheckingStatus) return;

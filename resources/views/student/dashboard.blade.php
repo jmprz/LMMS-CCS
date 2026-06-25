@@ -130,18 +130,6 @@
                             </a>
                         </div>
                     </template>
-                    <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Platform
-                        Support</div>
-
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.about') ? 'bg-black text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
-                        <i class="ri-information-line mr-3 text-lg"></i> About System
-                    </a>
-
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.faqs') ? 'bg-black text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
-                        <i class="ri-questionnaire-line mr-3 text-lg"></i> FAQs Hub
-                    </a>
                 </nav>
             </div>
 
@@ -401,7 +389,7 @@
 
             // Uniform local server configuration options object (Matches your local server!)
          
-     const localPeerOptions = {
+    const localPeerOptions = {
             host: 'localhost',
             port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
@@ -412,6 +400,7 @@
             pingInterval: 5000,
             debug: 3             
         };
+
             // Initialize peer using the local configuration options
             const peer = new Peer('STUDENT_' + studentId, localPeerOptions);
 

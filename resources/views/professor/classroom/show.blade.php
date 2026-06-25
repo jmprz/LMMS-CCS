@@ -61,19 +61,6 @@
                                 sessions</p>
                         </div>
                     @endforelse
-
-                    <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-4">Platform
-                        Support</div>
-
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.about') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
-                        <i class="ri-information-line mr-3 text-lg"></i> About System
-                    </a>
-
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('admin.faqs') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
-                        <i class="ri-questionnaire-line mr-3 text-lg"></i> FAQs Hub
-                    </a>
                 </nav>
             </div>
 
@@ -2353,7 +2340,7 @@
     <script type="module">
         // Shared local server configuration options
         
-     const localPeerOptions = {
+    const localPeerOptions = {
             host: 'localhost',
             port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
@@ -2364,6 +2351,7 @@
             pingInterval: 5000,
             debug: 3             
         };
+
 
         let receiverPeer = null;         // Phone 1: For receiving student screens
         let broadcastPeer = null;        // Phone 2: For sending professor screen to students

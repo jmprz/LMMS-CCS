@@ -42,17 +42,6 @@
                             </div>
                         </a>
                     @endforeach
-
-                    <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-6">Platform
-                        Support</div>
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs text-gray-600 font-bold hover:bg-gray-100 transition">
-                        <i class="ri-information-line mr-3 text-lg"></i> About System
-                    </a>
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs text-gray-600 font-bold hover:bg-gray-100 transition">
-                        <i class="ri-questionnaire-line mr-3 text-lg"></i> FAQs Hub
-                    </a>
                 </nav>
             </div>
 
