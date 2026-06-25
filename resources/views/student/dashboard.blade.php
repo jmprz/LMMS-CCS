@@ -16,7 +16,7 @@
                 <div class="pt-6 border-t border-gray-200">
                     <span
                         class="inline-flex items-center text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg uppercase tracking-wider">
-                        <i class="ri-broadcast-line mr-1.5 animate-pulse text-sm"></i> Live Monitoring Pipeline Active
+                        <i class="ri-broadcast-line mr-1.5 animate-pulse text-sm"></i> Live Monitoring Active
                     </span>
                 </div>
             </div>
