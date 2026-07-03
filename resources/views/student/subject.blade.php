@@ -1,4 +1,44 @@
 <x-app-layout>
+    @php
+        $violationStatus = $violationStatus ?? [
+            'violation_count' => 0,
+            'threshold' => $class->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3),
+            'remaining_warnings' => $class->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3),
+            'is_screen_blocked' => false,
+        ];
+    @endphp
+
+    <div id="screen-block-overlay"
+        class="{{ ($violationStatus['is_screen_blocked'] ?? false) ? 'flex' : 'hidden' }} fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-6">
+        <div class="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-10 text-center border border-red-100">
+            <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ri-lock-2-line text-4xl text-red-600"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-900 mb-3">Screen Locked</h2>
+            <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                You reached the maximum number of policy violations for this lab session.
+                Your workspace is locked until your instructor unblocks you.
+            </p>
+            <p class="text-[10px] font-black uppercase tracking-widest text-red-500">
+                Violations: {{ $violationStatus['violation_count'] ?? 0 }} / {{ $violationStatus['threshold'] ?? 3 }}
+            </p>
+        </div>
+    </div>
+
+    <div id="violation-warning-modal" class="hidden fixed inset-0 z-[99998] bg-black/50 backdrop-blur-sm items-center justify-center p-6">
+        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 text-center border border-amber-100">
+            <div class="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="ri-error-warning-line text-3xl text-amber-500"></i>
+            </div>
+            <h3 class="text-xl font-black text-gray-900 mb-2">Policy Violation</h3>
+            <p id="violation-warning-message" class="text-sm text-gray-600 leading-relaxed mb-6"></p>
+            <button type="button" onclick="hideViolationWarning()"
+                class="w-full bg-[#383838] text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition">
+                I Understand
+            </button>
+        </div>
+    </div>
+
     <!-- Lifted isSharing state to the root level to expose it to the FAB button -->
     <div class="flex h-screen w-full bg-gray-50 overflow-hidden" x-data="{ sidebarOpen: false, activeToolTab: 'compiler', isSharing: false }" @screen-shared.window="isSharing = true" @screen-stopped.window="isSharing = false">
         
@@ -547,19 +587,93 @@
     let studentPeer = null;
     let localScreenStream = null;
     let isCheckingStatus = false;
+    let violationState = @json($violationStatus);
+
+    function showScreenBlockOverlay() {
+        const overlay = document.getElementById('screen-block-overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        }
+    }
+
+    function hideScreenBlockOverlay() {
+        const overlay = document.getElementById('screen-block-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+    }
+
+    function showViolationWarning(message) {
+        const modal = document.getElementById('violation-warning-modal');
+        const messageEl = document.getElementById('violation-warning-message');
+        if (!modal || !messageEl) return;
+        messageEl.textContent = message;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function hideViolationWarning() {
+        const modal = document.getElementById('violation-warning-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function applyEnforcementResult(result) {
+        if (!result) return;
+
+        violationState = {
+            violation_count: result.violation_count ?? violationState.violation_count,
+            threshold: result.threshold ?? violationState.threshold,
+            remaining_warnings: result.remaining_warnings ?? violationState.remaining_warnings,
+            is_screen_blocked: !!result.is_screen_blocked,
+        };
+
+        if (result.is_screen_blocked) {
+            showScreenBlockOverlay();
+            return;
+        }
+
+        if (result.action === 'warning' && result.message) {
+            showViolationWarning(result.message);
+        }
+    }
+
+    function handleHeartbeatEnforcement(data) {
+        if (!data) return;
+
+        violationState = {
+            violation_count: data.violation_count ?? violationState.violation_count,
+            threshold: data.threshold ?? violationState.threshold,
+            remaining_warnings: data.remaining_warnings ?? violationState.remaining_warnings,
+            is_screen_blocked: !!data.is_screen_blocked,
+        };
+
+        if (data.is_screen_blocked) {
+            showScreenBlockOverlay();
+        } else {
+            hideScreenBlockOverlay();
+        }
+    }
+
+    if (violationState.is_screen_blocked) {
+        document.addEventListener('DOMContentLoaded', showScreenBlockOverlay);
+    }
 
     
-  const localPeerOptions = {
-            host: 'localhost',
-            port: 9000,          // Default port for local PeerJS server
-            path: '/myapp',
-            secure: false,      
-            config: {
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-            },
-            pingInterval: 5000,
-            debug: 3             
-        };
+    const localPeerOptions = {
+        host: 'peer.lmms-ccs.online',
+        port: 443,
+        path: '/myapp',
+        secure: true,
+        config: {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        },
+        pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
+        debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
+    };
 
 
     function verifySessionStatus() {
@@ -573,6 +687,7 @@
         .then(res => res.json())
         .then(data => {
             isCheckingStatus = false;
+            handleHeartbeatEnforcement(data);
             if (data && (data.is_active === false || data.status === 'inactive' || data.session_active === false)) {
                 console.log("⚠️ Backend confirmed session is offline. Reloading workspace view...");
                 cleanupHardwareAndReload();
@@ -703,6 +818,7 @@
             })
             .then(res => res.json())
             .then(data => {
+                handleHeartbeatEnforcement(data);
                 if (data && data.is_active === false) {
                     console.log("⚡ Session has been terminated by the instructor. Refreshing UI...");
                     cleanupHardwareAndReload();
@@ -928,7 +1044,7 @@ function materialViewer() {
                     if (!this.classId || this.classId === 'undefined') return;
                     this.loadBlockedRules();
                     window.addEventListener('message', (event) => { if (event.data && event.data.type === 'iframe-navigate') { this.urlInput = event.data.url; this.navigateTo(); } });
-                    if (window.ipcRenderer) { window.ipcRenderer.on('site-blocked-by-electron', (event, url) => { this.showBlockedPage(`"${this.cleanDomain(url)}" is restricted by the Instructor.`); }); }
+                    if (window.ipcRenderer) { window.ipcRenderer.on('site-blocked-by-electron', (event, url) => { this.showBlockedPage(`"${this.cleanDomain(url)}" is restricted by the Instructor.`); this.logViolationAttempt(url); }); }
                 },
                 async loadBlockedRules() {
                     try {
@@ -947,7 +1063,7 @@ function materialViewer() {
                     if (!isUrl) {
                         this.loadingUrl = true; const lowerInput = input.toLowerCase();
                         if (this.blockedSites.some(site => { const keyword = site.domain.replace(/^www\./, '').toLowerCase().trim().split('.')[0]; return keyword.length > 2 && lowerInput.includes(keyword); })) {
-                            this.loadingUrl = false; this.showBlockedPage(`Search query contains restricted keyword terms.`); this.urlInput = ''; return;
+                            this.loadingUrl = false; this.showBlockedPage(`Search query contains restricted keyword terms.`); this.logViolationAttempt(null, 'Attempted restricted search: ' + input); this.urlInput = ''; return;
                         }
                         this.browserUrl = `/student/classroom/${this.classId}/search?q=${encodeURIComponent(input)}`;
                         if (preserveHistory) { this.historyStack = this.historyStack.slice(0, this.historyIndex + 1); this.historyStack.push(this.browserUrl); this.historyIndex = this.historyStack.length - 1; }
@@ -966,7 +1082,7 @@ function materialViewer() {
                 loadUrlFromHistory(url) {
                     this.loadingUrl = true;
                     if (url.includes('/browser-home') || url.includes('/search?q=')) { this.browserUrl = url; const frame = document.getElementById('dashboard-browser-frame'); if (frame) frame.src = url; this.loadingUrl = false; return; }
-                    if (this.isSiteBlocked(url)) { this.loadingUrl = false; this.showBlockedPage(`"${this.cleanDomain(url)}" is restricted.`); return; }
+                    if (this.isSiteBlocked(url)) { this.loadingUrl = false; this.showBlockedPage(`"${this.cleanDomain(url)}" is restricted.`); this.logViolationAttempt(url); return; }
                     this.browserUrl = url; const frame = document.getElementById('dashboard-browser-frame'); if (frame) frame.src = url; this.loadingUrl = false;
                 },
                 browserRefresh() {
@@ -977,7 +1093,23 @@ function materialViewer() {
                     const blockedHtml = `<!DOCTYPE html><html><body style="font-family:sans-serif; background:#f8f9fa; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;"><div style="background:white; padding:40px; border-radius:12px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.1); max-width:400px; border:1px solid #fee2e2;"><div style="font-size:50px; margin-bottom:10px;">🚫</div><div style="color:#991b1b; background:#fef2f2; padding:15px; border-radius:8px; font-weight:bold;">${reason}</div><p style="color:#6b7280; font-size:12px; margin-top:15px;">This website or search keyword is restricted during this laboratory session.</p></div></body></html>`;
                     this.browserUrl = URL.createObjectURL(new Blob([blockedHtml], { type: 'text/html' })); const frame = document.getElementById('dashboard-browser-frame'); if (frame) frame.src = this.browserUrl;
                 },
-                logViolationAttempt(targetUrl) { fetch('/student/log-behavior', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ type: 'violation', detail: `Attempted to access blocked site: ${this.cleanDomain(targetUrl)}`, lab_session_id: this.classId }) }).catch(err => console.error(err)); },
+                logViolationAttempt(targetUrl, detail = null) {
+                    const payload = {
+                        type: 'violation',
+                        detail: detail || `Attempted to access blocked site: ${targetUrl ? this.cleanDomain(targetUrl) : 'restricted content'}`,
+                        lab_session_id: this.classId,
+                    };
+                    if (targetUrl) payload.url = targetUrl;
+
+                    fetch('/student/log-behavior', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => res.json())
+                    .then(data => applyEnforcementResult(data))
+                    .catch(err => console.error(err));
+                },
                 logSiteVisit(targetUrl) { if (targetUrl.startsWith('blob:') || targetUrl.includes('/search?q=')) return; fetch('/student/log-behavior', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ type: 'navigation', detail: targetUrl, lab_session_id: this.classId }) }).catch(err => console.error(err)); }
             };
         }

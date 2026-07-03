@@ -366,4 +366,41 @@ class ClassroomController extends Controller
             return response()->json([]);
         }
     }
+
+    public function updateViolationSettings(Request $request, $id)
+    {
+        $session = LabSession::findOrFail($id);
+
+        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        $validated = $request->validate([
+            'violation_warning_threshold' => 'required|integer|min:1|max:10',
+        ]);
+
+        $session->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'violation_warning_threshold' => $session->violation_warning_threshold,
+        ]);
+    }
+
+    public function unblockStudent($classId, $studentId)
+    {
+        $session = LabSession::findOrFail($classId);
+
+        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$session->students()->where('users.id', $studentId)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Student is not enrolled in this class.'], 404);
+        }
+
+        app(\App\Services\ViolationEnforcementService::class)->unblock((int) $studentId, (int) $classId);
+
+        return response()->json(['success' => true, 'message' => 'Student screen unblocked.']);
+    }
 }

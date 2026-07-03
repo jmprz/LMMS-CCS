@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\ViolationEnforcementService;
 
 class StudentClassController extends Controller
 {
@@ -67,17 +68,17 @@ class StudentClassController extends Controller
 
     public function heartbeat(LabSession $labSession)
     {
-        // Update student's presence tracking status
         auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
             'is_present' => true,
             'updated_at' => now(),
         ]);
 
-        // Return the response along with the actual state of the session
-        return response()->json([
+        $enforcement = app(ViolationEnforcementService::class)->getStatus(auth()->id(), $labSession->id);
+
+        return response()->json(array_merge([
             'status' => 'alive',
-            'is_active' => (bool) $labSession->is_active, // Returns true if active, false if ended
-        ]);
+            'is_active' => (bool) $labSession->is_active,
+        ], $enforcement));
     }
 
     public function join(Request $request)
@@ -278,16 +279,27 @@ class StudentClassController extends Controller
     {
         $userId = auth()->id() ?? 1;
         $labSessionId = $request->lab_session_id;
-        $detail = $request->detail;
+        $detail = $request->detail ?? 'Unknown activity';
+        $logType = $request->type ?? 'navigation';
 
-        // 🟢 BACKEND AUTO-RESOLVE GUARD: If the frontend sent null, find their active lab session
         if (empty($labSessionId) || $labSessionId === 'null') {
-            $labSessionId = \DB::table('lab_session_student') // or your pivot table name
-                ->join('lab_sessions', 'lab_session_student.lab_session_id', '=', 'lab_sessions.id')
-                ->where('lab_session_student.user_id', $userId)
+            $labSessionId = DB::table('class_student')
+                ->join('lab_sessions', 'class_student.lab_session_id', '=', 'lab_sessions.id')
+                ->where('class_student.user_id', $userId)
                 ->where('lab_sessions.is_active', true)
                 ->orderBy('lab_sessions.created_at', 'desc')
                 ->value('lab_sessions.id');
+        }
+
+        if ($logType === 'violation' && $labSessionId) {
+            $result = app(ViolationEnforcementService::class)->recordViolation(
+                $userId,
+                (int) $labSessionId,
+                $detail,
+                $request->input('url')
+            );
+
+            return response()->json(array_merge(['status' => 'success'], $result));
         }
 
         if (str_contains($detail, 'google.com/search?q=')) {
@@ -310,16 +322,14 @@ class StudentClassController extends Controller
                 DB::table('activity_logs')
                     ->where('id', $lastLog->id)
                     ->update(['duration_seconds' => $duration]);
-
-                \Log::info("ID {$lastLog->id} updated. Start: $startTime, End: $endTime, Diff: $duration");
             }
         }
 
         DB::table('activity_logs')->insert([
             'user_id' => $userId,
-            'log_type' => $request->type ?? 'navigation',
+            'log_type' => $logType,
             'content' => $detail,
-            'lab_session_id' => $labSessionId, // Safely assigned!
+            'lab_session_id' => $labSessionId,
             'duration_seconds' => 0,
             'created_at' => now(),
             'updated_at' => now(),
@@ -344,11 +354,14 @@ class StudentClassController extends Controller
             ->where('user_id', auth()->id())
             ->first()?->pivot->is_present ?? false;
 
-        // 🟢 FIXED: We send exactly what subject.blade.php needs
+        $enrollment = auth()->user()->joinedClasses()->where('lab_session_id', $id)->first();
+        $violationStatus = app(ViolationEnforcementService::class)->getStatus(auth()->id(), $id);
+
         return view('student.subject', [
             'class' => $class,
             'isPresent' => $isPresent,
-            'quizzes' => $quizzes
+            'quizzes' => $quizzes,
+            'violationStatus' => $violationStatus,
         ]);
     }
     public function refreshClassStatuses()

@@ -7,6 +7,8 @@ use App\Models\Quiz;
 use App\Models\LabSession;
 use App\Models\QuizAttempt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class QuizController extends Controller
 {
@@ -125,8 +127,30 @@ class QuizController extends Controller
         $completed = $attempt ? true : false;
         $studentScore = $attempt ? $attempt->score : 0;
 
-        // 4. Send the scoring context straight down to the view template
-        return view('student.quizzes.attempt', compact('quiz', 'completed', 'studentScore'));
+        // 4. Randomize question and option order for this student
+        $questions = $this->randomizedQuestionsForStudent($quiz);
+
+        // 5. Send the scoring context straight down to the view template
+        return view('student.quizzes.attempt', compact('quiz', 'completed', 'studentScore', 'questions'));
+    }
+
+    private function randomizedQuestionsForStudent(Quiz $quiz)
+    {
+        $userId = auth()->id();
+
+        return $quiz->questions
+            ->map(function ($question) use ($userId, $quiz) {
+                $question->setRelation(
+                    'options',
+                    $question->options
+                        ->sortBy(fn ($option) => crc32("{$userId}:{$quiz->id}:{$question->id}:{$option->id}"))
+                        ->values()
+                );
+
+                return $question;
+            })
+            ->sortBy(fn ($question) => crc32("{$userId}:{$quiz->id}:{$question->id}"))
+            ->values();
     }
 
     public function submit(Request $request, $quizId)
@@ -228,6 +252,83 @@ class QuizController extends Controller
         $quiz->delete(); // This removes the quiz and related attempts if cascade is on
 
         return redirect()->back()->with('success', 'Quiz deleted successfully!');
+    }
+
+    public function exportScores(Quiz $quiz): StreamedResponse
+    {
+        $quiz->load(['labSession', 'attempts.user']);
+
+        $session = $quiz->labSession;
+        if (!$session || ($session->faculty_id !== auth()->id() && auth()->user()->role !== 'admin')) {
+            abort(403, 'Unauthorized access to this quiz.');
+        }
+
+        $attemptsByUserId = $quiz->attempts->keyBy('user_id');
+        $defaultTotalQuestions = $quiz->questions()->count();
+        $students = $session->students()
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get(['users.id', 'users.school_id', 'users.first_name', 'users.last_name', 'users.email']);
+
+        $filename = Str::slug($quiz->title) . '-quiz-scores-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($quiz, $session, $students, $attemptsByUserId, $defaultTotalQuestions) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($handle, ['Quiz', $quiz->title]);
+            fputcsv($handle, ['Class', $session->subject_name]);
+            fputcsv($handle, ['Exported At', now()->format('M d, Y g:i A')]);
+            fputcsv($handle, []);
+
+            fputcsv($handle, [
+                'School ID',
+                'Last Name',
+                'First Name',
+                'Email',
+                'Score',
+                'Total Questions',
+                'Percentage',
+                'Time Taken',
+                'Status',
+            ]);
+
+            foreach ($students as $student) {
+                $attempt = $attemptsByUserId->get($student->id);
+                $totalQuestions = $attempt?->total_questions ?? $defaultTotalQuestions;
+                $percentage = ($attempt && $totalQuestions > 0)
+                    ? round(($attempt->score / $totalQuestions) * 100, 1) . '%'
+                    : '';
+
+                fputcsv($handle, [
+                    $student->school_id,
+                    $student->last_name,
+                    $student->first_name,
+                    $student->email,
+                    $attempt?->score ?? '',
+                    $attempt ? $totalQuestions : '',
+                    $percentage,
+                    $attempt ? $this->formatQuizTimeSpent($attempt->time_spent) : '',
+                    $attempt ? 'Submitted' : 'Not Submitted',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function formatQuizTimeSpent(?int $seconds): string
+    {
+        if ($seconds === null) {
+            return '';
+        }
+
+        $minutes = intdiv($seconds, 60);
+        $remainingSeconds = $seconds % 60;
+
+        return "{$minutes}m {$remainingSeconds}s";
     }
 
     public function edit($id)

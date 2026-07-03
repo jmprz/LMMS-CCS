@@ -200,7 +200,7 @@
                         @csrf
                         <input type="hidden" name="start_time" value="{{ now() }}">
 
-                        @foreach($quiz->questions as $index => $question)
+                        @foreach($questions as $index => $question)
                             <div class="card question-card mb-6 shadow-sm border-0" id="q_{{ $question->id }}">
                                 <div class="card-body p-8">
                                     <div class="flex justify-between items-center mb-6">
@@ -254,7 +254,7 @@
                                     <h6 class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-6">
                                         Question Review</h6>
                                     <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
-                                        @foreach($quiz->questions as $index => $q)
+                                        @foreach($questions as $index => $q)
                                             <a href="#q_{{ $q->id }}" id="nav_q_{{ $q->id }}"
                                                 class="nav-dot h-10 w-10 flex items-center justify-center rounded-lg border border-gray-200 font-bold text-gray-500 hover:border-[#383838] transition-all no-underline text-xs">
                                                 {{ $index + 1 }}

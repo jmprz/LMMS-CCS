@@ -1567,6 +1567,13 @@
                     View Results
                 </button>
 
+                <a href="{{ route('professor.quizzes.export-scores', $quiz) }}"
+                   class="flex-shrink-0 bg-[#383838] text-white py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-1.5"
+                   title="Export quiz scores to Excel">
+                    <i class="ri-file-excel-2-line text-xs"></i>
+                    Export
+                </a>
+
                 {{-- Inline Asynchronous Delete Control (Aligned right) --}}
                 <button type="button"
                         @click="removeQuiz({{ $quiz->id }}, '{{ route('professor.quizzes.destroy', $quiz->id) }}')"
@@ -1617,7 +1624,12 @@
                                                     placeholder="Search student name..."
                                                     class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:bg-white focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                             </div>
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <a x-bind:href="selectedQuiz ? '{{ url('/professor/quizzes') }}/' + selectedQuiz.id + '/export-scores' : '#'"
+                                                    class="inline-flex items-center gap-2 bg-[#383838] text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
+                                                    <i class="ri-file-excel-2-line text-sm"></i>
+                                                    Export to Excel
+                                                </a>
                                                 <span
                                                     class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sort
                                                     By:</span>
@@ -1734,7 +1746,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 @forelse($class->students as $student)
                                     <div @click="viewStudentActivity({{ $student->id }}, '{{ addslashes($student->first_name) }}', '{{ addslashes($student->last_name) }}', {{ json_encode($student->attendances ?? []) }}, {{ $class->id }})"
-                                        class="bg-white p-5 rounded-3xl border border-gray-100 flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
+                                        class="bg-white p-5 rounded-3xl border {{ ($student->pivot->is_screen_blocked ?? false) ? 'border-red-300 bg-red-50/30' : 'border-gray-100' }} flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
 
                                         <div class="flex items-center gap-4">
                                             <div
@@ -1753,10 +1765,23 @@
                                                 <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
                                                     {{ $student->school_id }}
                                                 </p>
+                                                @if(($student->pivot->violation_count ?? 0) > 0)
+                                                    <p class="text-[9px] font-black uppercase tracking-widest mt-1 {{ ($student->pivot->is_screen_blocked ?? false) ? 'text-red-600' : 'text-amber-600' }}">
+                                                        {{ ($student->pivot->is_screen_blocked ?? false) ? 'Screen Locked' : 'Warnings' }}:
+                                                        {{ $student->pivot->violation_count ?? 0 }}/{{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }}
+                                                    </p>
+                                                @endif
                                             </div>
                                         </div>
 
-                                        <div>
+                                        <div class="flex items-center gap-2">
+                                            @if($student->pivot->is_screen_blocked ?? false)
+                                                <button type="button"
+                                                    @click.stop="unblockStudent({{ $student->id }})"
+                                                    class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
+                                                    Unblock
+                                                </button>
+                                            @endif
                                             @if($student->pivot->is_present)
                                                 <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"
                                                     title="Active"></div>
@@ -2014,6 +2039,24 @@
                                             Website
                                         </h3>
 
+                                        <div class="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                                            <label class="text-[10px] font-black text-amber-700 uppercase tracking-widest block mb-2">
+                                                Violation Warning Limit
+                                            </label>
+                                            <div class="flex items-center gap-3">
+                                                <input type="number" min="1" max="10" x-model.number="violationWarningThreshold"
+                                                    class="w-20 border-none bg-white rounded-xl p-3 text-sm font-black text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none text-center">
+                                                <button type="button" @click="saveViolationSettings()" :disabled="savingThreshold"
+                                                    class="flex-1 py-3 bg-[#383838] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition disabled:opacity-50">
+                                                    <span x-show="!savingThreshold">Save Limit</span>
+                                                    <span x-show="savingThreshold">Saving...</span>
+                                                </button>
+                                            </div>
+                                            <p class="text-[9px] text-amber-700/80 font-bold mt-2 leading-relaxed">
+                                                Students are warned on each violation. After this many violations, their screen is locked until you unblock them.
+                                            </p>
+                                        </div>
+
                                         <form @submit.prevent="addSite()" class="space-y-5">
                                             <div>
                                                 <label
@@ -2174,6 +2217,8 @@
                             blockedAttempts: [],
                             blockedStats: {},
                             adding: false,
+                            savingThreshold: false,
+                            violationWarningThreshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
                             newSite: {
                                 domain: '',
                                 name: '',
@@ -2299,6 +2344,30 @@
                                 this.loadBlockedAttempts();
                             },
 
+                            async saveViolationSettings() {
+                                this.savingThreshold = true;
+                                try {
+                                    const res = await fetch('{{ route('professor.classroom.violation-settings', $session->id) }}', {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                            'Accept': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            violation_warning_threshold: this.violationWarningThreshold,
+                                        }),
+                                    });
+
+                                    if (!res.ok) throw new Error('Failed to save');
+                                    alert('Violation warning limit updated.');
+                                } catch (error) {
+                                    alert('Failed to update violation warning limit.');
+                                } finally {
+                                    this.savingThreshold = false;
+                                }
+                            },
+
                             formatTime(timestamp) {
                                 return new Date(timestamp).toLocaleString();
                             }
@@ -2339,17 +2408,17 @@
 
     <script type="module">
         // Shared local server configuration options
-        
-    const localPeerOptions = {
-            host: 'localhost',
-            port: 9000,          // Default port for local PeerJS server
+                                                                                        
+        const localPeerOptions = {
+            host: 'peer.lmms-ccs.online',
+            port: 443,
             path: '/myapp',
-            secure: false,      
+            secure: true,
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
-            pingInterval: 5000,
-            debug: 3             
+            pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
+            debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
         };
 
 
@@ -3018,6 +3087,28 @@
                 logs: [],
                 studentFiles: [],
                 modalTab: 'logs', // Tracks 'logs' or 'files'
+
+                async unblockStudent(studentId) {
+                    if (!confirm('Unblock this student and reset their violation count?')) return;
+
+                    try {
+                        const res = await fetch(`/professor/classroom/{{ $class->id }}/students/${studentId}/unblock`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                        });
+
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Failed to unblock');
+
+                        alert('Student screen unblocked.');
+                        window.location.reload();
+                    } catch (error) {
+                        alert(error.message || 'Failed to unblock student.');
+                    }
+                },
 
                 async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
                     this.selectedUserName = `${lastName}, ${firstName}`;
