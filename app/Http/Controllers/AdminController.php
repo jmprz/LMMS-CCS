@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Submission;
 use App\Models\ActivityLog;
+use App\Models\Quiz;
+use App\Models\QuizAttempt;
+use App\Models\Task;
 
 class AdminController extends Controller
 {
@@ -69,6 +72,16 @@ public function index(Request $request)
             ->where('is_present', false)
             ->count();
 
+        $chartConfigs = $this->buildProfessorChartConfigs(
+            $professorSessionIds,
+            $sessions,
+            $navigationLogsCount,
+            $quizLogsCount,
+            $submissionLogsCount,
+            $presentCount,
+            $absentCount
+        );
+
         return view('professor.dashboard', compact(
             'activeStudents', 
             'activeSessions', 
@@ -80,7 +93,8 @@ public function index(Request $request)
             'quizLogsCount',
             'submissionLogsCount',
             'presentCount',
-            'absentCount'
+            'absentCount',
+            'chartConfigs'
         ));
     }
 
@@ -139,6 +153,15 @@ public function index(Request $request)
 
      $logs = \App\Models\ActivityLog::with(['user', 'labSession'])->latest()->take(10)->get();
 
+        $totalAdmins = max(0, $totalUsers - ($totalStudents + $totalProfessors));
+        $chartConfigs = $this->buildAdminChartConfigs(
+            $allSessions,
+            $activeClassesCount,
+            $totalStudents,
+            $totalProfessors,
+            $totalAdmins
+        );
+
         return view('admin.dashboard', compact(
             'allSessions', 
             'totalStudents', 
@@ -146,7 +169,8 @@ public function index(Request $request)
             'totalUsers', 
             'activeClassesCount', 
             'upcomingClasses', 
-            'logs'
+            'logs',
+            'chartConfigs'
         ));
     }
 
@@ -366,5 +390,269 @@ public function destroyUser(User $user)
 
     $user->delete();
     return back()->with('success', 'User deleted successfully');
+}
+
+private function buildWeeklyActivitySeries(array $sessionIds, bool $systemWide = false): array
+{
+    $labels = [];
+    $data = [];
+
+    for ($i = 6; $i >= 0; $i--) {
+        $date = now()->subDays($i);
+        $labels[] = $date->format('D, M j');
+
+        $query = ActivityLog::whereDate('created_at', $date->toDateString());
+        if (!$systemWide) {
+            $query->whereIn('lab_session_id', $sessionIds);
+        }
+
+        $data[] = $query->count();
+    }
+
+    return compact('labels', 'data');
+}
+
+private function buildProfessorChartConfigs(
+    array $sessionIds,
+    $sessions,
+    int $navigationLogsCount,
+    int $quizLogsCount,
+    int $submissionLogsCount,
+    int $presentCount,
+    int $absentCount
+): array {
+    $materialLogsCount = ActivityLog::whereIn('lab_session_id', $sessionIds)->where('log_type', 'material')->count();
+    $violationLogsCount = ActivityLog::whereIn('lab_session_id', $sessionIds)->where('log_type', 'violation')->count();
+    $weekly = $this->buildWeeklyActivitySeries($sessionIds);
+
+    $quizScoreLabels = [];
+    $quizScoreData = [];
+    $quizParticipationLabels = [];
+    $quizParticipationData = [];
+    $taskSubmissionLabels = [];
+    $taskSubmissionData = [];
+
+    foreach ($sessions as $session) {
+        $session->loadCount('students');
+        $enrolled = $session->students_count;
+        $quizIds = Quiz::where('subject_id', $session->id)->pluck('id');
+        $taskIds = Task::where('subject_id', $session->id)->pluck('id');
+
+        if ($quizIds->isNotEmpty()) {
+            $attempts = QuizAttempt::whereIn('quiz_id', $quizIds)->get();
+
+            if ($attempts->isNotEmpty()) {
+                $avg = $attempts->avg(fn ($attempt) => $attempt->total_questions > 0
+                    ? ($attempt->score / $attempt->total_questions) * 100
+                    : 0);
+
+                $quizScoreLabels[] = $session->class_code;
+                $quizScoreData[] = round($avg, 1);
+            }
+
+            if ($enrolled > 0) {
+                $participants = QuizAttempt::whereIn('quiz_id', $quizIds)->distinct()->count('user_id');
+                $quizParticipationLabels[] = $session->class_code;
+                $quizParticipationData[] = round(min(100, ($participants / $enrolled) * 100), 1);
+            }
+        }
+
+        if ($taskIds->isNotEmpty() && $enrolled > 0) {
+            $expected = $enrolled * $taskIds->count();
+            $submitted = Submission::whereIn('task_id', $taskIds)->count();
+            $taskSubmissionLabels[] = $session->class_code;
+            $taskSubmissionData[] = round(min(100, ($submitted / $expected) * 100), 1);
+        }
+    }
+
+    return [
+        'activity_breakdown' => [
+            'title' => 'Student Activity Breakdown',
+            'description' => 'See which activities your students engage with most across all your classes.',
+            'type' => 'bar',
+            'labels' => ['Navigation', 'Quizzes', 'Submissions', 'Materials', 'Violations'],
+            'datasets' => [[
+                'label' => 'Activity Count',
+                'data' => [$navigationLogsCount, $quizLogsCount, $submissionLogsCount, $materialLogsCount, $violationLogsCount],
+                'backgroundColor' => ['rgba(99, 102, 241, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)', 'rgba(168, 85, 247, 0.85)', 'rgba(239, 68, 68, 0.85)'],
+            ]],
+            'yLabel' => 'Total Events',
+        ],
+        'weekly_trend' => [
+            'title' => 'Weekly Activity Trend',
+            'description' => 'Track daily student engagement over the past 7 days to spot drops early.',
+            'type' => 'line',
+            'labels' => $weekly['labels'],
+            'datasets' => [[
+                'label' => 'Daily Activity',
+                'data' => $weekly['data'],
+                'borderColor' => '#4f46e5',
+                'backgroundColor' => 'rgba(99, 102, 241, 0.15)',
+                'fill' => true,
+                'tension' => 0.35,
+            ]],
+            'yLabel' => 'Events',
+        ],
+        'quiz_scores' => [
+            'title' => 'Average Quiz Score by Class',
+            'description' => 'Compare class performance as a percentage to identify sections that may need support.',
+            'type' => 'bar',
+            'labels' => $quizScoreLabels ?: ['No quiz data yet'],
+            'datasets' => [[
+                'label' => 'Average Score (%)',
+                'data' => $quizScoreData ?: [0],
+                'backgroundColor' => 'rgba(34, 197, 94, 0.85)',
+            ]],
+            'yLabel' => 'Score (%)',
+            'yMax' => 100,
+        ],
+        'quiz_participation' => [
+            'title' => 'Quiz Participation by Class',
+            'description' => 'Percentage of enrolled students who have attempted at least one quiz in each class.',
+            'type' => 'bar',
+            'labels' => $quizParticipationLabels ?: ['No classes with quizzes'],
+            'datasets' => [[
+                'label' => 'Participation (%)',
+                'data' => $quizParticipationData ?: [0],
+                'backgroundColor' => 'rgba(245, 158, 11, 0.85)',
+            ]],
+            'yLabel' => 'Participation (%)',
+            'yMax' => 100,
+        ],
+        'task_submissions' => [
+            'title' => 'Task Submission Rate by Class',
+            'description' => 'Shows how many expected task submissions have been received per class.',
+            'type' => 'bar',
+            'labels' => $taskSubmissionLabels ?: ['No tasks assigned yet'],
+            'datasets' => [[
+                'label' => 'Submission Rate (%)',
+                'data' => $taskSubmissionData ?: [0],
+                'backgroundColor' => 'rgba(59, 130, 246, 0.85)',
+            ]],
+            'yLabel' => 'Completion (%)',
+            'yMax' => 100,
+        ],
+        'attendance' => [
+            'title' => 'Attendance Snapshot',
+            'description' => 'Current present vs absent status across all enrolled students in your classes.',
+            'type' => 'doughnut',
+            'labels' => ['Present', 'Absent / Inactive'],
+            'datasets' => [[
+                'label' => 'Students',
+                'data' => [$presentCount, $absentCount],
+                'backgroundColor' => ['#22c55e', '#ef4444'],
+            ]],
+        ],
+    ];
+}
+
+private function buildAdminChartConfigs(
+    $allSessions,
+    int $activeClassesCount,
+    int $totalStudents,
+    int $totalProfessors,
+    int $totalAdmins
+): array {
+    $totalClasses = $allSessions->count();
+    $inactiveClasses = max(0, $totalClasses - $activeClassesCount);
+    $weekly = $this->buildWeeklyActivitySeries([], true);
+
+    $studentsByProgram = User::where('role', 'student')
+        ->whereNotNull('program')
+        ->where('program', '!=', '')
+        ->selectRaw('program, COUNT(*) as total')
+        ->groupBy('program')
+        ->orderByDesc('total')
+        ->get();
+
+    $classesByProgram = LabSession::selectRaw('program, COUNT(*) as total')
+        ->whereNotNull('program')
+        ->where('program', '!=', '')
+        ->groupBy('program')
+        ->orderByDesc('total')
+        ->get();
+
+    $professorLoad = User::where('role', 'professor')
+        ->withCount('managedSessions')
+        ->orderByDesc('managed_sessions_count')
+        ->get()
+        ->filter(fn ($professor) => $professor->managed_sessions_count > 0);
+
+    return [
+        'classroom_status' => [
+            'title' => 'Active vs Inactive Classes',
+            'description' => 'Monitor how many lab sessions are currently live versus scheduled or inactive.',
+            'type' => 'bar',
+            'labels' => ['Active Live Sessions', 'Inactive / Scheduled'],
+            'datasets' => [[
+                'label' => 'Classes',
+                'data' => [$activeClassesCount, $inactiveClasses],
+                'backgroundColor' => ['rgba(99, 102, 241, 0.85)', 'rgba(168, 85, 247, 0.35)'],
+            ]],
+            'yLabel' => 'Class Count',
+        ],
+        'user_roles' => [
+            'title' => 'User Account Distribution',
+            'description' => 'Overview of students, professors, and administrators registered in the system.',
+            'type' => 'doughnut',
+            'labels' => ['Students', 'Professors', 'Admins'],
+            'datasets' => [[
+                'label' => 'Accounts',
+                'data' => [$totalStudents, $totalProfessors, $totalAdmins],
+                'backgroundColor' => ['#22c55e', '#3b82f6', '#ef4444'],
+            ]],
+        ],
+        'weekly_activity' => [
+            'title' => 'System Activity (Last 7 Days)',
+            'description' => 'Total platform activity per day to gauge overall system usage and peak days.',
+            'type' => 'line',
+            'labels' => $weekly['labels'],
+            'datasets' => [[
+                'label' => 'Daily Events',
+                'data' => $weekly['data'],
+                'borderColor' => '#7c3aed',
+                'backgroundColor' => 'rgba(124, 58, 237, 0.15)',
+                'fill' => true,
+                'tension' => 0.35,
+            ]],
+            'yLabel' => 'Events',
+        ],
+        'enrollment_program' => [
+            'title' => 'Students by Program',
+            'description' => 'Enrollment distribution across degree programs to support resource planning.',
+            'type' => 'bar',
+            'labels' => $studentsByProgram->pluck('program')->all() ?: ['No program data'],
+            'datasets' => [[
+                'label' => 'Students',
+                'data' => $studentsByProgram->pluck('total')->all() ?: [0],
+                'backgroundColor' => 'rgba(34, 197, 94, 0.85)',
+            ]],
+            'yLabel' => 'Student Count',
+        ],
+        'classes_program' => [
+            'title' => 'Classes by Program',
+            'description' => 'Number of lab sessions offered per program across the institution.',
+            'type' => 'bar',
+            'labels' => $classesByProgram->pluck('program')->all() ?: ['No program data'],
+            'datasets' => [[
+                'label' => 'Classes',
+                'data' => $classesByProgram->pluck('total')->all() ?: [0],
+                'backgroundColor' => 'rgba(59, 130, 246, 0.85)',
+            ]],
+            'yLabel' => 'Class Count',
+        ],
+        'professor_load' => [
+            'title' => 'Professor Teaching Load',
+            'description' => 'Number of classes assigned to each professor to balance workloads.',
+            'type' => 'bar',
+            'labels' => $professorLoad->map(fn ($professor) => Str::limit($professor->name, 18))->values()->all() ?: ['No assignments'],
+            'datasets' => [[
+                'label' => 'Classes Assigned',
+                'data' => $professorLoad->pluck('managed_sessions_count')->values()->all() ?: [0],
+                'backgroundColor' => 'rgba(245, 158, 11, 0.85)',
+            ]],
+            'yLabel' => 'Class Count',
+        ],
+    ];
 }
 }

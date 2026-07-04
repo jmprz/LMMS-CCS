@@ -23,7 +23,8 @@ class LabSession extends Model
         'faculty_id', 
         'semester',
         'school_year',
-        'is_active'
+        'is_active',
+        'violation_warning_threshold',
     ];
 
     /**
@@ -40,7 +41,7 @@ class LabSession extends Model
     public function students(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'class_student', 'lab_session_id', 'user_id')
-                    ->withPivot('is_present');
+                    ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at']);
     }
 
     /**

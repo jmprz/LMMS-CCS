@@ -34,7 +34,7 @@ class User extends Authenticatable
     public function joinedClasses()
     {
         return $this->belongsToMany(LabSession::class, 'class_student', 'user_id', 'lab_session_id')
-                    ->withPivot('is_present')
+                    ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at'])
                     ->withTimestamps();
     }
 

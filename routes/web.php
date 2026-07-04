@@ -215,6 +215,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/quizzes/{quiz}/edit', [QuizController::class, 'edit'])->name('quizzes.edit');
         Route::put('/quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
         Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
+        Route::get('/quizzes/{quiz}/export-scores', [QuizController::class, 'exportScores'])->name('quizzes.export-scores');
 
         // Material Routes
         Route::get('/materials/{id}/viewers', [MaterialController::class, 'getViewers'])->name('materials.viewers');
@@ -232,6 +233,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/allowed-sites/{id}', [App\Http\Controllers\AllowedSiteController::class, 'destroy'])->name('allowed-sites.destroy');
         Route::get('/classroom/{id}/blocked-attempts', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedAttempts'])->name('blocked-attempts.index');
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
+        Route::put('/classroom/{id}/violation-settings', [ClassroomController::class, 'updateViolationSettings'])->name('classroom.violation-settings');
+        Route::post('/classroom/{classId}/students/{studentId}/unblock', [ClassroomController::class, 'unblockStudent'])->name('classroom.students.unblock');
 
         Route::get('/classroom/{id}/active-students', function ($id) {
             $session = \App\Models\LabSession::findOrFail($id);

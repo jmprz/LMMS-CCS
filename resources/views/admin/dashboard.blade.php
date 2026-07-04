@@ -130,27 +130,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <div
-                        class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-bold text-sm text-gray-800 uppercase tracking-wider">Classroom Allocations Overview</h2>
-                            <span class="text-[10px] font-bold bg-purple-50 text-purple-600 px-2.5 py-1 rounded-md uppercase">Live Sessions Monitor</span>
-                        </div>
-                        <div class="relative h-64 w-full">
-                            <canvas id="classroomStatusChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                        <div class="mb-4">
-                            <h2 class="font-bold text-sm text-gray-800 uppercase tracking-wider">User Account Allocation</h2>
-                        </div>
-                        <div class="relative h-64 w-full flex items-center justify-center">
-                            <canvas id="userRolesChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                @include('partials.dashboard-chart-panel', ['chartConfigs' => $chartConfigs])
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
@@ -347,79 +327,4 @@
             </div>
         </main>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Data bindings parsed securely directly from server compact payloads
-            const activeClasses = {{ $activeClassesCount }};
-            const totalClasses = {{ $allSessions->count() }};
-            const inactiveClasses = Math.max(0, totalClasses - activeClasses);
-
-            const totalStudents = {{ $totalStudents }};
-            const totalProfessors = {{ $totalProfessors }};
-            const totalUsersCount = {{ $totalUsers }};
-            const totalAdmins = Math.max(0, totalUsersCount - (totalStudents + totalProfessors));
-
-            // Setup Chart 1: Classroom Distribution Performance Metrics (Horizontal Bar Stack)
-            const ctxStatus = document.getElementById('classroomStatusChart').getContext('2d');
-            new Chart(ctxStatus, {
-                type: 'bar',
-                data: {
-                    labels: ['Active Live Sessions', 'Inactive / Scheduled Rooms'],
-                    datasets: [{
-                        label: 'Total Academic Rooms',
-                        data: [activeClasses, inactiveClasses],
-                        backgroundColor: ['rgba(99, 102, 241, 0.85)', 'rgba(168, 85, 247, 0.35)'],
-                        borderColor: ['#4f46e5', '#a855f7'],
-                        borderWidth: 1.5,
-                        borderRadius: 8,
-                        barThickness: 32
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } },
-                        x: { grid: { color: '#f3f4f6' }, ticks: { stepSize: 1 } }
-                    }
-                }
-            });
-
-            // Setup Chart 2: System Account Distribution (Doughnut Paradigm)
-            const ctxRoles = document.getElementById('userRolesChart').getContext('2d');
-            new Chart(ctxRoles, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Students', 'Professors', 'System Admins'],
-                    datasets: [{
-                        data: [totalStudents, totalProfessors, totalAdmins],
-                        backgroundColor: ['#22c55e', '#3b82f6', '#ef4444'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 16,
-                                font: { size: 11, weight: 'bold' },
-                                usePointStyle: true
-                            }
-                        }
-                    },
-                    cutout: '70%'
-                }
-            });
-        });
-    </script>
 </x-app-layout>

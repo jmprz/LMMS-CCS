@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\AllowedSite;
-use App\Models\BlockedAttempt;
+use App\Services\ViolationEnforcementService;
 
 class BrowserProxyController extends Controller
 {
@@ -29,15 +29,21 @@ class BrowserProxyController extends Controller
         // Check if URL is allowed
         $allowed = AllowedSite::isUrlAllowed($url, $labSessionId, $taskId);
 
-        // Only log if in a lab session (not from dashboard)
+        $enforcement = null;
         if (!$allowed && $labSessionId) {
-            BlockedAttempt::logAttempt($userId, $labSessionId, $url, 'not_whitelisted');
+            $enforcement = app(ViolationEnforcementService::class)->recordViolation(
+                $userId,
+                (int) $labSessionId,
+                'Attempted to access blocked site: ' . AllowedSite::extractDomain($url),
+                $url
+            );
         }
 
         return response()->json([
             'allowed' => $allowed,
             'domain' => AllowedSite::extractDomain($url),
-            'reason' => $allowed ? null : 'This website is not allowed during lab sessions.'
+            'reason' => $allowed ? null : 'This website is not allowed during lab sessions.',
+            'enforcement' => $enforcement,
         ]);
     }
 }

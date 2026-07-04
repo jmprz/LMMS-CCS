@@ -132,31 +132,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <div
-                        class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="font-bold text-sm text-gray-800 uppercase tracking-wider">Student Activity
-                                Densities</h2>
-                            <span
-                                class="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md uppercase">Session
-                                Volume Logistics</span>
-                        </div>
-                        <div class="relative h-64 w-full">
-                            <canvas id="studentEngagementChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                        <div class="mb-4">
-                            <h2 class="font-bold text-sm text-gray-800 uppercase tracking-wider">Attendance Status
-                                Matrix</h2>
-                        </div>
-                        <div class="relative h-64 w-full flex items-center justify-center">
-                            <canvas id="facultyAttendanceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                @include('partials.dashboard-chart-panel', ['chartConfigs' => $chartConfigs])
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -352,70 +328,4 @@
             </div>
         </main>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const ctxEngagement = document.getElementById('studentEngagementChart').getContext('2d');
-            new Chart(ctxEngagement, {
-                type: 'bar',
-                data: {
-                    labels: ['Navigation Logs', 'Quiz Interactions', 'Code Submissions'],
-                    datasets: [{
-                        label: 'Logs Collected',
-                        // 🟢 Driven dynamically from backend aggregates
-                        data: [
-                            {{ $navigationLogsCount ?? 0 }},
-                            {{ $quizLogsCount ?? 0 }},
-                            {{ $submissionLogsCount ?? 0 }}
-                        ],
-                        backgroundColor: ['rgba(99, 102, 241, 0.85)', 'rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],
-                        borderColor: ['#4f46e5', '#f59e0b', '#3b82f6'],
-                        borderWidth: 1.5,
-                        borderRadius: 8,
-                        barThickness: 26
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 11 } } },
-                        x: { grid: { color: '#f3f4f6' } }
-                    }
-                }
-            });
-
-            const ctxAttendance = document.getElementById('facultyAttendanceChart').getContext('2d');
-            new Chart(ctxAttendance, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Present Today', 'Absent / Inactive'],
-                    datasets: [{
-                        // 🟢 Driven dynamically from pivot rows
-                        data: [
-                            {{ $presentCount ?? 0 }},
-                            {{ $absentCount ?? 0 }}
-                        ],
-                        backgroundColor: ['#22c55e', '#ef4444'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { padding: 14, font: { size: 10, weight: 'bold' }, usePointStyle: true }
-                        }
-                    },
-                    cutout: '72%'
-                }
-            });
-        });
-    </script>
 </x-app-layout>
