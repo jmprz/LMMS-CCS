@@ -365,12 +365,42 @@
                                                             this.fetchSessionLogs();
                                                             setInterval(() => this.fetchSessionLogs(), 10000);
                                                         },
-                                                        getIcon(type) {
-                                                            const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
+                                                        getIcon(type, content = '') {
+                                                            const icons = {
+                                                                'attendance': 'ri-checkbox-circle-line',
+                                                                'navigation': 'ri-global-line',
+                                                                'submission': 'ri-file-upload-line',
+                                                                'material': 'ri-book-open-line',
+                                                                'quiz': 'ri-task-line',
+                                                                'professor_session': 'ri-broadcast-line',
+                                                                'screen_share': 'ri-projector-2-line'
+                                                            };
+                                                            
+                                                            if (type === 'professor_activity') {
+                                                                if (content.includes('Posted')) return 'ri-add-circle-line';
+                                                                if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
+                                                                if (content.includes('Deleted')) return 'ri-delete-bin-line';
+                                                                return 'ri-briefcase-line';
+                                                            }
                                                             return icons[type] || 'ri-cursor-line';
                                                         },
-                                                        getIconClass(type) {
-                                                            const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
+                                                        getIconClass(type, content = '') {
+                                                            const classes = {
+                                                                'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                                                                'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                                                                'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                                                                'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                                                                'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+                                                                'professor_session': 'bg-red-50 text-red-600 border border-red-200',
+                                                                'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
+                                                            };
+                                                            
+                                                            if (type === 'professor_activity') {
+                                                                if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
+                                                                if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+                                                                if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
+                                                                return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                                                            }
                                                             return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
                                                         },
                                                         formatTime(dateStr) {
@@ -409,8 +439,8 @@
                                                 <template x-for="log in logs" :key="log.id">
                                                     <div class="flex gap-3 items-start relative group">
                                                         <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm"
-                                                            :class="getIconClass(log.log_type)">
-                                                            <i :class="getIcon(log.log_type)"></i>
+                                                            :class="getIconClass(log.log_type, log.content)">
+                                                            <i :class="getIcon(log.log_type, log.content)"></i>
                                                         </div>
                                                         <div
                                                             class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
@@ -2410,15 +2440,15 @@
         // Shared local server configuration options
                                                                                         
         const localPeerOptions = {
-            host: 'peer.lmms-ccs.online',
-            port: 443,
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
-            secure: true,
+            secure: false,      
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
-            pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
-            debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
+            pingInterval: 5000,
+            debug: 3             
         };
 
 
