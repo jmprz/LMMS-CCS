@@ -390,10 +390,10 @@
             // Uniform local server configuration options object (Matches your local server!)
          
         const localPeerOptions = {
-            host: 'peer.lmms-ccs.online',
-            port: 443,
+            host: 'http://127.0.0.1',
+            port: 9000,
             path: '/myapp',
-            secure: true,
+            secure: false,
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },

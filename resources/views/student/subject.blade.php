@@ -664,10 +664,10 @@
 
     
     const localPeerOptions = {
-        host: 'peer.lmms-ccs.online',
-        port: 443,
+        host: '127.0.0.1',
+        port: 9000,
         path: '/myapp',
-        secure: true,
+        secure: false,
         config: {
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         },
