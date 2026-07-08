@@ -50,6 +50,7 @@ class User extends Authenticatable
         'program',
         'year_level',
         'section',
+        'status',
     ];
 
     protected $hidden = [

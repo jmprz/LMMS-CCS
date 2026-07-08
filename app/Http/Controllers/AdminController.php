@@ -374,6 +374,7 @@ public function updateUser(Request $request, User $user)
         'program' => 'nullable',
         'year_level' => 'nullable',
         'section' => 'nullable',
+        'status' => 'required|in:enrolled,dropped,graduated',
     ]);
 
     $validated['name'] = $validated['first_name'] . ' ' . $validated['last_name'];

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Attendance;
+use App\Models\ActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,11 +48,36 @@ public function store(LoginRequest $request): RedirectResponse
      */
    public function destroy(Request $request)
 {
+    $user = auth()->user();
+    
     // Mark student as not present before logging out
-    if (auth()->user()->role === 'student') {
+    if ($user && $user->role === 'student') {
         \DB::table('class_student')
             ->where('user_id', auth()->id())
             ->update(['is_present' => false]);
+    }
+
+    // Handle professor logout - update attendance time out
+    if ($user && $user->role === 'professor') {
+        // Find the last attendance record without a left_at time
+        $attendance = Attendance::where('user_id', $user->id)
+            ->whereNull('left_at')
+            ->latest()
+            ->first();
+
+        if ($attendance) {
+            $attendance->update([
+                'left_at' => now()->toTimeString()
+            ]);
+
+            // Log professor time out in activity timeline
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'lab_session_id' => $attendance->lab_session_id,
+                'log_type' => 'attendance',
+                'content' => 'Professor Time Out',
+            ]);
+        }
     }
 
     // Standard logout logic

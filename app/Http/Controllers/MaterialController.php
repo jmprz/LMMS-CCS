@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Material;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 
 class MaterialController extends Controller
@@ -37,7 +38,12 @@ class MaterialController extends Controller
             'title' => $request->title,
             'type' => $request->type,
             'content' => $contentPath,
-        ]);
+    ]);
+
+    $this->logProfessorActivity(
+        $labSessionId,
+        'Posted a learning material: "' . $material->title . '"'
+    );
 
     // =========================================================================
         // LIVE PRODUCTION EMAIL ALERTS FOR MATERIALS (SYNCHRONOUS TRANSMISSION)
@@ -158,6 +164,11 @@ public function logEnd(Request $request, \App\Models\Material $material)
 
         $material->save();
 
+        $this->logProfessorActivity(
+            $material->lab_session_id,
+            'Updated learning material: "' . $material->title . '"'
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Material updated successfully!'
@@ -182,7 +193,15 @@ public function logEnd(Request $request, \App\Models\Material $material)
         // Wipe associated tracking histories from table to avoid broken record dependencies
         \DB::table('material_logs')->where('material_id', $id)->delete();
         
+        $materialTitle = $material->title;
+        $labSessionId = $material->lab_session_id;
+
         $material->delete();
+
+        $this->logProfessorActivity(
+            $labSessionId,
+            'Deleted the learning material: "' . $materialTitle . '"'
+        );
 
         return response()->json([
             'success' => true,
@@ -220,4 +239,15 @@ public function logEnd(Request $request, \App\Models\Material $material)
 
         return response()->json($logs);
     }
+
+    private function logProfessorActivity($labSessionId, $content)
+    {
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'lab_session_id' => $labSessionId,
+            'log_type' => 'professor_activity',
+            'content' => $content,
+        ]);
+    }
+
 }

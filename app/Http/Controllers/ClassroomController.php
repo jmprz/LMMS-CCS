@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\LabSession;
 use App\Models\ActivityLog;
+use App\Models\Attendance;
 use Illuminate\Support\Facades\Auth;
 
 class ClassroomController extends Controller
@@ -72,6 +73,15 @@ class ClassroomController extends Controller
         // Sync without detaching so we don't remove existing students
         $session->students()->syncWithoutDetaching($studentIds);
 
+        $students = \App\Models\User::whereIn('id', $studentIds)->pluck('name');
+
+        foreach ($students as $studentName) {
+            $this->logProfessorActivity(
+                $session->id,
+                'Enrolled student: ' . $studentName
+            );
+        }
+
         // Return the fresh list of students to the frontend
         return response()->json([
             'message' => 'Enrolled successfully',
@@ -82,7 +92,14 @@ class ClassroomController extends Controller
     public function unenroll($sessionId, $studentId)
     {
         $session = LabSession::findOrFail($sessionId);
+        $student = \App\Models\User::find($studentId);
+
         $session->students()->detach($studentId);
+
+        $this->logProfessorActivity(
+            $session->id,
+            'Removed student: ' . $student->name
+        );
 
         return response()->json(['message' => 'Unenrolled successfully']);
     }
@@ -155,6 +172,11 @@ class ClassroomController extends Controller
             'section' => $request->section,
         ]);
 
+        $this->logProfessorActivity(
+            $session->id,
+            'Updated classroom information.'
+        );
+
         return back()->with('success', 'Academic session updated successfully!');
     }
 
@@ -168,6 +190,12 @@ class ClassroomController extends Controller
         // $classroom->tasks()->delete(); 
 
         // 3. Delete the parent classroom instance safely
+
+        $this->logProfessorActivity(
+            $classroom->id,
+            'Deleted classroom.'
+        );
+
         $classroom->delete();
 
         return back()->with('success', 'Classroom deleted successfully.');
@@ -185,7 +213,84 @@ class ClassroomController extends Controller
             $class->is_broadcasting = false;
         }
 
-        $class->save();
+       $class->save();
+
+        if ($class->is_active) {
+
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'log_type' => 'professor_session',
+                'content' => 'Professor started the classroom session.',
+            ]);
+
+            // Log professor attendance when starting session (Time In)
+            $attendance = Attendance::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'attendance_date' => now()->toDateString(),
+                'joined_at' => now()->toTimeString(),
+                'status' => 'present'
+            ]);
+
+            // Log professor time in activity timeline
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'log_type' => 'attendance',
+                'content' => 'Professor Time In',
+            ]);
+
+        } else {
+
+            $duration = 0;
+
+            $startLog = ActivityLog::where('user_id', Auth::id())
+                ->where('lab_session_id', $class->id)
+                ->where('log_type', 'professor_session')
+                ->whereNull('ended_at')
+                ->latest()
+                ->first();
+
+            if ($startLog) {
+
+                $duration = abs(now()->getTimestamp() - $startLog->created_at->getTimestamp());
+
+                $startLog->update([
+                    'ended_at' => now(),
+                    'duration_seconds' => $duration,
+                ]);
+            }
+
+            // Update attendance record with time out
+            $attendance = Attendance::where('user_id', Auth::id())
+                ->where('lab_session_id', $class->id)
+                ->whereNull('left_at')
+                ->latest()
+                ->first();
+
+            if ($attendance) {
+                $attendance->update([
+                    'left_at' => now()->toTimeString()
+                ]);
+            }
+
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'log_type' => 'professor_session',
+                'content' => 'Professor ended the classroom session.',
+                'duration_seconds' => $duration,
+            ]);
+
+            // Log professor time out activity timeline
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'log_type' => 'attendance',
+                'content' => 'Professor Time Out',
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -216,6 +321,44 @@ class ClassroomController extends Controller
         // Flip the broadcasting status
         $class->is_broadcasting = !$class->is_broadcasting;
         $class->save();
+
+        if ($class->is_broadcasting) {
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'log_type' => 'screen_share',
+                'content' => 'Professor started screen sharing.',
+            ]);
+        } else {
+
+            $duration = 0;
+
+            $startLog = ActivityLog::where('user_id', Auth::id())
+                ->where('lab_session_id', $class->id)
+                ->where('log_type', 'screen_share')
+                ->whereNull('ended_at')
+                ->latest()
+                ->first();
+
+            if ($startLog) {
+
+                $duration = abs(now()->getTimestamp() - $startLog->created_at->getTimestamp());
+
+                $startLog->update([
+                    'ended_at' => now(),
+                    'duration_seconds' => $duration,
+                ]);
+
+            }
+
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'lab_session_id' => $class->id,
+                'log_type' => 'screen_share',
+                'content' => 'Professor stopped screen sharing.',
+                'duration_seconds' => $duration,
+            ]);
+        }
 
         // Return a clean JSON response so the Javascript doesn't crash!
         return response()->json([
@@ -343,8 +486,16 @@ class ClassroomController extends Controller
     {
         try {
             // Fetch the latest 50 logs matching this specific lab session
-            $logs = \App\Models\ActivityLog::where('lab_session_id', $classId) // Adjust foreign key column name if needed
-                ->with('user') // Eager load student profiles to avoid N+1 issues
+            // Exclude attendance logs (time in/time out) - only show professor session, screen share, and activities
+            $logs = \App\Models\ActivityLog::where('lab_session_id', $classId)
+                ->whereNotIn('log_type', ['attendance']) // Exclude time in/out attendance logs
+                ->orWhere(function ($query) use ($classId) {
+                    // Or if it's attendance, only include if it's not professor time in/out (which would have specific content)
+                    $query->where('lab_session_id', $classId)
+                        ->where('log_type', 'attendance')
+                        ->whereNotIn('content', ['Professor Time In', 'Professor Time Out']);
+                })
+                ->with('user')
                 ->latest()
                 ->take(50)
                 ->get();
@@ -355,7 +506,9 @@ class ClassroomController extends Controller
                     'log_type' => $log->log_type,
                     'content' => $log->content,
                     'student_name' => $log->user ? $log->user->name : 'System',
-                    'created_at' => $log->created_at->toIso8601String()
+                    'created_at' => $log->created_at->toIso8601String(),
+                    'ended_at' => $log->ended_at,
+                    'duration_seconds' => $log->duration_seconds,
                 ];
             });
 
@@ -402,5 +555,15 @@ class ClassroomController extends Controller
         app(\App\Services\ViolationEnforcementService::class)->unblock((int) $studentId, (int) $classId);
 
         return response()->json(['success' => true, 'message' => 'Student screen unblocked.']);
+    }
+
+    private function logProfessorActivity($labSessionId, $content)
+    {
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'lab_session_id' => $labSessionId,
+            'log_type' => 'professor_activity',
+            'content' => $content,
+        ]);
     }
 }
