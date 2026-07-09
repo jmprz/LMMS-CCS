@@ -399,7 +399,11 @@
             },
             pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
             debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
+<<<<<<< Updated upstream
     };
+=======
+        };
+>>>>>>> Stashed changes
 
             // Initialize peer using the local configuration options
             const peer = new Peer('STUDENT_' + studentId, localPeerOptions);

@@ -403,4 +403,38 @@ class ClassroomController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Student screen unblocked.']);
     }
+<<<<<<< Updated upstream
+=======
+
+    public function getStudentViolations($classId)
+    {
+        $session = LabSession::findOrFail($classId);
+
+        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        $students = $session->students()->get(['users.id', 'users.first_name', 'users.last_name']);
+        
+        $violations = $students->map(function ($student) use ($session) {
+            return [
+                'id' => $student->id,
+                'violation_count' => $student->pivot->violation_count ?? 0,
+                'is_screen_blocked' => (bool) ($student->pivot->is_screen_blocked ?? false),
+            ];
+        });
+
+        return response()->json($violations);
+    }
+
+    private function logProfessorActivity($labSessionId, $content)
+    {
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'lab_session_id' => $labSessionId,
+            'log_type' => 'professor_activity',
+            'content' => $content,
+        ]);
+    }
+>>>>>>> Stashed changes
 }

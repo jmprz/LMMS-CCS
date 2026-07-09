@@ -354,6 +354,7 @@
                                     <div class="lg:col-span-1" x-data="{
                                                         logs: [],
                                                         loading: false,
+                                                        studentViolations: {},
                                                         fetchSessionLogs() {
                                                             this.loading = true;
                                                             fetch('/professor/classroom/{{ $class->id }}/activity-logs')
@@ -361,9 +362,33 @@
                                                                 .then(data => { this.logs = data; this.loading = false; })
                                                                 .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
                                                         },
+                                                        fetchStudentViolations() {
+                                                            fetch('/professor/classroom/{{ $class->id }}/student-violations')
+                                                                .then(res => res.json())
+                                                                .then(data => {
+                                                                    data.forEach(student => {
+                                                                        const oldData = this.studentViolations[student.id];
+                                                                        if (!oldData || 
+                                                                            oldData.violation_count !== student.violation_count ||
+                                                                            oldData.is_screen_blocked !== student.is_screen_blocked) {
+                                                                            window.dispatchEvent(new CustomEvent('student-violation-updated', {
+                                                                                detail: {
+                                                                                    studentId: student.id,
+                                                                                    violation_count: student.violation_count,
+                                                                                    is_screen_blocked: student.is_screen_blocked
+                                                                                }
+                                                                            }));
+                                                                        }
+                                                                        this.studentViolations[student.id] = student;
+                                                                    });
+                                                                })
+                                                                .catch(err => console.error('Failed to fetch student violations:', err));
+                                                        },
                                                         init() {
                                                             this.fetchSessionLogs();
+                                                            this.fetchStudentViolations();
                                                             setInterval(() => this.fetchSessionLogs(), 10000);
+                                                            setInterval(() => this.fetchStudentViolations(), 5000);
                                                         },
                                                         getIcon(type) {
                                                             const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
@@ -1745,8 +1770,23 @@
 
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 @forelse($class->students as $student)
-                                    <div @click="viewStudentActivity({{ $student->id }}, '{{ addslashes($student->first_name) }}', '{{ addslashes($student->last_name) }}', {{ json_encode($student->attendances ?? []) }}, {{ $class->id }})"
-                                        class="bg-white p-5 rounded-3xl border {{ ($student->pivot->is_screen_blocked ?? false) ? 'border-red-300 bg-red-50/30' : 'border-gray-100' }} flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
+                                    <div x-data="{
+                                        studentId: {{ $student->id }},
+                                        violationCount: {{ $student->pivot->violation_count ?? 0 }},
+                                        threshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
+                                        isScreenBlocked: {{ ($student->pivot->is_screen_blocked ?? false) ? 'true' : 'false' }},
+                                        init() {
+                                            window.addEventListener('student-violation-updated', (e) => {
+                                                if (e.detail.studentId === this.studentId) {
+                                                    this.violationCount = e.detail.violation_count;
+                                                    this.isScreenBlocked = e.detail.is_screen_blocked;
+                                                }
+                                            });
+                                        }
+                                    }"
+                                    @click="viewStudentActivity({{ $student->id }}, '{{ addslashes($student->first_name) }}', '{{ addslashes($student->last_name) }}', {{ json_encode($student->attendances ?? []) }}, {{ $class->id }})"
+                                    :class="isScreenBlocked ? 'border-red-300 bg-red-50/30' : 'border-gray-100'"
+                                    class="bg-white p-5 rounded-3xl border flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
 
                                         <div class="flex items-center gap-4">
                                             <div
@@ -1765,23 +1805,21 @@
                                                 <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
                                                     {{ $student->school_id }}
                                                 </p>
-                                                @if(($student->pivot->violation_count ?? 0) > 0)
-                                                    <p class="text-[9px] font-black uppercase tracking-widest mt-1 {{ ($student->pivot->is_screen_blocked ?? false) ? 'text-red-600' : 'text-amber-600' }}">
-                                                        {{ ($student->pivot->is_screen_blocked ?? false) ? 'Screen Locked' : 'Warnings' }}:
-                                                        {{ $student->pivot->violation_count ?? 0 }}/{{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }}
-                                                    </p>
-                                                @endif
+                                                <p x-show="violationCount > 0" 
+                                                   :class="isScreenBlocked ? 'text-red-600' : 'text-amber-600'"
+                                                   class="text-[9px] font-black uppercase tracking-widest mt-1">
+                                                    <span x-text="isScreenBlocked ? 'Screen Locked' : 'Warnings'"></span>:
+                                                    <span x-text="violationCount"></span>/<span x-text="threshold"></span>
+                                                </p>
                                             </div>
                                         </div>
 
                                         <div class="flex items-center gap-2">
-                                            @if($student->pivot->is_screen_blocked ?? false)
-                                                <button type="button"
-                                                    @click.stop="unblockStudent({{ $student->id }})"
-                                                    class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
-                                                    Unblock
-                                                </button>
-                                            @endif
+                                            <button x-show="isScreenBlocked" type="button"
+                                                @click.stop="unblockStudent({{ $student->id }})"
+                                                class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
+                                                Unblock
+                                            </button>
                                             @if($student->pivot->is_present)
                                                 <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"
                                                     title="Active"></div>
@@ -3104,7 +3142,15 @@
                         if (!res.ok) throw new Error(data.message || 'Failed to unblock');
 
                         alert('Student screen unblocked.');
-                        window.location.reload();
+                        
+                        // Dispatch event to update UI in real-time
+                        window.dispatchEvent(new CustomEvent('student-violation-updated', {
+                            detail: {
+                                studentId: studentId,
+                                violation_count: 0,
+                                is_screen_blocked: false
+                            }
+                        }));
                     } catch (error) {
                         alert(error.message || 'Failed to unblock student.');
                     }

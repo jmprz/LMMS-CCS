@@ -9,6 +9,8 @@
     @endphp
 
     <div id="screen-block-overlay"
+        x-data="{ violationCount: {{ $violationStatus['violation_count'] ?? 0 }}, threshold: {{ $violationStatus['threshold'] ?? 3 }} }"
+        x-init="window.addEventListener('violation-updated', (e) => { violationCount = e.detail.violation_count; threshold = e.detail.threshold; });"
         class="{{ ($violationStatus['is_screen_blocked'] ?? false) ? 'flex' : 'hidden' }} fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-6">
         <div class="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-10 text-center border border-red-100">
             <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -20,7 +22,7 @@
                 Your workspace is locked until your instructor unblocks you.
             </p>
             <p class="text-[10px] font-black uppercase tracking-widest text-red-500">
-                Violations: {{ $violationStatus['violation_count'] ?? 0 }} / {{ $violationStatus['threshold'] ?? 3 }}
+                Violations: <span x-text="violationCount"></span> / <span x-text="threshold"></span>
             </p>
         </div>
     </div>
@@ -631,6 +633,14 @@
             is_screen_blocked: !!result.is_screen_blocked,
         };
 
+        // Dispatch custom event for Alpine.js to update UI in real-time
+        window.dispatchEvent(new CustomEvent('violation-updated', {
+            detail: {
+                violation_count: violationState.violation_count,
+                threshold: violationState.threshold
+            }
+        }));
+
         if (result.is_screen_blocked) {
             showScreenBlockOverlay();
             return;
@@ -650,6 +660,14 @@
             remaining_warnings: data.remaining_warnings ?? violationState.remaining_warnings,
             is_screen_blocked: !!data.is_screen_blocked,
         };
+
+        // Dispatch custom event for Alpine.js to update UI in real-time
+        window.dispatchEvent(new CustomEvent('violation-updated', {
+            detail: {
+                violation_count: violationState.violation_count,
+                threshold: violationState.threshold
+            }
+        }));
 
         if (data.is_screen_blocked) {
             showScreenBlockOverlay();

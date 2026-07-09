@@ -235,6 +235,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/classroom/{id}/blocked-stats', [App\Http\Controllers\AllowedSiteController::class, 'getBlockedStats'])->name('blocked-attempts.stats');
         Route::put('/classroom/{id}/violation-settings', [ClassroomController::class, 'updateViolationSettings'])->name('classroom.violation-settings');
         Route::post('/classroom/{classId}/students/{studentId}/unblock', [ClassroomController::class, 'unblockStudent'])->name('classroom.students.unblock');
+        Route::get('/classroom/{classId}/student-violations', [ClassroomController::class, 'getStudentViolations'])->name('classroom.student-violations');
 
         Route::get('/classroom/{id}/active-students', function ($id) {
             $session = \App\Models\LabSession::findOrFail($id);
