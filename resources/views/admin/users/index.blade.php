@@ -394,14 +394,14 @@
                                 x-transition.opacity x-cloak>
 
                                 <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] m-4"
-                                    @click.away="logModalOpen = false">
+                                    @click.away="closeActivityTimeline()">
                                     <div class="p-6 border-b flex justify-between items-center bg-white rounded-t-2xl">
                                         <div>
                                             <h3 class="text-xl font-bold text-gray-800">Activity Timeline</h3>
                                             <p class="text-sm text-gray-500">History for <span
                                                     class="text-black font-bold" x-text="selectedUserName"></span></p>
                                         </div>
-                                        <button @click="logModalOpen = false"
+                                        <button @click="closeActivityTimeline()"
                                             class="text-gray-400 hover:text-gray-600 p-2 transition">
                                             <i class="ri-close-line text-2xl"></i>
                                         </button>
@@ -645,7 +645,9 @@
                 logModalOpen: false,
                 loading: false,
                 selectedUserName: '',
+                selectedUserId: null,
                 logs: [],
+                logRefreshInterval: null,
 
                 // NEW: Cloud Storage State Registries
                 driveModalOpen: false,
@@ -665,6 +667,12 @@
                             this.filterYear = '';
                             this.filterSection = '';
                             this.filterStatus = '';
+                        }
+                    });
+
+                    this.$watch('logModalOpen', isOpen => {
+                        if (!isOpen) {
+                            this.stopTimelineRefresh();
                         }
                     });
                 },
@@ -793,13 +801,13 @@
                     }
                 },
 
-                // ... Keep your pre-existing viewActivity(), formats, and log properties completely untouched ...
-                async viewActivity(userId, userName) {
+                async fetchActivityLogs(userId, showLoader = false) {
                     const user = this.users.find(u => u.id === userId);
-                    this.selectedUserName = `${user.last_name}, ${user.first_name}`;
-                    this.logModalOpen = true;
-                    this.loading = true;
-                    this.logs = [];
+
+                    if (showLoader) {
+                        this.loading = true;
+                    }
+
                     try {
                         const response = await fetch(`/admin/users/${userId}/activity-logs`);
                         let fetchedLogs = await response.json();
@@ -819,7 +827,34 @@
                     } catch (e) {
                         console.error("Log Fetch Failed", e);
                     } finally {
-                        this.loading = false;
+                        if (showLoader) {
+                            this.loading = false;
+                        }
+                    }
+                },
+                async viewActivity(userId, userName) {
+                    const user = this.users.find(u => u.id === userId);
+                    this.selectedUserId = userId;
+                    this.selectedUserName = user ? `${user.last_name}, ${user.first_name}` : userName;
+                    this.logModalOpen = true;
+                    this.logs = [];
+                    this.stopTimelineRefresh();
+                    await this.fetchActivityLogs(userId, true);
+                    this.logRefreshInterval = setInterval(() => {
+                        if (this.logModalOpen && this.selectedUserId) {
+                            this.fetchActivityLogs(this.selectedUserId);
+                        }
+                    }, 3000);
+                },
+                closeActivityTimeline() {
+                    this.logModalOpen = false;
+                    this.selectedUserId = null;
+                    this.stopTimelineRefresh();
+                },
+                stopTimelineRefresh() {
+                    if (this.logRefreshInterval) {
+                        clearInterval(this.logRefreshInterval);
+                        this.logRefreshInterval = null;
                     }
                 },
                 get groupedLogs() {

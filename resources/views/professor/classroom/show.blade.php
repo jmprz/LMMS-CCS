@@ -354,6 +354,7 @@
                                     <div class="lg:col-span-1" x-data="{
                                                         logs: [],
                                                         loading: false,
+                                                        refreshInterval: null,
                                                         fetchSessionLogs() {
                                                             this.loading = true;
                                                             fetch('/professor/classroom/{{ $class->id }}/activity-logs')
@@ -363,7 +364,10 @@
                                                         },
                                                         init() {
                                                             this.fetchSessionLogs();
-                                                            setInterval(() => this.fetchSessionLogs(), 10000);
+                                                            this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
+                                                        },
+                                                        destroy() {
+                                                            if (this.refreshInterval) clearInterval(this.refreshInterval);
                                                         },
                                                         getIcon(type, content = '') {
                                                             const icons = {
@@ -1836,7 +1840,7 @@
                                     x-transition.opacity x-cloak>
 
                                     <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden transform transition-all relative"
-                                        @click.away="logModalOpen = false" x-transition:enter="ease-out duration-300"
+                                        @click.away="closeActivityModal()" x-transition:enter="ease-out duration-300"
                                         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
 
@@ -1868,7 +1872,7 @@
                                             </div>
                                         </div>
 
-                                        <button @click="logModalOpen = false"
+                                        <button @click="closeActivityModal()"
                                             class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 border border-gray-200 rounded-xl transition-all z-10 shadow-sm">
                                             <i class="ri-close-line text-xl"></i>
                                         </button>
@@ -3114,9 +3118,21 @@
                 logModalOpen: false,
                 loading: false,
                 selectedUserName: '',
+                selectedUserId: null,
+                selectedClassId: null,
+                selectedAttendances: [],
+                logRefreshInterval: null,
                 logs: [],
                 studentFiles: [],
                 modalTab: 'logs', // Tracks 'logs' or 'files'
+
+                init() {
+                    this.$watch('logModalOpen', isOpen => {
+                        if (!isOpen) {
+                            this.stopActivityRefresh();
+                        }
+                    });
+                },
 
                 async unblockStudent(studentId) {
                     if (!confirm('Unblock this student and reset their violation count?')) return;
@@ -3140,14 +3156,10 @@
                     }
                 },
 
-                async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
-                    this.selectedUserName = `${lastName}, ${firstName}`;
-                    this.logModalOpen = true;
-                    this.loading = true;
-                    this.logs = [];
-                    this.studentFiles = [];
-                    this.modalTab = 'logs'; // Default to logs tab opening
-
+                async fetchStudentWorkspace(userId, classId, attendances = [], showLoader = false) {
+                    if (showLoader) {
+                        this.loading = true;
+                    }
                     try {
                         // Fetch Logs and Files at the same time
                         const [logsRes, filesRes] = await Promise.all([
@@ -3182,7 +3194,43 @@
                     } catch (e) {
                         console.error("Fetch Execution Failed", e);
                     } finally {
-                        this.loading = false;
+                        if (showLoader) {
+                            this.loading = false;
+                        }
+                    }
+                },
+
+                async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
+                    this.selectedUserName = `${lastName}, ${firstName}`;
+                    this.selectedUserId = userId;
+                    this.selectedClassId = classId;
+                    this.selectedAttendances = attendances || [];
+                    this.logModalOpen = true;
+                    this.logs = [];
+                    this.studentFiles = [];
+                    this.modalTab = 'logs'; // Default to logs tab opening
+                    this.stopActivityRefresh();
+
+                    await this.fetchStudentWorkspace(userId, classId, this.selectedAttendances, true);
+                    this.logRefreshInterval = setInterval(() => {
+                        if (this.logModalOpen && this.selectedUserId && this.selectedClassId) {
+                            this.fetchStudentWorkspace(this.selectedUserId, this.selectedClassId, this.selectedAttendances);
+                        }
+                    }, 3000);
+                },
+
+                closeActivityModal() {
+                    this.logModalOpen = false;
+                    this.selectedUserId = null;
+                    this.selectedClassId = null;
+                    this.selectedAttendances = [];
+                    this.stopActivityRefresh();
+                },
+
+                stopActivityRefresh() {
+                    if (this.logRefreshInterval) {
+                        clearInterval(this.logRefreshInterval);
+                        this.logRefreshInterval = null;
                     }
                 },
 
