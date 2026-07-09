@@ -294,6 +294,13 @@
                                                 <i class="ri-apps-2-line"></i>
                                             </button>
                                         </div>
+
+                                        <button onclick="openMonitoringWall()"
+                                            class="flex items-center gap-1.5 pl-3 pr-3.5 py-1.5 ml-1 rounded-xl text-xs font-black bg-[#383838] text-white hover:bg-black transition shadow-sm uppercase tracking-wide"
+                                            title="Open fullscreen monitoring wall">
+                                            <i class="ri-fullscreen-line"></i>
+                                            <span class="hidden sm:inline">Wall View</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -503,6 +510,43 @@
                                     <div class="aspect-video bg-black flex items-center justify-center">
                                         <video id="modal-video" autoplay playsinline
                                             class="w-full h-full object-contain"></video>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Fullscreen Monitoring Wall (all connected student screens, auto-adjusting grid) --}}
+                        <template x-teleport="body">
+                            <div id="monitoring-wall" class="fixed inset-0 z-[9998] bg-[#0a0a0a] hidden flex-col">
+
+                                <div
+                                    class="flex items-center justify-between px-6 py-4 bg-[#111111] border-b border-white/10 flex-shrink-0">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                                        <h3 class="text-white font-black text-sm uppercase tracking-widest">
+                                            Live Monitoring Wall
+                                        </h3>
+                                        <span id="wall-counter-label"
+                                            class="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-lg">
+                                            0 connected
+                                        </span>
+                                    </div>
+                                    <button onclick="closeMonitoringWall()"
+                                        class="flex items-center gap-1.5 text-gray-300 hover:text-white text-xs font-bold uppercase tracking-wide transition px-3 py-1.5 rounded-lg hover:bg-white/10">
+                                        <i class="ri-close-line text-xl"></i>
+                                        <span class="hidden sm:inline">Exit (Esc)</span>
+                                    </button>
+                                </div>
+
+                                <div class="flex-1 overflow-auto p-4">
+                                    <div id="wall-grid" class="grid gap-3 w-full h-full"></div>
+
+                                    <div id="wall-empty-state"
+                                        class="hidden h-full flex-col items-center justify-center text-center">
+                                        <i class="ri-tv-2-line text-5xl text-gray-700 mb-3"></i>
+                                        <p class="text-gray-500 font-bold text-xs uppercase tracking-widest">
+                                            No students connected yet
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -2467,6 +2511,143 @@
             if (broadcastPeer) { broadcastPeer.disconnect(); broadcastPeer.destroy(); }
         });
 
+        // ================================================================
+        // 🖥️ FULLSCREEN MONITORING WALL — shows every connected student
+        // screen at once in a grid that auto-adjusts to how many are live.
+        // ================================================================
+        let wallIsOpen = false;
+
+        // Computes a near-square grid (cols x rows) for N tiles, the same
+        // way Zoom/Meet-style "gallery view" walls size themselves.
+        function computeWallDimensions(count) {
+            if (count <= 0) return { cols: 1, rows: 1 };
+            if (count === 1) return { cols: 1, rows: 1 };
+            if (count === 2) return { cols: 2, rows: 1 };
+            if (count === 3) return { cols: 3, rows: 1 };
+            const cols = Math.ceil(Math.sqrt(count));
+            const rows = Math.ceil(count / cols);
+            return { cols, rows };
+        }
+
+        // Rebuilds the wall grid from whichever students are currently
+        // connected. Safe to call anytime — it's a no-op if the wall is
+        // closed, and reuses the *same* MediaStream objects already
+        // attached to the dashboard cards (a stream can back more than
+        // one <video> element at once, so no extra bandwidth is used).
+        function renderMonitoringWall() {
+            const wallGrid = document.getElementById('wall-grid');
+            const emptyState = document.getElementById('wall-empty-state');
+            const counterLabel = document.getElementById('wall-counter-label');
+            if (!wallGrid) return;
+
+            const ids = Array.from(connectedStudents);
+            if (counterLabel) {
+                counterLabel.innerText = ids.length === 1 ? '1 connected' : `${ids.length} connected`;
+            }
+
+            // Keep tiles for students who are still connected, drop the rest,
+            // add tiles for newcomers — avoids tearing down video elements
+            // that don't need to change (prevents stream flicker).
+            const existingTileIds = Array.from(wallGrid.children).map(el => el.dataset.studentId);
+
+            existingTileIds.forEach(id => {
+                if (!ids.includes(id)) {
+                    const tile = document.getElementById(`wall-tile-${id}`);
+                    if (tile) tile.remove();
+                }
+            });
+
+            if (ids.length === 0) {
+                wallGrid.classList.add('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+
+            wallGrid.classList.remove('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
+
+            const { cols, rows } = computeWallDimensions(ids.length);
+            wallGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+            wallGrid.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+
+            ids.forEach(studentId => {
+                let tile = document.getElementById(`wall-tile-${studentId}`);
+                const sourceVideo = document.getElementById(`video-${studentId}`);
+                const card = document.getElementById(`student-card-${studentId}`);
+                const nameEl = card ? card.querySelector('[title]') : null;
+                const fullName = nameEl ? nameEl.getAttribute('title') : `Student ${studentId}`;
+
+                if (!tile) {
+                    tile = document.createElement('div');
+                    tile.id = `wall-tile-${studentId}`;
+                    tile.dataset.studentId = studentId;
+                    tile.className = 'relative bg-black rounded-xl overflow-hidden border border-white/10';
+                    tile.innerHTML = `
+                        <video id="wall-video-${studentId}" autoplay muted playsinline
+                            class="w-full h-full object-cover"></video>
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 to-transparent px-3 py-2 flex items-center justify-between">
+                            <span class="text-white text-[11px] font-black truncate tracking-wide uppercase"></span>
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0 ml-2"></span>
+                        </div>
+                    `;
+                    wallGrid.appendChild(tile);
+                }
+
+                tile.querySelector('span.truncate').innerText = fullName;
+
+                const wallVideo = tile.querySelector('video');
+                if (sourceVideo && sourceVideo.srcObject && wallVideo.srcObject !== sourceVideo.srcObject) {
+                    wallVideo.srcObject = sourceVideo.srcObject;
+                    wallVideo.play().catch(() => { });
+                }
+            });
+        }
+
+        window.openMonitoringWall = function () {
+            const wall = document.getElementById('monitoring-wall');
+            if (!wall) return;
+
+            wall.classList.remove('hidden');
+            wall.classList.add('flex');
+            wallIsOpen = true;
+            renderMonitoringWall();
+
+            const requestFs = wall.requestFullscreen || wall.webkitRequestFullscreen;
+            if (requestFs) {
+                requestFs.call(wall).catch(err => console.warn('Fullscreen request denied:', err));
+            }
+        };
+
+        window.closeMonitoringWall = function () {
+            const wall = document.getElementById('monitoring-wall');
+            if (!wall) return;
+
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(() => { });
+            }
+
+            wall.classList.add('hidden');
+            wall.classList.remove('flex');
+            wallIsOpen = false;
+        };
+
+        // Exiting fullscreen via Esc/browser chrome should close the wall too.
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && wallIsOpen) {
+                window.closeMonitoringWall();
+            }
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (!document.webkitFullscreenElement && wallIsOpen) {
+                window.closeMonitoringWall();
+            }
+        });
+
+        // Re-flow tile sizing on resize/orientation change.
+        window.addEventListener('resize', () => {
+            if (wallIsOpen) renderMonitoringWall();
+        });
+
         // Explicitly exposed to window scope to fix ReferenceError
         window.openFullscreenViewer = function (studentId, fullNameFormat) {
             console.log("Opening custom proctoring modal for student ID:", studentId);
@@ -2512,6 +2693,7 @@
             // Reset whole grid counter state
             connectedStudents.clear();
             updateConnectedCounter();
+            if (wallIsOpen) renderMonitoringWall();
             console.log("✅ Local peer hardware links closed successfully.");
         }
 
@@ -2573,6 +2755,7 @@
                         // UPDATE STREAM TRACKING COUNTER
                         connectedStudents.add(studentId);
                         updateConnectedCounter();
+                        if (wallIsOpen) renderMonitoringWall();
 
                         videoElement.play().catch(err => {
                             console.error("Video playback failed:", err);
@@ -2613,6 +2796,7 @@
                     // REMOVE FROM STREAM TRACKING COUNTER
                     connectedStudents.delete(studentId);
                     updateConnectedCounter();
+                    if (wallIsOpen) renderMonitoringWall();
                 };
 
                 call.on('close', handleStudentDisconnect);
@@ -2657,6 +2841,7 @@
 
             connectedStudents.delete(studentId);
             updateConnectedCounter();
+            if (wallIsOpen) renderMonitoringWall();
         }
 
         // 🟢 BROADCASTING ACTIONS (Professor -> Everyone)
