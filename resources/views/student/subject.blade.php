@@ -664,15 +664,15 @@
 
     
     const localPeerOptions = {
-        host: '127.0.0.1',
-        port: 9000,
+        host: 'localhost',
+        port: 9000,          // Default port for local PeerJS server
         path: '/myapp',
-        secure: false,
+        secure: false,      
         config: {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         },
-        pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
-        debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
+        pingInterval: 5000,
+        debug: 3             
     };
 
 

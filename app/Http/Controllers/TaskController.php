@@ -10,6 +10,7 @@ use App\Models\RubricCriterion;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
+use App\Models\ActivityLog;
 
 class TaskController extends Controller
 {
@@ -134,6 +135,11 @@ class TaskController extends Controller
             }
             // =========================================================================
 
+            $this->logProfessorActivity(
+                $request->subject_id,
+                'Posted a task: "' . $task->title . '"'
+            );
+
             DB::commit();
             return response()->json(['success' => true, 'task' => $task]);
 
@@ -213,6 +219,11 @@ class TaskController extends Controller
                 ]);
             }
 
+            $this->logProfessorActivity(
+                $task->subject_id,
+                'Updated the task: "' . $task->title . '"'
+            );
+
             DB::commit();
             return response()->json(['success' => true, 'task' => $task]);
 
@@ -223,30 +234,48 @@ class TaskController extends Controller
         }
     }
     public function destroy($id)
-{
-    try {
-        DB::beginTransaction();
+    {
+        try {
+            DB::beginTransaction();
 
-        $task = Task::findOrFail($id);
+            $task = Task::findOrFail($id);
 
-        // Optional: Manual cleanup if DB cascade is not set up
-        if ($task->rubric) {
-            $task->rubric->criteria()->delete();
-            $task->rubric->delete();
+            // Optional: Manual cleanup if DB cascade is not set up
+            if ($task->rubric) {
+                $task->rubric->criteria()->delete();
+                $task->rubric->delete();
+            }
+            
+            // Clean up submissions linked to this task
+            $task->submissions()->delete();
+
+            // Delete the main task record
+            $taskTitle = $task->title;
+            $labSessionId = $task->subject_id;
+
+            $task->delete();
+            
+            $this->logProfessorActivity(
+                $labSessionId,
+                'Deleted task: "' . $taskTitle . '"'
+            );
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Task and all related student submissions were successfully deleted.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to delete task: ' . $e->getMessage());
         }
-        
-        // Clean up submissions linked to this task
-        $task->submissions()->delete();
-
-        // Delete the main task record
-        $task->delete();
-
-        DB::commit();
-        return redirect()->back()->with('success', 'Task and all related student submissions were successfully deleted.');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return redirect()->back()->with('error', 'Failed to delete task: ' . $e->getMessage());
     }
-}
+    
+    private function logProfessorActivity($labSessionId, $content)
+    {
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'lab_session_id' => $labSessionId,
+            'log_type' => 'professor_activity',
+            'content' => $content,
+        ]);
+    }
 }
