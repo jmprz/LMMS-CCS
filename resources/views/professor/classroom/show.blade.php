@@ -354,7 +354,6 @@
                                     <div class="lg:col-span-1" x-data="{
                                                         logs: [],
                                                         loading: false,
-                                                        studentViolations: {},
                                                         fetchSessionLogs() {
                                                             this.loading = true;
                                                             fetch('/professor/classroom/{{ $class->id }}/activity-logs')
@@ -386,16 +385,47 @@
                                                         },
                                                         init() {
                                                             this.fetchSessionLogs();
-                                                            this.fetchStudentViolations();
                                                             setInterval(() => this.fetchSessionLogs(), 10000);
-                                                            setInterval(() => this.fetchStudentViolations(), 5000);
                                                         },
-                                                        getIcon(type) {
-                                                            const icons = { 'attendance': 'ri-checkbox-circle-line', 'navigation': 'ri-global-line', 'submission': 'ri-file-upload-line', 'material': 'ri-book-open-line', 'quiz': 'ri-task-line' };
+                                                        destroy() {
+                                                            if (this.refreshInterval) clearInterval(this.refreshInterval);
+                                                        },
+                                                        getIcon(type, content = '') {
+                                                            const icons = {
+                                                                'attendance': 'ri-checkbox-circle-line',
+                                                                'navigation': 'ri-global-line',
+                                                                'submission': 'ri-file-upload-line',
+                                                                'material': 'ri-book-open-line',
+                                                                'quiz': 'ri-task-line',
+                                                                'professor_session': 'ri-broadcast-line',
+                                                                'screen_share': 'ri-projector-2-line'
+                                                            };
+                                                            
+                                                            if (type === 'professor_activity') {
+                                                                if (content.includes('Posted')) return 'ri-add-circle-line';
+                                                                if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
+                                                                if (content.includes('Deleted')) return 'ri-delete-bin-line';
+                                                                return 'ri-briefcase-line';
+                                                            }
                                                             return icons[type] || 'ri-cursor-line';
                                                         },
-                                                        getIconClass(type) {
-                                                            const classes = { 'attendance': 'bg-green-50 text-green-600 border border-green-200', 'navigation': 'bg-amber-50 text-amber-600 border border-amber-200', 'submission': 'bg-blue-50 text-blue-600 border border-blue-200', 'material': 'bg-purple-50 text-purple-600 border border-purple-200', 'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200' };
+                                                        getIconClass(type, content = '') {
+                                                            const classes = {
+                                                                'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                                                                'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                                                                'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                                                                'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                                                                'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+                                                                'professor_session': 'bg-red-50 text-red-600 border border-red-200',
+                                                                'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
+                                                            };
+                                                            
+                                                            if (type === 'professor_activity') {
+                                                                if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
+                                                                if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+                                                                if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
+                                                                return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                                                            }
                                                             return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
                                                         },
                                                         formatTime(dateStr) {
@@ -434,8 +464,8 @@
                                                 <template x-for="log in logs" :key="log.id">
                                                     <div class="flex gap-3 items-start relative group">
                                                         <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-sm"
-                                                            :class="getIconClass(log.log_type)">
-                                                            <i :class="getIcon(log.log_type)"></i>
+                                                            :class="getIconClass(log.log_type, log.content)">
+                                                            <i :class="getIcon(log.log_type, log.content)"></i>
                                                         </div>
                                                         <div
                                                             class="flex-grow min-w-0 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/80 rounded-xl p-2.5 transition">
@@ -1844,7 +1874,7 @@
                                     x-transition.opacity x-cloak>
 
                                     <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden transform transition-all relative"
-                                        @click.away="logModalOpen = false" x-transition:enter="ease-out duration-300"
+                                        @click.away="closeActivityModal()" x-transition:enter="ease-out duration-300"
                                         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
 
@@ -1876,7 +1906,7 @@
                                             </div>
                                         </div>
 
-                                        <button @click="logModalOpen = false"
+                                        <button @click="closeActivityModal()"
                                             class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 border border-gray-200 rounded-xl transition-all z-10 shadow-sm">
                                             <i class="ri-close-line text-xl"></i>
                                         </button>
@@ -2448,15 +2478,15 @@
         // Shared local server configuration options
                                                                                         
         const localPeerOptions = {
-            host: 'peer.lmms-ccs.online',
-            port: 443,
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
-            secure: true,
+            secure: false,      
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
-            pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
-            debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
+            pingInterval: 5000,
+            debug: 3             
         };
 
 
@@ -3122,9 +3152,21 @@
                 logModalOpen: false,
                 loading: false,
                 selectedUserName: '',
+                selectedUserId: null,
+                selectedClassId: null,
+                selectedAttendances: [],
+                logRefreshInterval: null,
                 logs: [],
                 studentFiles: [],
                 modalTab: 'logs', // Tracks 'logs' or 'files'
+
+                init() {
+                    this.$watch('logModalOpen', isOpen => {
+                        if (!isOpen) {
+                            this.stopActivityRefresh();
+                        }
+                    });
+                },
 
                 async unblockStudent(studentId) {
                     if (!confirm('Unblock this student and reset their violation count?')) return;
@@ -3156,14 +3198,10 @@
                     }
                 },
 
-                async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
-                    this.selectedUserName = `${lastName}, ${firstName}`;
-                    this.logModalOpen = true;
-                    this.loading = true;
-                    this.logs = [];
-                    this.studentFiles = [];
-                    this.modalTab = 'logs'; // Default to logs tab opening
-
+                async fetchStudentWorkspace(userId, classId, attendances = [], showLoader = false) {
+                    if (showLoader) {
+                        this.loading = true;
+                    }
                     try {
                         // Fetch Logs and Files at the same time
                         const [logsRes, filesRes] = await Promise.all([
@@ -3198,7 +3236,43 @@
                     } catch (e) {
                         console.error("Fetch Execution Failed", e);
                     } finally {
-                        this.loading = false;
+                        if (showLoader) {
+                            this.loading = false;
+                        }
+                    }
+                },
+
+                async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
+                    this.selectedUserName = `${lastName}, ${firstName}`;
+                    this.selectedUserId = userId;
+                    this.selectedClassId = classId;
+                    this.selectedAttendances = attendances || [];
+                    this.logModalOpen = true;
+                    this.logs = [];
+                    this.studentFiles = [];
+                    this.modalTab = 'logs'; // Default to logs tab opening
+                    this.stopActivityRefresh();
+
+                    await this.fetchStudentWorkspace(userId, classId, this.selectedAttendances, true);
+                    this.logRefreshInterval = setInterval(() => {
+                        if (this.logModalOpen && this.selectedUserId && this.selectedClassId) {
+                            this.fetchStudentWorkspace(this.selectedUserId, this.selectedClassId, this.selectedAttendances);
+                        }
+                    }, 3000);
+                },
+
+                closeActivityModal() {
+                    this.logModalOpen = false;
+                    this.selectedUserId = null;
+                    this.selectedClassId = null;
+                    this.selectedAttendances = [];
+                    this.stopActivityRefresh();
+                },
+
+                stopActivityRefresh() {
+                    if (this.logRefreshInterval) {
+                        clearInterval(this.logRefreshInterval);
+                        this.logRefreshInterval = null;
                     }
                 },
 

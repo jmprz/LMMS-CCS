@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Quiz;
 use App\Models\LabSession;
 use App\Models\QuizAttempt;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -77,6 +78,11 @@ class QuizController extends Controller
                     ]);
                 }
             }
+            
+            $this->logProfessorActivity(
+                $quiz->subject_id,
+                'Posted a quiz: "' . $quiz->title . '"'
+            );
 
             // =========================================================================
             // LIVE PRODUCTION EMAIL ALERTS FOR QUIZZES (SYNCHRONOUS TRANSMISSION)
@@ -249,6 +255,12 @@ class QuizController extends Controller
     public function destroy($id)
     {
         $quiz = Quiz::findOrFail($id);
+
+        $this->logProfessorActivity(
+            $quiz->subject_id,
+            'Deleted the quiz: "' . $quiz->title . '"'
+        );
+
         $quiz->delete(); // This removes the quiz and related attempts if cascade is on
 
         return redirect()->back()->with('success', 'Quiz deleted successfully!');
@@ -401,6 +413,11 @@ class QuizController extends Controller
                     }
                 }
 
+                $this->logProfessorActivity(
+                    $quiz->subject_id,
+                    'Updated the quiz: "' . $quiz->title . '"'
+                );
+
                 return redirect()->route('professor.classroom.show', $quiz->subject_id)
                     ->with('success', 'Quiz structural updates committed successfully!');
             });
@@ -425,4 +442,15 @@ class QuizController extends Controller
 
         return view('student.quizzes.show', compact('quiz'));
     }
+
+    private function logProfessorActivity($labSessionId, $content)
+    {
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'lab_session_id' => $labSessionId,
+            'log_type' => 'professor_activity',
+            'content' => $content,
+        ]);
+    }
+
 }

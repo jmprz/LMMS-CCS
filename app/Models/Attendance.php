@@ -11,6 +11,7 @@ class Attendance extends Model
         'lab_session_id', 
         'attendance_date', 
         'joined_at', 
+        'left_at',
         'status'
     ];
 

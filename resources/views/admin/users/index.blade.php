@@ -90,7 +90,8 @@
         role: '',
         program: '',
         year_level: '',
-        section: ''
+        section: '',
+        status: 'enrolled'
     },
     openEditModal(user) {
         this.editUserData = { ...user };
@@ -99,7 +100,7 @@
 }" x-cloak>
                     <div class="mt-4" x-data="userManagement({{ $users->toJson() }})">
                         <div
-                            class="mb-6 grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
+                            class="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
                             <div class="relative">
                                 <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                                 <input type="text" x-model="search" placeholder="Search name..."
@@ -141,6 +142,18 @@
                                 <option value="B">Section B</option>
                                 <option value="C">Section C</option>
                             </select>
+
+                            <select
+                                x-model="filterStatus"
+                                :disabled="filterRole !== 'student' && filterRole !== ''"
+                                :class="filterRole !== 'student' && filterRole !== '' ? 'opacity-50 cursor-not-allowed' : ''"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none transition">
+
+                                <option value="">All Status</option>
+                                <option value="enrolled">Enrolled</option>
+                                <option value="dropped">Dropped</option>
+                                <option value="graduated">Graduated</option>
+                            </select>
                         </div>
 
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -151,6 +164,8 @@
                                         <th x-show="filterRole === 'student' || filterRole === ''"
                                             class="px-6 py-4 font-semibold">Program/Year/Section</th>
                                         <th class="px-6 py-4 font-semibold">Role</th>
+                                        <th x-show="filterRole === 'student' || filterRole === ''" 
+                                            class="px-6 py-4 font-semibold">Status</th>
                                         <th class="px-6 py-4 font-semibold text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -176,6 +191,22 @@
                                                 <span
                                                     class="px-2 py-1 bg-gray-100 font-mono font-bold rounded text-[10px] font-bold uppercase"
                                                     x-text="user.role"></span>
+                                            </td>
+                                            <td
+                                                x-show="filterRole === 'student' || filterRole === ''"
+                                                class="px-6 py-4">
+                                                <template x-if="user.role === 'student'">
+                                                    <span
+                                                        class="px-3 py-1 rounded-full text-[10px] font-bold uppercase"
+
+                                                        :class="{
+                                                            'bg-green-100 text-green-700': user.status === 'enrolled',
+                                                            'bg-red-100 text-red-700': user.status === 'dropped',
+                                                            'bg-blue-100 text-blue-700': user.status === 'graduated'
+                                                        }"
+                                                        x-text="user.status">
+                                                    </span>
+                                                </template>
                                             </td>
                                             <td class="px-6 py-4 text-right">
                                                 <div class="flex justify-end gap-2">
@@ -207,7 +238,7 @@
                                     </template>
                                     <template x-if="filteredUsers.length === 0">
                                         <tr>
-                                            <td colspan="4" class="px-6 py-10 text-center text-gray-400 italic text-sm">
+                                            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic text-sm">
                                                 No
                                                 users found matching your filters.</td>
                                         </tr>
@@ -307,7 +338,7 @@
                                             <div x-show="editUserData.role === 'student'"
                                                 x-transition:enter="transition ease-out duration-200"
                                                 x-transition:enter-start="opacity-0 transform -translate-y-2"
-                                                class="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-gray-50/80 border border-gray-100 rounded-2xl mb-6">
+                                                class="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-gray-50/80 border border-gray-100 rounded-2xl mb-6">
                                                 <div>
                                                     <label
                                                         class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Program</label>
@@ -330,8 +361,17 @@
                                                         placeholder="e.g. A"
                                                         class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Status</label>
+                                                    <select name="status" x-model="editUserData.status"
+                                                        class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                                        <option value="enrolled">Enrolled</option>
+                                                        <option value="dropped">Dropped</option>
+                                                        <option value="graduated" :disabled="editUserData.year_level >= 1 && editUserData.year_level <= 3">Graduated</option>
+                                                    </select>
+                                                </div>
                                             </div>
-
                                             <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-50">
                                                 <button type="button" @click="showEditModal = false"
                                                     class="px-6 py-3 rounded-2xl text-[11px] uppercase tracking-widest text-gray-500 font-black hover:bg-gray-100 transition-colors">
@@ -354,14 +394,14 @@
                                 x-transition.opacity x-cloak>
 
                                 <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] m-4"
-                                    @click.away="logModalOpen = false">
+                                    @click.away="closeActivityTimeline()">
                                     <div class="p-6 border-b flex justify-between items-center bg-white rounded-t-2xl">
                                         <div>
                                             <h3 class="text-xl font-bold text-gray-800">Activity Timeline</h3>
                                             <p class="text-sm text-gray-500">History for <span
                                                     class="text-black font-bold" x-text="selectedUserName"></span></p>
                                         </div>
-                                        <button @click="logModalOpen = false"
+                                        <button @click="closeActivityTimeline()"
                                             class="text-gray-400 hover:text-gray-600 p-2 transition">
                                             <i class="ri-close-line text-2xl"></i>
                                         </button>
@@ -380,59 +420,82 @@
 
                                             <template x-for="(group, date) in groupedLogs" :key="date">
                                                 <div class="relative">
-                                                    <div class="sticky top-0 z-20 mb-6">
+                                                    <div class="sticky top-0 z-20 mb-6 flex">
                                                         <span
-                                                            class="bg-white border border-gray-200 text-gray-600 text-[11px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-sm"
+                                                            class="bg-white border border-gray-200 text-gray-800 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-sm"
                                                             x-text="formatDateHeader(date)"></span>
                                                     </div>
 
                                                     <div class="space-y-4 ml-4">
                                                         <template x-for="log in group" :key="log.id">
                                                             <div
-                                                                class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-4 hover:border-gray-300 transition-all relative group">
-                                                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 z-10"
-                                                                    :class="getIconClass(log.log_type)">
-                                                                    <i :class="getIcon(log.log_type)"
-                                                                        class="text-lg"></i>
+                                                                class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-5 hover:border-gray-300 transition-all relative group">
+                                                                <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm"
+                                                                    :class="getIconClass(log.log_type, log.content)">
+                                                                    <i :class="getIcon(log.log_type, log.content)"
+                                                                        class="text-xl"></i>
                                                                 </div>
 
-                                                                <div class="flex-1 min-w-0">
-                                                                    <div class="flex justify-between items-start gap-2">
+                                                                <div class="flex-1 min-w-0 pt-0.5">
+                                                                    <div
+                                                                        class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                                                         <div>
-                                                                            <p class="text-sm font-bold text-gray-800 leading-tight"
+                                                                            <p class="text-sm font-black text-gray-900 leading-tight"
                                                                                 x-text="log.content"></p>
-                                                                            <p class="text-[11px] mt-1 text-gray-500 font-bold uppercase tracking-wider text-[10px]"
+                                                                            <p class="text-[9px] mt-1.5 text-gray-400 font-bold uppercase tracking-widest"
                                                                                 x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 
-                                                                            log.log_type === 'submission' ? 'Task Submission' : 
-                                                                            log.log_type === 'material' ? 'Courseware Access' : 
-                                                                            log.log_type === 'quiz' ? 'Assessment Activity' : 'Navigation Log'">
+                                                                    log.log_type === 'submission' ? 'Task Submission' : 
+                                                                    log.log_type === 'material' ? 'Courseware Access' : 
+                                                                    log.log_type === 'quiz' ? 'Assessment Activity' :
+                                                                    log.log_type === 'professor_session' ? 'Session Management' :
+                                                                    log.log_type === 'screen_share' ? 'Screen Sharing' :
+                                                                    log.log_type === 'professor_activity' ? 'Instructor Activity' : 'Navigation Log'">
                                                                             </p>
                                                                         </div>
                                                                         <span
-                                                                            class="text-[10px] font-mono text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded"
+                                                                            class="text-[10px] font-black text-gray-800 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100"
                                                                             x-text="formatTime(log.created_at)"></span>
                                                                     </div>
 
                                                                     <div
-                                                                        class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-gray-400">
-                                                                        <template x-if="log.log_type !== 'attendance'">
-                                                                            <span class="flex items-center gap-1">
-                                                                                <i class="ri-time-line"></i>
-                                                                                Duration: <strong class="text-gray-600"
-                                                                                    x-text="log.duration_seconds + 's'"></strong>
+                                                                        class="mt-4 flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                                                        <template
+                                                                            x-if="log.log_type !== 'attendance' && log.log_type !== 'professor_activity' && !((log.log_type === 'professor_session' || log.log_type === 'screen_share') && !log.content.includes('ended') && !log.content.includes('stopped'))">
+                                                                            <span
+                                                                                class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg">
+                                                                                <i
+                                                                                    class="ri-time-line text-gray-400"></i>
+                                                                                <span
+                                                                                    x-text="log.duration_seconds + 's'"></span>
                                                                             </span>
                                                                         </template>
-
-                                                                        <span class="flex items-center gap-1">
-                                                                            <i class="ri-book-open-line"></i>
-                                                                            Class: <strong class="text-gray-600"
-                                                                                x-text="log.class_name || 'General Session'"></strong>
+                                                                        <span
+                                                                            class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg truncate max-w-[250px]">
+                                                                            <i
+                                                                                class="ri-book-open-line text-gray-400"></i>
+                                                                            <span class="truncate"
+                                                                                x-text="log.class_name || 'General Session'"></span>
                                                                         </span>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         </template>
                                                     </div>
+                                                </div>
+                                            </template>
+
+                                            <template x-if="Object.keys(groupedLogs).length === 0 && !loading">
+                                                <div
+                                                    class="text-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center">
+                                                    <div
+                                                        class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
+                                                        <i class="ri-history-line text-2xl text-gray-300"></i>
+                                                    </div>
+                                                    <h4 class="text-gray-900 font-bold mb-1">No Activity Found
+                                                    </h4>
+                                                    <p
+                                                        class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
+                                                        This user has no recorded activity.</p>
                                                 </div>
                                             </template>
                                         </div>
@@ -577,11 +640,14 @@
                 filterProgram: '',
                 filterYear: '',
                 filterSection: '',
+                filterStatus: '',
 
                 logModalOpen: false,
                 loading: false,
                 selectedUserName: '',
+                selectedUserId: null,
                 logs: [],
+                logRefreshInterval: null,
 
                 // NEW: Cloud Storage State Registries
                 driveModalOpen: false,
@@ -600,6 +666,13 @@
                             this.filterProgram = '';
                             this.filterYear = '';
                             this.filterSection = '';
+                            this.filterStatus = '';
+                        }
+                    });
+
+                    this.$watch('logModalOpen', isOpen => {
+                        if (!isOpen) {
+                            this.stopTimelineRefresh();
                         }
                     });
                 },
@@ -615,8 +688,9 @@
                         const matchesProgram = this.filterProgram === '' || (user.program || '') === this.filterProgram;
                         const matchesYear = this.filterYear === '' || String(user.year_level || '') === this.filterYear;
                         const matchesSection = this.filterSection === '' || (user.section || '') === this.filterSection;
+                        const matchesStatus = this.filterStatus === '' || (user.status || '') === this.filterStatus;
 
-                        return matchesSearch && matchesRole && matchesProgram && matchesYear && matchesSection;
+                        return matchesSearch && matchesRole && matchesProgram && matchesYear && matchesSection && matchesStatus;
                     });
                 },
 
@@ -727,13 +801,13 @@
                     }
                 },
 
-                // ... Keep your pre-existing viewActivity(), formats, and log properties completely untouched ...
-                async viewActivity(userId, userName) {
+                async fetchActivityLogs(userId, showLoader = false) {
                     const user = this.users.find(u => u.id === userId);
-                    this.selectedUserName = `${user.last_name}, ${user.first_name}`;
-                    this.logModalOpen = true;
-                    this.loading = true;
-                    this.logs = [];
+
+                    if (showLoader) {
+                        this.loading = true;
+                    }
+
                     try {
                         const response = await fetch(`/admin/users/${userId}/activity-logs`);
                         let fetchedLogs = await response.json();
@@ -753,7 +827,34 @@
                     } catch (e) {
                         console.error("Log Fetch Failed", e);
                     } finally {
-                        this.loading = false;
+                        if (showLoader) {
+                            this.loading = false;
+                        }
+                    }
+                },
+                async viewActivity(userId, userName) {
+                    const user = this.users.find(u => u.id === userId);
+                    this.selectedUserId = userId;
+                    this.selectedUserName = user ? `${user.last_name}, ${user.first_name}` : userName;
+                    this.logModalOpen = true;
+                    this.logs = [];
+                    this.stopTimelineRefresh();
+                    await this.fetchActivityLogs(userId, true);
+                    this.logRefreshInterval = setInterval(() => {
+                        if (this.logModalOpen && this.selectedUserId) {
+                            this.fetchActivityLogs(this.selectedUserId);
+                        }
+                    }, 3000);
+                },
+                closeActivityTimeline() {
+                    this.logModalOpen = false;
+                    this.selectedUserId = null;
+                    this.stopTimelineRefresh();
+                },
+                stopTimelineRefresh() {
+                    if (this.logRefreshInterval) {
+                        clearInterval(this.logRefreshInterval);
+                        this.logRefreshInterval = null;
                     }
                 },
                 get groupedLogs() {
@@ -776,20 +877,36 @@
                 formatTime(dateStr) {
                     return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
                 },
-                getIcon(type) {
+                getIcon(type, content = '') {
                     if (type === 'attendance') return 'ri-checkbox-circle-line';
                     if (type === 'navigation') return 'ri-global-line';
                     if (type === 'submission') return 'ri-file-upload-line';
                     if (type === 'material') return 'ri-book-open-line';
                     if (type === 'quiz') return 'ri-task-line';
+                    if (type === 'professor_session') return 'ri-broadcast-line';
+                    if (type === 'screen_share') return 'ri-projector-2-line';
+                    if (type === 'professor_activity') {
+                        if (content.includes('Posted')) return 'ri-add-circle-line';
+                        if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
+                        if (content.includes('Deleted')) return 'ri-delete-bin-line';
+                        return 'ri-briefcase-line';
+                    }
                     return 'ri-cursor-line';
                 },
-                getIconClass(type) {
+                getIconClass(type, content = '') {
                     if (type === 'attendance') return 'bg-green-50 text-green-600 border border-green-200';
                     if (type === 'navigation') return 'bg-amber-50 text-amber-600 border border-amber-200';
                     if (type === 'submission') return 'bg-blue-50 text-blue-600 border border-blue-200';
                     if (type === 'material') return 'bg-purple-50 text-purple-600 border border-purple-200';
                     if (type === 'quiz') return 'bg-indigo-50 text-indigo-600 border border-indigo-200';
+                    if (type === 'professor_session') return 'bg-red-50 text-red-600 border border-red-200';
+                    if (type === 'screen_share') return 'bg-orange-50 text-orange-600 border border-orange-200';
+                    if (type === 'professor_activity') {
+                        if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
+                        if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+                        if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
+                        return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                    }
                     return 'bg-gray-100 text-gray-600';
                 }
             }
