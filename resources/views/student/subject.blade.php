@@ -9,9 +9,10 @@
     @endphp
 
     <div id="screen-block-overlay"
-        x-data="{ violationCount: {{ $violationStatus['violation_count'] ?? 0 }}, threshold: {{ $violationStatus['threshold'] ?? 3 }} }"
-        x-init="window.addEventListener('violation-updated', (e) => { violationCount = e.detail.violation_count; threshold = e.detail.threshold; });"
-        class="{{ ($violationStatus['is_screen_blocked'] ?? false) ? 'flex' : 'hidden' }} fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-6">
+        x-data="{ violationCount: {{ $violationStatus['violation_count'] ?? 0 }}, threshold: {{ $violationStatus['threshold'] ?? 3 }}, isScreenBlocked: {{ ($violationStatus['is_screen_blocked'] ?? false) ? 'true' : 'false' } }"
+        x-init="window.addEventListener('violation-updated', (e) => { violationCount = e.detail.violation_count; threshold = e.detail.threshold; isScreenBlocked = e.detail.is_screen_blocked; });"
+        x-show="isScreenBlocked"
+        class="fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-6">
         <div class="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-10 text-center border border-red-100">
             <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="ri-lock-2-line text-4xl text-red-600"></i>
@@ -637,14 +638,10 @@
         window.dispatchEvent(new CustomEvent('violation-updated', {
             detail: {
                 violation_count: violationState.violation_count,
-                threshold: violationState.threshold
+                threshold: violationState.threshold,
+                is_screen_blocked: violationState.is_screen_blocked
             }
         }));
-
-        if (result.is_screen_blocked) {
-            showScreenBlockOverlay();
-            return;
-        }
 
         if (result.action === 'warning' && result.message) {
             showViolationWarning(result.message);
@@ -665,32 +662,23 @@
         window.dispatchEvent(new CustomEvent('violation-updated', {
             detail: {
                 violation_count: violationState.violation_count,
-                threshold: violationState.threshold
+                threshold: violationState.threshold,
+                is_screen_blocked: violationState.is_screen_blocked
             }
         }));
-
-        if (data.is_screen_blocked) {
-            showScreenBlockOverlay();
-        } else {
-            hideScreenBlockOverlay();
-        }
     }
 
-    if (violationState.is_screen_blocked) {
-        document.addEventListener('DOMContentLoaded', showScreenBlockOverlay);
-    }
 
-    
-    const localPeerOptions = {
-        host: 'localhost',
-        port: 9000,          // Default port for local PeerJS server
+     const localPeerOptions = {
+        host: 'peer.lmms-ccs.online',
+        port: 443,
         path: '/myapp',
-        secure: false,      
+        secure: true,
         config: {
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         },
-        pingInterval: 5000,
-        debug: 3             
+        pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
+        debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
     };
 
 
