@@ -354,6 +354,12 @@
                                     <div class="lg:col-span-1" x-data="{
                                                         logs: [],
                                                         loading: false,
+<<<<<<< Updated upstream
+=======
+                                                        refreshInterval: null,
+                                                        violationInterval: null,
+                                                        lastViolations: {},
+>>>>>>> Stashed changes
                                                         fetchSessionLogs() {
                                                             this.loading = true;
                                                             fetch('/professor/classroom/{{ $class->id }}/activity-logs')
@@ -366,6 +372,7 @@
                                                                 .then(res => res.json())
                                                                 .then(data => {
                                                                     data.forEach(student => {
+<<<<<<< Updated upstream
                                                                         const oldData = this.studentViolations[student.id];
                                                                         if (!oldData || 
                                                                             oldData.violation_count !== student.violation_count ||
@@ -386,9 +393,37 @@
                                                         init() {
                                                             this.fetchSessionLogs();
                                                             setInterval(() => this.fetchSessionLogs(), 10000);
+=======
+                                                                        const key = student.student_id;
+                                                                        const lastData = this.lastViolations[key];
+                                                                        if (!lastData || 
+                                                                            lastData.violation_count !== student.violation_count ||
+                                                                            lastData.is_screen_blocked !== student.is_screen_blocked) {
+                                                                            // Dispatch event to update UI
+                                            window.dispatchEvent(new CustomEvent('student-violation-updated', {
+                                                detail: {
+                                                    studentId: student.student_id,
+                                                    violation_count: student.violation_count,
+                                                    threshold: student.threshold,
+                                                    is_screen_blocked: student.is_screen_blocked
+                                                }
+                                            }));
+                                        }
+                                        this.lastViolations[key] = student;
+                                    });
+                                })
+                                .catch(err => console.error('Failed to fetch student violations:', err));
+                            },
+                                                        init() {
+                                                            this.fetchSessionLogs();
+                                                            this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
+                                                            this.fetchStudentViolations();
+                                                            this.violationInterval = setInterval(() => this.fetchStudentViolations(), 5000);
+>>>>>>> Stashed changes
                                                         },
                                                         destroy() {
                                                             if (this.refreshInterval) clearInterval(this.refreshInterval);
+                                                            if (this.violationInterval) clearInterval(this.violationInterval);
                                                         },
                                                         getIcon(type, content = '') {
                                                             const icons = {
@@ -1801,6 +1836,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 @forelse($class->students as $student)
                                     <div x-data="{
+<<<<<<< Updated upstream
                                         studentId: {{ $student->id }},
                                         violationCount: {{ $student->pivot->violation_count ?? 0 }},
                                         threshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
@@ -1814,6 +1850,20 @@
                                             });
                                         }
                                     }"
+=======
+                                        violationCount: {{ $student->pivot->violation_count ?? 0 }},
+                                        threshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
+                                        isScreenBlocked: {{ ($student->pivot->is_screen_blocked ?? false) ? 'true' : 'false' }},
+                                        studentId: {{ $student->id }}
+                                    }"
+                                    x-init="window.addEventListener('student-violation-updated', (e) => {
+                                        if (e.detail.studentId === studentId) {
+                                            violationCount = e.detail.violation_count;
+                                            threshold = e.detail.threshold;
+                                            isScreenBlocked = e.detail.is_screen_blocked;
+                                        }
+                                    });"
+>>>>>>> Stashed changes
                                     @click="viewStudentActivity({{ $student->id }}, '{{ addslashes($student->first_name) }}', '{{ addslashes($student->last_name) }}', {{ json_encode($student->attendances ?? []) }}, {{ $class->id }})"
                                     :class="isScreenBlocked ? 'border-red-300 bg-red-50/30' : 'border-gray-100'"
                                     class="bg-white p-5 rounded-3xl border flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
@@ -1835,21 +1885,39 @@
                                                 <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
                                                     {{ $student->school_id }}
                                                 </p>
+<<<<<<< Updated upstream
                                                 <p x-show="violationCount > 0" 
                                                    :class="isScreenBlocked ? 'text-red-600' : 'text-amber-600'"
                                                    class="text-[9px] font-black uppercase tracking-widest mt-1">
                                                     <span x-text="isScreenBlocked ? 'Screen Locked' : 'Warnings'"></span>:
                                                     <span x-text="violationCount"></span>/<span x-text="threshold"></span>
                                                 </p>
+=======
+                                                <template x-if="violationCount > 0">
+                                                    <p x-text="(isScreenBlocked ? 'Screen Locked' : 'Warnings') + ': ' + violationCount + '/' + threshold"
+                                                       :class="isScreenBlocked ? 'text-red-600' : 'text-amber-600'"
+                                                       class="text-[9px] font-black uppercase tracking-widest mt-1"></p>
+                                                </template>
+>>>>>>> Stashed changes
                                             </div>
                                         </div>
 
                                         <div class="flex items-center gap-2">
+<<<<<<< Updated upstream
                                             <button x-show="isScreenBlocked" type="button"
                                                 @click.stop="unblockStudent({{ $student->id }})"
                                                 class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
                                                 Unblock
                                             </button>
+=======
+                                            <template x-if="isScreenBlocked">
+                                                <button type="button"
+                                                    @click.stop="unblockStudent(studentId)"
+                                                    class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
+                                                    Unblock
+                                                </button>
+                                            </template>
+>>>>>>> Stashed changes
                                             @if($student->pivot->is_present)
                                                 <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"
                                                     title="Active"></div>
@@ -3184,12 +3252,19 @@
                         if (!res.ok) throw new Error(data.message || 'Failed to unblock');
 
                         alert('Student screen unblocked.');
+<<<<<<< Updated upstream
                         
+=======
+>>>>>>> Stashed changes
                         // Dispatch event to update UI in real-time
                         window.dispatchEvent(new CustomEvent('student-violation-updated', {
                             detail: {
                                 studentId: studentId,
                                 violation_count: 0,
+<<<<<<< Updated upstream
+=======
+                                threshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
+>>>>>>> Stashed changes
                                 is_screen_blocked: false
                             }
                         }));

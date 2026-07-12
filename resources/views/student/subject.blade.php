@@ -9,10 +9,32 @@
     @endphp
 
     <div id="screen-block-overlay"
+<<<<<<< Updated upstream
         x-data="{ violationCount: {{ $violationStatus['violation_count'] ?? 0 }}, threshold: {{ $violationStatus['threshold'] ?? 3 }}, isScreenBlocked: {{ ($violationStatus['is_screen_blocked'] ?? false) ? 'true' : 'false' } }"
         x-init="window.addEventListener('violation-updated', (e) => { violationCount = e.detail.violation_count; threshold = e.detail.threshold; isScreenBlocked = e.detail.is_screen_blocked; });"
         x-show="isScreenBlocked"
         class="fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-6">
+=======
+        x-data="{
+            violationCount: {{ $violationStatus['violation_count'] ?? 0 }},
+            threshold: {{ $violationStatus['threshold'] ?? 3 }},
+            isScreenBlocked: {{ $violationStatus['is_screen_blocked'] ? 'true' : 'false' }},
+            wasBlocked: {{ $violationStatus['is_screen_blocked'] ? 'true' : 'false' }}
+        }"
+        x-init="window.addEventListener('violation-updated', (e) => { 
+            violationCount = e.detail.violation_count; 
+            threshold = e.detail.threshold; 
+            if (wasBlocked && !e.detail.is_screen_blocked) {
+                // Student was just unblocked, prompt for screen sharing again
+                setTimeout(() => enterClassroom(), 500);
+            }
+            wasBlocked = e.detail.is_screen_blocked;
+            isScreenBlocked = e.detail.is_screen_blocked; 
+        });"
+        x-show="isScreenBlocked"
+        x-transition.opacity
+        class="fixed inset-0 z-[99999] bg-[#111827] flex items-center justify-center p-6">
+>>>>>>> Stashed changes
         <div class="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-10 text-center border border-red-100">
             <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="ri-lock-2-line text-4xl text-red-600"></i>
@@ -669,7 +691,11 @@
     }
 
 
+<<<<<<< Updated upstream
      const localPeerOptions = {
+=======
+    const localPeerOptions = {
+>>>>>>> Stashed changes
         host: 'peer.lmms-ccs.online',
         port: 443,
         path: '/myapp',
@@ -720,6 +746,13 @@
     async function enterClassroom() {
         try {
             console.log("📹 Accessing student display media for monitoring...");
+            
+            // Cleanup any existing stream before starting new one
+            if (localScreenStream) {
+                localScreenStream.getTracks().forEach(track => track.stop());
+                localScreenStream = null;
+            }
+
             // Request the feed using high-performance constraints suited for production
             localScreenStream = await navigator.mediaDevices.getDisplayMedia({
                 video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 15 } },
@@ -835,16 +868,6 @@
     });
 </script>
 <script>
-
-        async function enterClassroom() {
-            try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-                window.dispatchEvent(new CustomEvent('screen-shared'));
-                const call = studentPeer.call(profPeerId, stream, { metadata: { studentId: {{ auth()->id() }}, studentName: '{{ auth()->user()->name }}' } });
-                fetch("{{ route('student.mark-present', $class->id) }}", { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' } });
-                stream.getVideoTracks()[0].onended = () => { window.dispatchEvent(new CustomEvent('screen-stopped')); location.reload(); };
-            } catch (err) { console.error("Capture Failed", err); }
-        }
 
         function classroomTasks() {
             return {
