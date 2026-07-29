@@ -2488,15 +2488,15 @@
         // Shared local server configuration options
                                                                                         
         const localPeerOptions = {
-            host: 'localhost',
-            port: 9000,          // Default port for local PeerJS server
+            host: 'peer.lmms-ccs.online',
+            port: 443,
             path: '/myapp',
-            secure: false,      
+            secure: true,
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
-            pingInterval: 5000,
-            debug: 3             
+            pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
+            debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
         };
 
 
@@ -2541,6 +2541,20 @@
             if (!wallGrid) return;
 
             const ids = Array.from(connectedStudents);
+            
+            // Sort students alphabetically by name
+            ids.sort((a, b) => {
+                const cardA = document.getElementById(`student-card-${a}`);
+                const nameElA = cardA ? cardA.querySelector('[title]') : null;
+                const nameA = nameElA ? nameElA.getAttribute('title') : `Student ${a}`;
+                
+                const cardB = document.getElementById(`student-card-${b}`);
+                const nameElB = cardB ? cardB.querySelector('[title]') : null;
+                const nameB = nameElB ? nameElB.getAttribute('title') : `Student ${b}`;
+                
+                return nameA.localeCompare(nameB);
+            });
+            
             if (counterLabel) {
                 counterLabel.innerText = ids.length === 1 ? '1 connected' : `${ids.length} connected`;
             }
