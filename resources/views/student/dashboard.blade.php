@@ -389,16 +389,16 @@
 
             // Uniform local server configuration options object (Matches your local server!)
          
-        const localPeerOptions = {
-            host: 'peer.lmms-ccs.online',
-            port: 443,
+         const localPeerOptions = {
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
-            secure: true,
+            secure: false,      
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
-            pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
-            debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
+            pingInterval: 5000,
+            debug: 3             
         };
 
             // Initialize peer using the local configuration options

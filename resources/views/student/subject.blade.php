@@ -17,11 +17,11 @@
             <h2 class="text-2xl font-black text-gray-900 mb-3">Screen Locked</h2>
             <p class="text-sm text-gray-500 leading-relaxed mb-4">
                 You reached the maximum number of policy violations for this lab session.
-                Your workspace is locked until your instructor unblocks you.
+                Your workspace is locked until your professor unblocks you.
             </p>
-            <p class="text-[10px] font-black uppercase tracking-widest text-red-500">
-                Violations: {{ $violationStatus['violation_count'] ?? 0 }} / {{ $violationStatus['threshold'] ?? 3 }}
-            </p>
+           <p id="screen-block-violation-text" class="text-[10px] font-black uppercase tracking-widest text-red-500">
+    Violations: {{ $violationStatus['violation_count'] ?? 0 }} / {{ $violationStatus['threshold'] ?? 3 }}
+        </p>
         </div>
     </div>
 
@@ -38,11 +38,14 @@
             </button>
         </div>
     </div>
-
-    <!-- Lifted isSharing state to the root level to expose it to the FAB button -->
-    <div class="flex h-screen w-full bg-gray-50 overflow-hidden" x-data="{ sidebarOpen: false, activeToolTab: 'compiler', isSharing: false }" @screen-shared.window="isSharing = true" @screen-stopped.window="isSharing = false">
+<!-- UPDATED: Added isFullWidth state -->
+<div class="flex h-screen w-full bg-gray-50 overflow-hidden" 
+     x-data="{ sidebarOpen: false, isFullWidth: false, activeToolTab: 'compiler', isSharing: false }" 
+     @screen-shared.window="isSharing = true" 
+     @screen-stopped.window="isSharing = false">
         
-        <div :class="sidebarOpen ? 'w-1/2' : 'w-full'" class="h-full relative transition-all duration-500 ease-in-out flex flex-col border-r border-gray-200">
+      <div :class="!sidebarOpen ? 'w-full' : (isFullWidth ? 'w-0 opacity-0 overflow-hidden pointer-events-none' : 'w-1/2')" 
+     class="h-full relative transition-all duration-500 ease-in-out flex flex-col border-r border-gray-200">
             
             <div id="lockdown-ui" class="hidden w-full h-full bg-black relative flex-1 flex-col">
                 <video id="professor-screen" autoplay playsinline muted class="w-full h-full object-contain"></video>
@@ -177,7 +180,7 @@
     
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <template x-for="quiz in filteredQuizzes" :key="quiz.id">
-            <div @click="$dispatch('open-quiz', { id: quiz.id })" 
+           <div @click="handleQuizClick(quiz)"
      class="bg-white p-5 rounded-[28px] border border-gray-100 flex flex-col justify-between group hover:border-[#383838] cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-gray-100/50 active:scale-[0.98] animate-fade-in min-h-[220px]">
                 <div class="space-y-4">
                     <div class="flex items-start gap-3">
@@ -250,17 +253,17 @@
         </div> 
         
         <div x-show="sidebarOpen" 
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="translate-x-full" 
-             x-transition:enter-end="translate-x-0"
-             x-transition:leave="transition ease-in duration-300" 
-             x-transition:leave-start="translate-x-0" 
-             x-transition:leave-end="translate-x-full"
-             class="w-1/2 h-full bg-white flex flex-col border-l border-gray-200 z-40 shrink-0 shadow-2xl">
+     :class="isFullWidth ? 'w-full' : 'w-1/2'"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="translate-x-full" 
+     x-transition:enter-end="translate-x-0"
+     x-transition:leave="transition ease-in duration-300" 
+     x-transition:leave-start="translate-x-0" 
+     x-transition:leave-end="translate-x-full"
+     class="h-full bg-white flex flex-col border-l border-gray-200 z-40 shrink-0 shadow-2xl transition-all duration-500 ease-in-out">
             
             <div class="border-b border-gray-100 p-4 flex flex-col xl:flex-row justify-between items-center bg-white gap-4 shrink-0">
                 <div class="flex flex-wrap items-center gap-2 bg-gray-50/50 p-1.5 rounded-[18px] border border-gray-100">
-                    <!-- REMOVED: Live Tasks tab toggle button -->
                     <button @click="activeToolTab = 'compiler'"
                             :class="activeToolTab === 'compiler' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
                             class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
@@ -277,6 +280,14 @@
                         <i class="ri-file-text-line text-sm"></i> Editor
                     </button>
                 </div>
+                <div class="flex items-center gap-2">
+        <button @click="isFullWidth = !isFullWidth" 
+                class="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold border border-gray-200 transition-all flex items-center gap-2"
+                :title="isFullWidth ? 'Split View (50%)' : 'Full Screen View (100%)'">
+            <i :class="isFullWidth ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'" class="text-base"></i>
+            <span class="text-[10px] font-black uppercase tracking-wider hidden sm:inline" x-text="isFullWidth ? 'Split Screen' : 'Full Screen'"></span>
+        </button>
+    </div>
             </div>
 
             <div class="flex-grow w-full bg-gray-50 relative overflow-hidden flex flex-col">
@@ -289,19 +300,71 @@
 
                 <div x-show="activeToolTab === 'browser'" class="w-full h-full flex flex-col bg-white" x-data="browserManager()">
                     <div class="p-4 border-b border-gray-100 bg-white shrink-0">
-                        <div class="flex items-center gap-3">
-                            <button @click="browserBack()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Back"><i class="ri-arrow-left-line text-xl"></i></button>
-                            <button @click="browserForward()" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Go Forward"><i class="ri-arrow-right-line text-xl"></i></button>
-                            <button @click="browserRefresh()" :class="refreshing ? 'animate-spin' : ''" class="p-2 hover:bg-gray-100 rounded-lg transition" title="Refresh Page"><i class="ri-refresh-line text-xl"></i></button>
-                            <div class="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
-                                <i class="ri-global-line text-gray-400"></i>
-                                <input type="text" x-model="urlInput" @keyup.enter="navigateTo()" placeholder="Search educational URL..." class="flex-1 bg-transparent border-0 focus:ring-0 text-sm p-0 focus:outline-none w-full">
-                            </div>
-                            <button @click="navigateTo()" :disabled="loadingUrl" :class="loadingUrl ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'" class="px-6 py-2 text-white rounded-xl font-bold transition text-xs">
-                                <span x-show="!loadingUrl">Go</span><span x-show="loadingUrl">...</span>
-                            </button>
-                        </div>
-                    </div>
+    <div class="flex items-center gap-2.5 bg-white p-2 rounded-2xl border border-gray-200/80 shadow-sm">
+    
+    <!-- Grouped Navigation Controls -->
+    <div class="flex items-center gap-0.5 bg-gray-50/80 p-1 rounded-xl border border-gray-100 shrink-0">
+        <button @click="browserBack()" 
+                class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-all hover:shadow-xs shrink-0" 
+                title="Go Back">
+            <i class="ri-arrow-left-line text-lg"></i>
+        </button>
+        <button @click="browserForward()" 
+                class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-all hover:shadow-xs shrink-0" 
+                title="Go Forward">
+            <i class="ri-arrow-right-line text-lg"></i>
+        </button>
+        <button @click="browserRefresh()" 
+                class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-lg transition-all hover:shadow-xs shrink-0" 
+                title="Refresh Page">
+            <i class="ri-refresh-line text-lg" :class="refreshing ? 'animate-spin text-blue-600' : ''"></i>
+        </button>
+    </div>
+
+    <!-- Integrated URL / Search Capsule -->
+    <div class="flex-1 min-w-0 flex items-center gap-2 bg-gray-50 hover:bg-gray-100/70 focus-within:bg-white border border-gray-200 focus-within:border-gray-400 focus-within:ring-4 focus-within:ring-gray-100 rounded-xl px-3 py-1.5 transition-all">
+        
+        <!-- Status / Dynamic Icon -->
+        <div class="flex items-center text-gray-400 shrink-0">
+            <i class="ri-global-line text-base" x-show="!urlInput"></i>
+            <i class="ri-search-line text-base text-gray-500" x-show="urlInput" x-cloak></i>
+        </div>
+
+        <!-- Input Field -->
+        <input type="text" 
+               x-model="urlInput" 
+               @keyup.enter="navigateTo()" 
+               placeholder="Enter website URL or educational search query..." 
+               class="flex-1 min-w-0 bg-transparent border-0 focus:ring-0 text-xs font-semibold text-gray-800 placeholder-gray-400 p-0 focus:outline-none w-full">
+
+        <!-- Quick Clear Button -->
+        <button x-show="urlInput" 
+                x-cloak 
+                @click="urlInput = ''" 
+                class="text-gray-300 hover:text-gray-600 shrink-0 transition p-0.5">
+            <i class="ri-close-circle-fill text-sm"></i>
+        </button>
+
+        <!-- Embedded Action Button -->
+        <button @click="navigateTo()" 
+                :disabled="loadingUrl || !urlInput.trim()" 
+                :class="loadingUrl || !urlInput.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#383838] hover:bg-black text-white shadow-sm hover:scale-[1.02] active:scale-95'" 
+                class="shrink-0 px-3.5 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5">
+            <span x-show="!loadingUrl" class="flex items-center gap-1">
+                <span>Go</span>
+                <i class="ri-arrow-right-s-line text-xs"></i>
+            </span>
+            <span x-show="loadingUrl" x-cloak class="flex items-center gap-1.5">
+                <svg class="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            </span>
+        </button>
+    </div>
+
+</div>
+</div>
                     <div class="flex-grow w-full bg-white relative">
                         <iframe id="dashboard-browser-frame" :src="browserUrl" class="w-full h-full border-none bg-white absolute inset-0"></iframe>
                     </div>
@@ -339,7 +402,6 @@
         </button>
     </div>
 
-    <!-- Modals and script architectures remain below -->
    <!-- Modals and script architectures remain below -->
   <div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" x-data="taskModal()" @open-task.window="openModal($event.detail)" @click.self="closeModal()">
     <div class="bg-white rounded-[40px] shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-fade-in border border-zinc-100/80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors" @click.stop>
@@ -589,21 +651,28 @@
     let isCheckingStatus = false;
     let violationState = @json($violationStatus);
 
-    function showScreenBlockOverlay() {
-        const overlay = document.getElementById('screen-block-overlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-            overlay.classList.add('flex');
-        }
+   function updateViolationUI() {
+    const textEl = document.getElementById('screen-block-violation-text');
+    if (textEl && violationState) {
+        textEl.textContent = `Violations: ${violationState.violation_count ?? 0} / ${violationState.threshold ?? 3}`;
     }
+}
 
-    function hideScreenBlockOverlay() {
-        const overlay = document.getElementById('screen-block-overlay');
-        if (overlay) {
-            overlay.classList.add('hidden');
-            overlay.classList.remove('flex');
-        }
+    function showScreenBlockOverlay() {
+    updateViolationUI(); // Update text before showing
+    const overlay = document.getElementById('screen-block-overlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
     }
+}
+   function hideScreenBlockOverlay() {
+    const overlay = document.getElementById('screen-block-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+    }
+}
 
     function showViolationWarning(message) {
         const modal = document.getElementById('violation-warning-modal');
@@ -621,60 +690,59 @@
         modal.classList.remove('flex');
     }
 
-    function applyEnforcementResult(result) {
-        if (!result) return;
+  function applyEnforcementResult(result) {
+    if (!result) return;
 
-        violationState = {
-            violation_count: result.violation_count ?? violationState.violation_count,
-            threshold: result.threshold ?? violationState.threshold,
-            remaining_warnings: result.remaining_warnings ?? violationState.remaining_warnings,
-            is_screen_blocked: !!result.is_screen_blocked,
-        };
+    violationState = {
+        violation_count: result.violation_count ?? violationState.violation_count,
+        threshold: result.threshold ?? violationState.threshold,
+        remaining_warnings: result.remaining_warnings ?? violationState.remaining_warnings,
+        is_screen_blocked: !!result.is_screen_blocked,
+    };
 
-        if (result.is_screen_blocked) {
-            showScreenBlockOverlay();
-            return;
-        }
+    updateViolationUI(); // Sync UI
 
-        if (result.action === 'warning' && result.message) {
-            showViolationWarning(result.message);
-        }
+    if (result.is_screen_blocked) {
+        showScreenBlockOverlay();
+        return;
     }
+
+    if (result.action === 'warning' && result.message) {
+        showViolationWarning(result.message);
+    }
+}
 
     function handleHeartbeatEnforcement(data) {
-        if (!data) return;
+    if (!data) return;
 
-        violationState = {
-            violation_count: data.violation_count ?? violationState.violation_count,
-            threshold: data.threshold ?? violationState.threshold,
-            remaining_warnings: data.remaining_warnings ?? violationState.remaining_warnings,
-            is_screen_blocked: !!data.is_screen_blocked,
-        };
+    violationState = {
+        violation_count: data.violation_count ?? violationState.violation_count,
+        threshold: data.threshold ?? violationState.threshold,
+        remaining_warnings: data.remaining_warnings ?? violationState.remaining_warnings,
+        is_screen_blocked: !!data.is_screen_blocked,
+    };
 
-        if (data.is_screen_blocked) {
-            showScreenBlockOverlay();
-        } else {
-            hideScreenBlockOverlay();
-        }
+    updateViolationUI(); // Sync UI
+
+    if (data.is_screen_blocked) {
+        showScreenBlockOverlay();
+    } else {
+        hideScreenBlockOverlay();
     }
-
-    if (violationState.is_screen_blocked) {
-        document.addEventListener('DOMContentLoaded', showScreenBlockOverlay);
-    }
+}
 
     
     const localPeerOptions = {
-        host: 'peer.lmms-ccs.online',
-        port: 443,
-        path: '/myapp',
-        secure: true,
-        config: {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        },
-        pingInterval: 5000, // Sends a ping every 5 seconds to prevent Cloudflare from dropping it
-        debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
-    };
-
+            host: 'localhost',
+            port: 9000,          // Default port for local PeerJS server
+            path: '/myapp',
+            secure: false,      
+            config: {
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            },
+            pingInterval: 5000,
+            debug: 3             
+        };
 
     function verifySessionStatus() {
         if (isCheckingStatus) return;
@@ -829,17 +897,6 @@
     });
 </script>
 <script>
-
-        async function enterClassroom() {
-            try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-                window.dispatchEvent(new CustomEvent('screen-shared'));
-                const call = studentPeer.call(profPeerId, stream, { metadata: { studentId: {{ auth()->id() }}, studentName: '{{ auth()->user()->name }}' } });
-                fetch("{{ route('student.mark-present', $class->id) }}", { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' } });
-                stream.getVideoTracks()[0].onended = () => { window.dispatchEvent(new CustomEvent('screen-stopped')); location.reload(); };
-            } catch (err) { console.error("Capture Failed", err); }
-        }
-
         function classroomTasks() {
             return {
                 tasks: [], filter: 'all',
@@ -865,34 +922,35 @@
             });
         @endphp
 
-        function classroomQuizzes() {
-            return {
-                quizzes: @json($initialQuizzes), filter: 'all',
-                init() { setInterval(() => this.fetchQuizzes(), 5000); },
-                fetchQuizzes() { fetch(`/student/classroom/${classId}/live-quizzes`).then(res => res.json()).then(data => { this.quizzes = data; }).catch(err => console.error(err)); },
-                get filteredQuizzes() {
-                    if (this.filter === 'completed') return this.quizzes.filter(q => q.has_attempt);
-                    if (this.filter === 'pending') return this.quizzes.filter(q => !q.has_attempt);
-                    return this.quizzes;
-                },
-                formatDeadline(dateString) {
-                    if (!dateString) return 'No Deadline';
-                    const date = new Date(dateString);
-                    return isNaN(date.getTime()) ? 'No Deadline' : date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-                },
-                handleQuizClick(quiz) {
-                    // If the student already completed it, stop them right here!
-                    if (quiz.has_attempt) {
-                        alert("You have already completed this quiz! You cannot retake it.");
-                        return;
-                    }
-
-                    // Otherwise, open the modal normally
-                    this.selectedQuiz = quiz; 
-                    this.quizModalOpen = true;
-                }
+      function classroomQuizzes() {
+    return {
+        quizzes: @json($initialQuizzes), filter: 'all',
+        init() { setInterval(() => this.fetchQuizzes(), 5000); },
+        fetchQuizzes() { 
+            fetch(`/student/classroom/${classId}/live-quizzes`)
+                .then(res => res.json())
+                .then(data => { this.quizzes = data; })
+                .catch(err => console.error(err)); 
+        },
+        get filteredQuizzes() {
+            if (this.filter === 'completed') return this.quizzes.filter(q => q.has_attempt);
+            if (this.filter === 'pending') return this.quizzes.filter(q => !q.has_attempt);
+            return this.quizzes;
+        },
+        formatDeadline(dateString) {
+            if (!dateString) return 'No Deadline';
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? 'No Deadline' : date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        },
+        handleQuizClick(quiz) {
+            if (quiz.has_attempt) {
+                alert("You have already completed this quiz! You cannot retake it.");
+                return;
             }
+            this.$dispatch('open-quiz', { id: quiz.id });
         }
+    }
+}
 
         @php
             $initialMaterials = $class->materials->map(function($m) {

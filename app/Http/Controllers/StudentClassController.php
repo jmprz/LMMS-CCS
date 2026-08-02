@@ -424,9 +424,9 @@ class StudentClassController extends Controller
         return view('student.browser-home', compact('id'));
     }
 
-    public function customSearch(Request $request, $id)
+   public function customSearch(Request $request, $id)
     {
-        $query = $request->input('q');
+        $query = trim($request->input('q', ''));
 
         // Log search event to activity timeline
         try {
@@ -443,63 +443,125 @@ class StudentClassController extends Controller
 
         $results = [];
 
-        if (empty(trim($query))) {
+        if (empty($query)) {
             return view('student.search', compact('query', 'results', 'id'));
         }
 
-        // 🟢 HIGH-STABILITY ENGINES: Accept natural phrases and do not block local environments
-        $engines = [
-            'bing' => 'https://www.bing.com/search',
-            'mojeek' => 'https://www.mojeek.com/search'
-        ];
-
-        // Filter out internal system assets, layout utilities, or search platforms
+        // Filter out search engine homepages, portal aggregators, and ad networks
         $forbiddenDomains = [
+            'duckduckgo.com',
             'bing.com',
-            'microsoft',
+            'microsoft.com',
             'msn.com',
-            'live.com',
-            'mojeek',
-            'w3.org',
-            'google',
-            'duckduckgo',
-            'yahoo',
+            'google.com',
+            'yahoo.com',
+            'mojeek.com',
             'ask.com',
+            'doubleclick.net',
             'javascript:',
             'mailto:',
             '#'
         ];
 
-        foreach ($engines as $engineName => $engineUrl) {
+        // 🟢 1. PRIMARY ENGINE: DuckDuckGo HTML Endpoint (Supports all real tech sites & articles)
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(5)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept-Language' => 'en-US,en;q=0.9',
+                ])
+                ->asForm()
+                ->post('https://html.duckduckgo.com/html/', [
+                    'q' => $query
+                ]);
+
+            if ($response->successful()) {
+                $dom = new \DOMDocument();
+                @$dom->loadHTML(mb_convert_encoding($response->body(), 'HTML-ENTITIES', 'UTF-8'));
+                $xpath = new \DOMXPath($dom);
+
+                // Fetch result links from DDG HTML structure
+                $nodeList = $xpath->query("//a[contains(@class, 'result__a')]");
+
+                foreach ($nodeList as $node) {
+                    $rawHref = trim($node->getAttribute('href'));
+                    $title = trim(preg_replace('/\s+/', ' ', $node->nodeValue));
+
+                    // Decode DuckDuckGo redirect wrapper URL (/l/?uddg=...)
+                    $actualUrl = $rawHref;
+                    if (strpos($rawHref, 'uddg=') !== false) {
+                        parse_str(parse_url($rawHref, PHP_URL_QUERY), $queryParameters);
+                        if (!empty($queryParameters['uddg'])) {
+                            $actualUrl = urldecode($queryParameters['uddg']);
+                        }
+                    }
+
+                    // Must be a valid HTTP/HTTPS URL
+                    if (strpos($actualUrl, 'http') !== 0) {
+                        continue;
+                    }
+
+                    // Filter out forbidden search engine portals/ads
+                    $isForbidden = false;
+                    foreach ($forbiddenDomains as $forbidden) {
+                        if (strpos(strtolower($actualUrl), $forbidden) !== false) {
+                            $isForbidden = true;
+                            break;
+                        }
+                    }
+                    if ($isForbidden) {
+                        continue;
+                    }
+
+                    // De-duplicate results
+                    $alreadyExists = false;
+                    foreach ($results as $existing) {
+                        if ($existing['FirstURL'] === $actualUrl) {
+                            $alreadyExists = true;
+                            break;
+                        }
+                    }
+
+                    if (!$alreadyExists && strlen($title) > 3) {
+                        $results[] = [
+                            'FirstURL' => $actualUrl,
+                            'Text' => $title
+                        ];
+                    }
+
+                    if (count($results) >= 15) {
+                        break;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning("DuckDuckGo HTML search failed: " . $e->getMessage());
+        }
+
+        // 🟢 2. SECONDARY ENGINE: Mojeek (Backup scraper)
+        if (count($results) === 0) {
             try {
                 $response = Http::withoutVerifying()
-                    ->timeout(4) // 4-second maximum wait time per engine
+                    ->timeout(4)
                     ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                        'Accept-Language' => 'en-US,en;q=0.9',
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     ])
-                    ->get($engineUrl, ['q' => $query]);
+                    ->get('https://www.mojeek.com/search', ['q' => $query]);
 
                 if ($response->successful()) {
-                    $html = $response->body();
-
                     $dom = new \DOMDocument();
-                    @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+                    @$dom->loadHTML(mb_convert_encoding($response->body(), 'HTML-ENTITIES', 'UTF-8'));
                     $xpath = new \DOMXPath($dom);
 
-                    // Fetch every clickable anchor link on the rendered page
-                    $links = $xpath->query("//a");
+                    $links = $xpath->query("//a[contains(@class, 'ob') or contains(@class, 'title')] | //h2/a");
 
                     foreach ($links as $link) {
                         $href = trim($link->getAttribute('href'));
                         $title = trim(preg_replace('/\s+/', ' ', $link->nodeValue));
 
-                        // 1. Must be an absolute external web path
-                        if (strpos($href, 'http') !== 0) {
-                            continue;
-                        }
+                        if (strpos($href, 'http') !== 0) continue;
 
-                        // 2. Filter out internal tracking routing
                         $isForbidden = false;
                         foreach ($forbiddenDomains as $forbidden) {
                             if (strpos(strtolower($href), $forbidden) !== false) {
@@ -507,21 +569,8 @@ class StudentClassController extends Controller
                                 break;
                             }
                         }
-                        if ($isForbidden) {
-                            continue;
-                        }
+                        if ($isForbidden) continue;
 
-                        // 3. Drop layout artifacts, sidebars, cookie policies, or empty elements
-                        if (
-                            strlen($title) < 12 ||
-                            in_array(strtolower($title), ['cached', 'translate this page', 'privacy policy', 'terms of service']) ||
-                            strpos(strtolower($title), 'learn more') !== false ||
-                            strpos(strtolower($title), 'see results for') !== false
-                        ) {
-                            continue;
-                        }
-
-                        // 4. De-duplicate matches
                         $alreadyExists = false;
                         foreach ($results as $existing) {
                             if ($existing['FirstURL'] === $href) {
@@ -530,70 +579,36 @@ class StudentClassController extends Controller
                             }
                         }
 
-                        if (!$alreadyExists) {
-                            // Keeps 'FirstURL' array key name intact so search.blade.php doesn't break
+                        if (!$alreadyExists && strlen($title) > 5) {
                             $results[] = [
                                 'FirstURL' => $href,
                                 'Text' => $title
                             ];
                         }
 
-                        if (count($results) >= 12) {
-                            break;
-                        }
+                        if (count($results) >= 15) break;
                     }
                 }
-
-                // If the current engine successfully extracted genuine links, break out of loop
-                if (count($results) > 0) {
-                    break;
-                }
-
             } catch (\Exception $e) {
-                \Log::warning("Engine [{$engineName}] connection bypassed: " . $e->getMessage());
-                continue;
+                \Log::warning("Mojeek search failed: " . $e->getMessage());
             }
         }
 
-        // 🟢 SMART CONTEXTUAL FALLBACK (Emergency failsafe if local computer completely loses internet)
-        // If the results array is completely empty, it dynamically reads the keywords in the query 
-        // and sends the phrase into the search endpoints of major documentation hubs. This will never 404.
+        // 🟢 3. EMERGENCY OFFLINE FAILSAFE
+        // If internet/live scraping is completely down on the local server, provide direct technical search entry points.
         if (count($results) === 0) {
-            $words = explode(' ', strtolower(trim($query)));
-            $context = 'programming';
-
-            if (in_array('python', $words)) {
-                $context = 'python';
-            } elseif (in_array('java', $words)) {
-                $context = 'java';
-            } elseif (in_array('javascript', $words) || in_array('js', $words)) {
-                $context = 'javascript';
-            } elseif (in_array('html', $words) || in_array('css', $words)) {
-                $context = 'web';
-            }
-
-            $displayQuery = htmlspecialchars($query);
             $urlEncodedQuery = urlencode($query);
+            $displayQuery = htmlspecialchars($query);
 
-            if ($context === 'python') {
-                $results = [
-                    ['FirstURL' => "https://docs.python.org/3/search.html?q={$urlEncodedQuery}", 'Text' => "Official Python Documentation Hub - Results for: \"{$displayQuery}\""],
-                    ['FirstURL' => "https://realpython.com/search?q={$urlEncodedQuery}", 'Text' => "Real Python Tutorial Index & Video Guides for: \"{$displayQuery}\""],
-                    ['FirstURL' => "https://www.geeksforgeeks.org/search/?q={$urlEncodedQuery}", 'Text' => "GeeksforGeeks Python Learning Portal Reference: \"{$displayQuery}\""]
-                ];
-            } elseif ($context === 'javascript' || $context === 'web') {
-                $results = [
-                    ['FirstURL' => "https://developer.mozilla.org/en-US/search?q={$urlEncodedQuery}", 'Text' => "MDN Web Docs Engineering Search Network for: \"{$displayQuery}\""],
-                    ['FirstURL' => "https://javascript.info/search?query={$urlEncodedQuery}", 'Text' => "The Modern JavaScript Tutorial Collection: \"{$displayQuery}\""],
-                    ['FirstURL' => "https://www.w3schools.com/search/index.php?q={$urlEncodedQuery}", 'Text' => "W3Schools Interactive Reference Index: \"{$displayQuery}\""]
-                ];
-            } else {
-                $results = [
-                    ['FirstURL' => "https://stackoverflow.com/search?q={$urlEncodedQuery}", 'Text' => "Stack Overflow Community Code Verification Hub for: \"{$displayQuery}\""],
-                    ['FirstURL' => "https://github.com/search?q={$urlEncodedQuery}", 'Text' => "Search GitHub Open Source Code Repositories for: \"{$displayQuery}\""],
-                    ['FirstURL' => "https://devdocs.io/#q={$urlEncodedQuery}", 'Text' => "DevDocs Unified Multi-Framework Framework Search for: \"{$displayQuery}\""]
-                ];
-            }
+            $results = [
+                ['FirstURL' => "https://stackoverflow.com/search?q={$urlEncodedQuery}", 'Text' => "Stack Overflow: \"{$displayQuery}\""],
+                ['FirstURL' => "https://github.com/search?q={$urlEncodedQuery}", 'Text' => "GitHub Code Repositories: \"{$displayQuery}\""],
+                ['FirstURL' => "https://www.geeksforgeeks.org/search/?q={$urlEncodedQuery}", 'Text' => "GeeksforGeeks Articles: \"{$displayQuery}\""],
+                ['FirstURL' => "https://developer.mozilla.org/en-US/search?q={$urlEncodedQuery}", 'Text' => "MDN Web Docs: \"{$displayQuery}\""],
+                ['FirstURL' => "https://dev.to/search?q={$urlEncodedQuery}", 'Text' => "DEV Community Articles: \"{$displayQuery}\""],
+                ['FirstURL' => "https://medium.com/search?q={$urlEncodedQuery}", 'Text' => "Medium Tech Articles: \"{$displayQuery}\""],
+                ['FirstURL' => "https://www.freecodecamp.org/news/search/?query={$urlEncodedQuery}", 'Text' => "freeCodeCamp News: \"{$displayQuery}\""]
+            ];
         }
 
         return view('student.search', compact('query', 'results', 'id'));

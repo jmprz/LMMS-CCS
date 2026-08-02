@@ -1,22 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+    <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
 </head>
-<body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen p-6 select-none font-sans">
-    <div class="text-center max-w-md w-full">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-50 rounded-3xl text-blue-600 mb-6 shadow-sm">
-            <i class="ri-global-line text-4xl"></i>
-        </div>
-        <h2 class="text-2xl font-black text-gray-800 tracking-tight mb-2">Secure Browser Environment</h2>
-        <p class="text-sm text-gray-500 mb-6">Type an educational URL or enter search keywords above to begin your research.</p>
+<body class="bg-slate-50 text-slate-800 min-h-full flex flex-col items-center justify-center p-6 antialiased select-none">
+    <div class="text-center max-w-lg w-full space-y-6">
         
-        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-left">
-            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Session Integrity</h4>
-            <p class="text-xs text-gray-500 leading-relaxed">Access to restricted domains is blocked by your instructor. All web activity and navigation attempts are logged to the dashboard timeline.</p>
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-white border border-slate-200/80 rounded-3xl text-[#383838] shadow-sm mb-2">
+            <i class="ri-compass-3-line text-4xl"></i>
         </div>
+
+        <div class="space-y-2">
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Laboratory Browser</h2>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                Enter a URL or keyword query in the address toolbar above to begin research.
+            </p>
+        </div>
+
     </div>
 </body>
 </html>

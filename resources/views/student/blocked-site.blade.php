@@ -1,94 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Access Blocked</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 60px 40px;
-            text-align: center;
-            max-width: 500px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .icon { font-size: 80px; margin-bottom: 20px; }
-        h1 { font-size: 28px; font-weight: 900; color: #1a1a1a; margin-bottom: 15px; }
-        p { font-size: 16px; color: #666; line-height: 1.6; margin-bottom: 20px; }
-        .message {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-        .message strong { color: #856404; font-weight: 700; }
-        .suggestions {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 1px solid #eee;
-        }
-        .suggestions h3 {
-            font-size: 14px;
-            font-weight: 700;
-            color: #999;
-            text-transform: uppercase;
-            margin-bottom: 15px;
-        }
-        .suggestion-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-        .suggestion-item {
-            background: #f8f9fa;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            color: #667eea;
-            font-weight: 600;
-        }
-    </style>
+    <title>Access Restricted</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+    <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
 </head>
-<body>
-    <div class="container">
-        <div class="icon">🚫</div>
-        <h1>Access Blocked</h1>
+<body class="bg-slate-900 text-white min-h-full flex items-center justify-center p-6 antialiased select-none">
+    <div class="max-w-md w-full bg-slate-800/80 backdrop-blur-xl rounded-3xl border border-slate-700/60 p-8 shadow-2xl text-center relative overflow-hidden">
         
-        <div class="message">
-            <strong>{{ $message ?? 'This website is not allowed during lab sessions.' }}</strong>
+        <!-- Red Accent Ambient Light -->
+        <div class="absolute -top-12 -left-12 w-32 h-32 bg-red-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Warning Icon Badge -->
+        <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-5 text-red-400 shadow-inner">
+            <i class="ri-shield-keyhole-line text-3xl"></i>
         </div>
+
+        <span class="inline-block px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">
+            Lab Security Firewall
+        </span>
+
+        <h1 class="text-2xl font-black text-white tracking-tight mb-2">Access Restricted</h1>
         
-        <p>
-            This website is not on the approved whitelist for this class. 
-            Your professor controls which sites you can access during lab sessions.
+        <p class="text-xs text-slate-400 leading-relaxed mb-6">
+            {{ $message ?? 'This domain or URL pattern is restricted during active laboratory sessions.' }}
         </p>
-        
-        <p style="font-size: 14px; color: #999;">
-            ⚠️ This attempt has been logged.
-        </p>
-        
-        <div class="suggestions">
-            <h3>Try These Instead:</h3>
-            <div class="suggestion-list">
-                <span class="suggestion-item">Google</span>
-                <span class="suggestion-item">Wikipedia</span>
-                <span class="suggestion-item">W3Schools</span>
-                <span class="suggestion-item">Stack Overflow</span>
+
+        <!-- Warning Box -->
+        <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-700/50 mb-6 text-left">
+            <div class="flex items-center gap-2 text-xs font-bold text-amber-400 mb-1">
+                <i class="ri-error-warning-line"></i>
+                Session Audit Notice
+            </div>
+            <p class="text-[11px] text-slate-400 leading-normal">
+                All external request attempts outside approved educational resources are logged to the instructor timeline.
+            </p>
+        </div>
+
+        <!-- Whitelisted Suggestions -->
+        <div class="pt-4 border-t border-slate-700/50">
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Approved Educational Domains</p>
+            <div class="flex flex-wrap gap-2 justify-center">
+                <span class="px-3 py-1 bg-slate-700/50 border border-slate-600/50 rounded-lg text-xs font-medium text-slate-300">Stack Overflow</span>
+                <span class="px-3 py-1 bg-slate-700/50 border border-slate-600/50 rounded-lg text-xs font-medium text-slate-300">W3Schools</span>
+                <span class="px-3 py-1 bg-slate-700/50 border border-slate-600/50 rounded-lg text-xs font-medium text-slate-300">PHP Docs</span>
+                <span class="px-3 py-1 bg-slate-700/50 border border-slate-600/50 rounded-lg text-xs font-medium text-slate-300">TailwindCSS</span>
             </div>
         </div>
+
     </div>
 </body>
 </html>
