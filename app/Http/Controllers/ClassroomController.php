@@ -298,20 +298,26 @@ class ClassroomController extends Controller
         ]);
     }
     public function getStudentsStatus($id)
-    {
-        $session = LabSession::with('students')->findOrFail($id);
-        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
-            abort(403);
-        }
-        $students = $session->students()->get()->map(function ($student) {
-            return [
-                'id' => $student->id,
-                'name' => $student->last_name . ', ' . $student->first_name,
-                'is_present' => (bool) $student->pivot->is_present,
-            ];
-        });
-        return response()->json($students);
+{
+    $session = LabSession::with('students')->findOrFail($id);
+
+    if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+        abort(403);
     }
+
+    // Access the loaded collection directly to avoid redundant DB queries
+    $students = $session->students->map(function ($student) {
+        return [
+            'id' => $student->id,
+            'name' => $student->last_name . ', ' . $student->first_name,
+            'is_present' => (bool) ($student->pivot->is_present ?? false),
+            'is_screen_blocked' => (bool) ($student->pivot->is_screen_blocked ?? false),
+            'violation_count' => (int) ($student->pivot->violation_count ?? 0),
+        ];
+    });
+
+    return response()->json($students);
+}
 
     // 🟢 2. Handles the "Share My Screen / Stop Broadcasting" Button
     public function broadcast(Request $request, $id)

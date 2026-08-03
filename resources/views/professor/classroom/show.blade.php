@@ -1799,282 +1799,76 @@
                             </template>
                         </div>
 
-                        <div x-show="activeTab === 'students'" x-data="studentManager()" x-cloak
-                            class="space-y-6 animate-fade-in">
+                       <div x-show="activeTab === 'students'" x-data="studentManager()" x-cloak class="space-y-6 animate-fade-in">
 
-                            <div
-                                class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
-                                <div>
-                                    <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Enrolled
-                                        Students</h2>
-                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                        Monitor presence and activity history
-                                    </p>
-                                </div>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
+        <div>
+            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Enrolled Students</h2>
+            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                Monitor presence and activity history
+            </p>
+        </div>
 
-                                <div
-                                    class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
-                                    <i class="ri-team-line text-lg"></i>
-                                    <span class="text-[10px] font-black uppercase tracking-widest">
-                                        Total Enrolled: {{ $class->students->count() ?? 0 }}
-                                    </span>
-                                </div>
-                            </div>
+        <div class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
+            <i class="ri-team-line text-lg"></i>
+            <span class="text-[10px] font-black uppercase tracking-widest">
+                Total Enrolled: <span x-text="students.length"></span>
+            </span>
+        </div>
+    </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                @forelse($class->students as $student)
-                                    <div @click="viewStudentActivity({{ $student->id }}, '{{ addslashes($student->first_name) }}', '{{ addslashes($student->last_name) }}', {{ json_encode($student->attendances ?? []) }}, {{ $class->id }})"
-                                        class="bg-white p-5 rounded-3xl border {{ ($student->pivot->is_screen_blocked ?? false) ? 'border-red-300 bg-red-50/30' : 'border-gray-100' }} flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
+    {{-- Reactive Grid --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <template x-for="student in students" :key="student.id">
+            <div @click="viewStudentActivity(student.id, student.first_name, student.last_name, student.attendances, {{ $class->id }})"
+                :class="student.is_screen_blocked ? 'border-red-300 bg-red-50/30' : 'border-gray-100'"
+                class="bg-white p-5 rounded-3xl border flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
 
-                                        <div class="flex items-center gap-4">
-                                            <div
-                                                class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] font-black text-sm border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors">
-                                                {{ strtoupper(substr($student->first_name, 0, 1)) }}{{ strtoupper(substr($student->last_name, 0, 1)) }}
-                                            </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] font-black text-sm border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors">
+                        <span x-text="(student.first_name[0] + student.last_name[0]).toUpperCase()"></span>
+                    </div>
 
-                                            <div class="flex flex-col min-w-0">
-                                                <h4
-                                                    class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
-                                                    {{ strtoupper($student->last_name) }}, {{ $student->first_name }}
-                                                    @if($student->middle_name)
-                                                        {{ strtoupper(substr($student->middle_name, 0, 1)) }}.
-                                                    @endif
-                                                </h4>
-                                                <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1">
-                                                    {{ $student->school_id }}
-                                                </p>
-                                                @if(($student->pivot->violation_count ?? 0) > 0)
-                                                    <p class="text-[9px] font-black uppercase tracking-widest mt-1 {{ ($student->pivot->is_screen_blocked ?? false) ? 'text-red-600' : 'text-amber-600' }}">
-                                                        {{ ($student->pivot->is_screen_blocked ?? false) ? 'Screen Locked' : 'Warnings' }}:
-                                                        {{ $student->pivot->violation_count ?? 0 }}/{{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }}
-                                                    </p>
-                                                @endif
-                                            </div>
-                                        </div>
+                    <div class="flex flex-col min-w-0">
+                        <h4 class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
+                            <span x-text="student.last_name.toUpperCase() + ', ' + student.first_name"></span>
+                        </h4>
+                        <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1" x-text="student.school_id"></p>
+                        
+                        <template x-if="student.violation_count > 0 || student.is_screen_blocked">
+                            <p class="text-[9px] font-black uppercase tracking-widest mt-1"
+                               :class="student.is_screen_blocked ? 'text-red-600' : 'text-amber-600'">
+                                <span x-text="student.is_screen_blocked ? 'Screen Locked' : 'Warnings'"></span>:
+                                <span x-text="student.violation_count + '/' + warningThreshold"></span>
+                            </p>
+                        </template>
+                    </div>
+                </div>
 
-                                        <div class="flex items-center gap-2">
-                                            @if($student->pivot->is_screen_blocked ?? false)
-                                                <button type="button"
-                                                    @click.stop="unblockStudent({{ $student->id }})"
-                                                    class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
-                                                    Unblock
-                                                </button>
-                                            @endif
-                                            @if($student->pivot->is_present)
-                                                <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"
-                                                    title="Active"></div>
-                                            @else
-                                                <div class="w-3 h-3 rounded-full bg-gray-200" title="Offline"></div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div
-                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
-                                        <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
-                                        <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.
-                                        </p>
-                                    </div>
-                                @endforelse
-                            </div>
+                <div class="flex items-center gap-2">
+                    {{-- Unblock Button --}}
+                    <button type="button"
+                        x-show="student.is_screen_blocked"
+                        @click.stop="unblockStudent(student.id)"
+                        class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
+                        Unblock
+                    </button>
 
-                            <template x-teleport="body">
-                                <div x-show="logModalOpen"
-                                    class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4 sm:p-6"
-                                    x-transition.opacity x-cloak>
+                    {{-- Presence Indicator --}}
+                    <div x-show="student.is_present" class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" title="Active"></div>
+                    <div x-show="!student.is_present" class="w-3 h-3 rounded-full bg-gray-200" title="Offline"></div>
+                </div>
+            </div>
+        </template>
 
-                                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden transform transition-all relative"
-                                        @click.away="closeActivityModal()" x-transition:enter="ease-out duration-300"
-                                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
-
-                                        <div
-                                            class="pl-8 pr-20 py-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between sm:items-center bg-white shrink-0 gap-5 relative">
-                                            <div>
-                                                <h3
-                                                    class="font-black text-2xl text-gray-900 uppercase tracking-tight leading-none">
-                                                    Student Workspace</h3>
-                                                <p
-                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">
-                                                    Data for <span class="text-[#383838]"
-                                                        x-text="selectedUserName"></span>
-                                                </p>
-                                            </div>
-
-                                            <div
-                                                class="flex items-center gap-1 border border-gray-100 rounded-xl p-1 bg-gray-50 self-start sm:self-auto shrink-0">
-                                                <button @click="modalTab = 'logs'"
-                                                    :class="modalTab === 'logs' ? 'bg-white text-[#383838] shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-700 border border-transparent'"
-                                                    class="px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2">
-                                                    <i class="ri-history-line text-sm"></i> Timeline
-                                                </button>
-                                                <button @click="modalTab = 'files'"
-                                                    :class="modalTab === 'files' ? 'bg-white text-[#383838] shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-700 border border-transparent'"
-                                                    class="px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2">
-                                                    <i class="ri-folder-open-line text-sm"></i> Explorer
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <button @click="closeActivityModal()"
-                                            class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 border border-gray-200 rounded-xl transition-all z-10 shadow-sm">
-                                            <i class="ri-close-line text-xl"></i>
-                                        </button>
-                                        <div class="p-6 md:p-8 overflow-y-auto bg-gray-50/50 flex-1">
-                                            <template x-if="loading">
-                                                <div class="flex flex-col items-center justify-center py-24 gap-4">
-                                                    <i
-                                                        class="ri-loader-4-line animate-spin text-5xl text-[#383838]"></i>
-                                                    <p
-                                                        class="text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                                                        Querying student records...</p>
-                                                </div>
-                                            </template>
-
-                                            <div x-show="modalTab === 'logs' && !loading"
-                                                class="space-y-8 relative max-w-3xl mx-auto">
-                                                <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200">
-                                                </div>
-
-                                                <template x-for="(group, date) in groupedLogs" :key="date">
-                                                    <div class="relative">
-                                                        <div class="sticky top-0 z-20 mb-6 flex">
-                                                            <span
-                                                                class="bg-white border border-gray-200 text-[#383838] text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-sm"
-                                                                x-text="formatDateHeader(date)"></span>
-                                                        </div>
-
-                                                        <div class="space-y-4 ml-4">
-                                                            <template x-for="log in group" :key="log.id">
-                                                                <div
-                                                                    class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-5 hover:border-[#383838] transition-all relative group">
-
-                                                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm"
-                                                                        :class="getIconClass(log.log_type)">
-                                                                        <i :class="getIcon(log.log_type)"
-                                                                            class="text-xl"></i>
-                                                                    </div>
-
-                                                                    <div class="flex-1 min-w-0 pt-0.5">
-                                                                        <div
-                                                                            class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                                                                            <div>
-                                                                                <p class="text-sm font-black text-gray-900 leading-tight"
-                                                                                    x-text="log.content"></p>
-                                                                                <p class="text-[9px] mt-1.5 text-gray-400 font-bold uppercase tracking-widest"
-                                                                                    x-text="log.log_type === 'attendance' ? 'Verified Check-in' : 
-                                                                    log.log_type === 'submission' ? 'Task Submission' : 
-                                                                    log.log_type === 'material' ? 'Courseware Access' : 
-                                                                    log.log_type === 'quiz' ? 'Assessment Activity' : 'Navigation Log'">
-                                                                                </p>
-                                                                            </div>
-                                                                            <span
-                                                                                class="text-[10px] font-black text-[#383838] bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100"
-                                                                                x-text="formatTime(log.created_at)"></span>
-                                                                        </div>
-
-                                                                        <div
-                                                                            class="mt-4 flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                                                            <template
-                                                                                x-if="log.log_type !== 'attendance'">
-                                                                                <span
-                                                                                    class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg">
-                                                                                    <i
-                                                                                        class="ri-time-line text-gray-400"></i>
-                                                                                    <span
-                                                                                        x-text="log.duration_seconds + 's'"></span>
-                                                                                </span>
-                                                                            </template>
-                                                                            <span
-                                                                                class="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-lg truncate max-w-[250px]">
-                                                                                <i
-                                                                                    class="ri-book-open-line text-gray-400"></i>
-                                                                                <span class="truncate"
-                                                                                    x-text="log.class_name || 'General Session'"></span>
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </template>
-                                                        </div>
-                                                    </div>
-                                                </template>
-
-                                                <template x-if="Object.keys(groupedLogs).length === 0 && !loading">
-                                                    <div
-                                                        class="text-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center">
-                                                        <div
-                                                            class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
-                                                            <i class="ri-history-line text-2xl text-gray-300"></i>
-                                                        </div>
-                                                        <h4 class="text-gray-900 font-bold mb-1">No Activity Found
-                                                        </h4>
-                                                        <p
-                                                            class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
-                                                            This student has no recorded logs.</p>
-                                                    </div>
-                                                </template>
-                                            </div>
-
-                                            <div x-show="modalTab === 'files' && !loading"
-                                                class="space-y-4 max-w-4xl mx-auto w-full">
-
-                                                <template x-if="studentFiles.length === 0">
-                                                    <div
-                                                        class="text-center py-20 bg-white border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center">
-                                                        <div
-                                                            class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
-                                                            <i class="ri-folder-open-line text-2xl text-gray-300"></i>
-                                                        </div>
-                                                        <h4 class="text-gray-900 font-bold mb-1">No Files Found</h4>
-                                                        <p
-                                                            class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
-                                                            This student hasn't submitted any files.</p>
-                                                    </div>
-                                                </template>
-
-                                                <template x-for="file in studentFiles" :key="file.id">
-                                                    <div
-                                                        class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-[#383838] transition-all duration-300">
-
-                                                        <div class="flex items-center gap-5 min-w-0">
-                                                            <div
-                                                                class="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                                                                <i class="ri-file-text-line text-2xl"></i>
-                                                            </div>
-                                                            <div class="min-w-0">
-                                                                <a :href="file.file_url" target="_blank" download
-                                                                    class="text-sm font-black text-gray-900 hover:text-blue-600 truncate block transition-colors"
-                                                                    x-text="file.file_name"></a>
-
-                                                                <div class="flex items-center flex-wrap gap-2 mt-1.5">
-                                                                    <span
-                                                                        class="bg-gray-50 border border-gray-200 text-gray-700 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate max-w-[200px]"
-                                                                        x-text="file.task_title"></span>
-                                                                    <span class="text-gray-300">•</span>
-                                                                    <span
-                                                                        class="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                                                        <i class="ri-time-line text-xs"></i> <span
-                                                                            x-text="file.submitted_at"></span>
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <a :href="file.file_url" target="_blank" download
-                                                            class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-100 hover:bg-[#383838] hover:text-white hover:border-[#383838] transition-all shrink-0 shadow-sm">
-                                                            <i class="ri-download-2-line text-xl"></i>
-                                                        </a>
-                                                    </div>
-                                                </template>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
+        <template x-if="students.length === 0">
+            <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
+                <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
+                <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.</p>
+            </div>
+        </template>
+    </div>
+</div>
 
 
 
@@ -3310,174 +3104,216 @@
         });
     </script>
 
-    <script>
-        function studentManager() {
-            return {
-                logModalOpen: false,
-                loading: false,
-                selectedUserName: '',
-                selectedUserId: null,
-                selectedClassId: null,
-                selectedAttendances: [],
-                logRefreshInterval: null,
-                logs: [],
-                studentFiles: [],
-                modalTab: 'logs', // Tracks 'logs' or 'files'
+  @php
+    $studentsData = $class->students->map(function($s) use ($session) {
+        return [
+            'id' => $s->id,
+            'first_name' => $s->first_name,
+            'last_name' => $s->last_name,
+            'middle_name' => $s->middle_name,
+            'school_id' => $s->school_id,
+            'is_present' => (bool)($s->pivot->is_present ?? false),
+            'is_screen_blocked' => (bool)($s->pivot->is_screen_blocked ?? false),
+            'violation_count' => (int)($s->pivot->violation_count ?? 0),
+            'attendances' => $s->attendances ?? []
+        ];
+    });
+@endphp
 
-                init() {
-                    this.$watch('logModalOpen', isOpen => {
-                        if (!isOpen) {
-                            this.stopActivityRefresh();
+<script>
+function studentManager() {
+    return {
+        // Hydrate initial state cleanly from Blade variable
+        students: @json($studentsData),
+        warningThreshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
+        logModalOpen: false,
+        pollInterval: null,
+        
+        // Modal state variables
+        selectedUserName: '',
+        selectedUserId: null,
+        selectedClassId: null,
+        selectedAttendances: [],
+        logs: [],
+        studentFiles: [],
+        modalTab: 'logs',
+        loading: false,
+        logRefreshInterval: null,
+
+        init() {
+            // Poll for student status updates every 3 seconds
+            this.pollInterval = setInterval(() => this.fetchStudentStatuses(), 3000);
+        },
+
+        destroy() {
+            if (this.pollInterval) clearInterval(this.pollInterval);
+            this.stopActivityRefresh();
+        },
+
+        async fetchStudentStatuses() {
+            try {
+                let response = await fetch('/professor/classroom/{{ $class->id }}/students-status');
+                if (response.ok) {
+                    let data = await response.json();
+                    
+                    data.forEach(updatedStudent => {
+                        let student = this.students.find(s => s.id === updatedStudent.id);
+                        if (student) {
+                            student.is_screen_blocked = updatedStudent.is_screen_blocked;
+                            student.violation_count = updatedStudent.violation_count;
+                            student.is_present = updatedStudent.is_present;
                         }
                     });
-                },
+                }
+            } catch (err) {
+                console.error('Failed to sync student statuses:', err);
+            }
+        },
 
-                async unblockStudent(studentId) {
-                    if (!confirm('Unblock this student and reset their violation count?')) return;
+        async unblockStudent(studentId) {
+            try {
+                let response = await fetch(`/professor/classroom/{{ $class->id }}/students/${studentId}/unblock`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
 
-                    try {
-                        const res = await fetch(`/professor/classroom/{{ $class->id }}/students/${studentId}/unblock`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                            },
+                if (response.ok) {
+                    let student = this.students.find(s => s.id === studentId);
+                    if (student) {
+                        student.is_screen_blocked = false;
+                    }
+                } else {
+                    alert('Failed to unblock student. Please try again.');
+                }
+            } catch (err) {
+                console.error('Error during unblock request:', err);
+            }
+        },
+
+        async fetchStudentWorkspace(userId, classId, attendances = [], showLoader = false) {
+            if (showLoader) {
+                this.loading = true;
+            }
+            try {
+                const [logsRes, filesRes] = await Promise.all([
+                    fetch(`/professor/students/${userId}/activity-logs/${classId}`),
+                    fetch(`/professor/students/${userId}/files/${classId}`)
+                ]);
+
+                if (logsRes.ok) {
+                    let fetchedLogs = await logsRes.json();
+                    if (attendances && attendances.length > 0) {
+                        attendances.forEach(att => {
+                            fetchedLogs.push({
+                                id: 'att-' + att.id,
+                                log_type: 'attendance',
+                                content: 'Official Attendance Marked',
+                                class_name: (att.lab_session ? att.lab_session.subject_name : null) || (att.labSession ? att.labSession.subject_name : null) || 'Academic Session',
+                                duration_seconds: 0,
+                                created_at: `${att.attendance_date} ${att.joined_at}`
+                            });
                         });
-
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || 'Failed to unblock');
-
-                        alert('Student screen unblocked.');
-                        window.location.reload();
-                    } catch (error) {
-                        alert(error.message || 'Failed to unblock student.');
                     }
-                },
+                    this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                }
 
-                async fetchStudentWorkspace(userId, classId, attendances = [], showLoader = false) {
-                    if (showLoader) {
-                        this.loading = true;
-                    }
-                    try {
-                        // Fetch Logs and Files at the same time
-                        const [logsRes, filesRes] = await Promise.all([
-                            fetch(`/professor/students/${userId}/activity-logs/${classId}`),
-                            fetch(`/professor/students/${userId}/files/${classId}`)
-                        ]);
+                if (filesRes.ok) {
+                    let fetchedFiles = await filesRes.json();
+                    this.studentFiles = fetchedFiles.sort((a, b) => b.id - a.id);
+                }
 
-                        // 1. Compile Logs (Original Functionality preserved)
-                        if (logsRes.ok) {
-                            let fetchedLogs = await logsRes.json();
-                            if (attendances && attendances.length > 0) {
-                                attendances.forEach(att => {
-                                    fetchedLogs.push({
-                                        id: 'att-' + att.id,
-                                        log_type: 'attendance',
-                                        content: 'Official Attendance Marked',
-                                        class_name: (att.lab_session ? att.lab_session.subject_name : null) || (att.labSession ? att.labSession.subject_name : null) || 'Academic Session',
-                                        duration_seconds: 0,
-                                        created_at: `${att.attendance_date} ${att.joined_at}`
-                                    });
-                                });
-                            }
-                            this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                        }
-
-                        // 2. Compile Files (Sort recent uploads to top)
-                        if (filesRes.ok) {
-                            let fetchedFiles = await filesRes.json();
-                            this.studentFiles = fetchedFiles.sort((a, b) => b.id - a.id);
-                        }
-
-                    } catch (e) {
-                        console.error("Fetch Execution Failed", e);
-                    } finally {
-                        if (showLoader) {
-                            this.loading = false;
-                        }
-                    }
-                },
-
-                async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
-                    this.selectedUserName = `${lastName}, ${firstName}`;
-                    this.selectedUserId = userId;
-                    this.selectedClassId = classId;
-                    this.selectedAttendances = attendances || [];
-                    this.logModalOpen = true;
-                    this.logs = [];
-                    this.studentFiles = [];
-                    this.modalTab = 'logs'; // Default to logs tab opening
-                    this.stopActivityRefresh();
-
-                    await this.fetchStudentWorkspace(userId, classId, this.selectedAttendances, true);
-                    this.logRefreshInterval = setInterval(() => {
-                        if (this.logModalOpen && this.selectedUserId && this.selectedClassId) {
-                            this.fetchStudentWorkspace(this.selectedUserId, this.selectedClassId, this.selectedAttendances);
-                        }
-                    }, 3000);
-                },
-
-                closeActivityModal() {
-                    this.logModalOpen = false;
-                    this.selectedUserId = null;
-                    this.selectedClassId = null;
-                    this.selectedAttendances = [];
-                    this.stopActivityRefresh();
-                },
-
-                stopActivityRefresh() {
-                    if (this.logRefreshInterval) {
-                        clearInterval(this.logRefreshInterval);
-                        this.logRefreshInterval = null;
-                    }
-                },
-
-                // Helper functions from the original script
-                get groupedLogs() {
-                    return this.logs.reduce((groups, log) => {
-                        const date = log.created_at.split(/[ T]/)[0];
-                        if (!groups[date]) { groups[date] = []; }
-                        groups[date].push(log);
-                        return groups;
-                    }, {});
-                },
-
-                formatDateHeader(dateStr) {
-                    const today = new Date().toISOString().split('T')[0];
-                    const yesterdayDate = new Date();
-                    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-                    const yesterday = yesterdayDate.toISOString().split('T')[0];
-                    if (dateStr === today) return 'Today';
-                    if (dateStr === yesterday) return 'Yesterday';
-                    return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                },
-
-                formatTime(dateStr) {
-                    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                },
-
-                getIcon(type) {
-                    const icons = {
-                        'attendance': 'ri-checkbox-circle-line',
-                        'navigation': 'ri-global-line',
-                        'submission': 'ri-file-upload-line',
-                        'material': 'ri-book-open-line',
-                        'quiz': 'ri-task-line'
-                    };
-                    return icons[type] || 'ri-cursor-line';
-                },
-
-                getIconClass(type) {
-                    const classes = {
-                        'attendance': 'bg-green-50 text-green-600 border border-green-200',
-                        'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
-                        'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
-                        'material': 'bg-purple-50 text-purple-600 border border-purple-200',
-                        'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200'
-                    };
-                    return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+            } catch (e) {
+                console.error("Fetch Execution Failed", e);
+            } finally {
+                if (showLoader) {
+                    this.loading = false;
                 }
             }
+        },
+
+        async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
+            this.selectedUserName = `${lastName}, ${firstName}`;
+            this.selectedUserId = userId;
+            this.selectedClassId = classId;
+            this.selectedAttendances = attendances || [];
+            this.logModalOpen = true;
+            this.logs = [];
+            this.studentFiles = [];
+            this.modalTab = 'logs';
+            this.stopActivityRefresh();
+
+            await this.fetchStudentWorkspace(userId, classId, this.selectedAttendances, true);
+            this.logRefreshInterval = setInterval(() => {
+                if (this.logModalOpen && this.selectedUserId && this.selectedClassId) {
+                    this.fetchStudentWorkspace(this.selectedUserId, this.selectedClassId, this.selectedAttendances);
+                }
+            }, 3000);
+        },
+
+        closeActivityModal() {
+            this.logModalOpen = false;
+            this.selectedUserId = null;
+            this.selectedClassId = null;
+            this.selectedAttendances = [];
+            this.stopActivityRefresh();
+        },
+
+        stopActivityRefresh() {
+            if (this.logRefreshInterval) {
+                clearInterval(this.logRefreshInterval);
+                this.logRefreshInterval = null;
+            }
+        },
+
+        get groupedLogs() {
+            return this.logs.reduce((groups, log) => {
+                const date = log.created_at.split(/[ T]/)[0];
+                if (!groups[date]) { groups[date] = []; }
+                groups[date].push(log);
+                return groups;
+            }, {});
+        },
+
+        formatDateHeader(dateStr) {
+            const today = new Date().toISOString().split('T')[0];
+            const yesterdayDate = new Date();
+            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+            const yesterday = yesterdayDate.toISOString().split('T')[0];
+            if (dateStr === today) return 'Today';
+            if (dateStr === yesterday) return 'Yesterday';
+            return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        },
+
+        formatTime(dateStr) {
+            return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        },
+
+        getIcon(type) {
+            const icons = {
+                'attendance': 'ri-checkbox-circle-line',
+                'navigation': 'ri-global-line',
+                'submission': 'ri-file-upload-line',
+                'material': 'ri-book-open-line',
+                'quiz': 'ri-task-line'
+            };
+            return icons[type] || 'ri-cursor-line';
+        },
+
+        getIconClass(type) {
+            const classes = {
+                'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+            };
+            return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
         }
-    </script>
+    };
+}
+</script>
 </x-app-layout>
