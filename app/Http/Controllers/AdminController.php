@@ -271,14 +271,41 @@ public function statusCheck(Request $request)
 
 public function gradeSubmission(Request $request, $id)
 {
+    $request->validate([
+        'grade'    => 'nullable|numeric|min:0',
+        'feedback' => 'nullable|string',
+    ]);
+
     $submission = \App\Models\Submission::findOrFail($id);
     
     $submission->update([
-        'grade' => $request->grade,
-        'feedback' => $request->feedback
+        'grade'       => $request->grade,
+        'feedback'    => $request->feedback,
+        'auto_graded' => false, // 👈 Explicitly marks status as manually graded in DB
     ]);
 
     return back()->with('success', 'Grade and Feedback saved!');
+}
+
+public function toggleTaskAiGrading(Request $request, Task $task)
+{
+    $request->validate([
+        'ai_grading_enabled' => 'required|boolean',
+    ]);
+
+    // Update Task level toggle
+    $task->update([
+        'ai_grading_enabled' => $request->ai_grading_enabled,
+    ]);
+
+    // Sync Rubric auto_grade_enabled flag as well
+    if ($task->rubric) {
+        $task->rubric->update([
+            'auto_grade_enabled' => $request->ai_grading_enabled,
+        ]);
+    }
+
+    return response()->json(['success' => true]);
 }
 
 public function userIndex()

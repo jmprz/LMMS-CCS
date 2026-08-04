@@ -457,13 +457,7 @@
                                         <span class="text-xl opacity-50" x-text="'/ ' + (detailedFeedback ? detailedFeedback.max_score : currentTask?.points)"></span>
                                     </div>
                                 </div>
-                                
-                                <template x-if="detailedFeedback && detailedFeedback.auto_graded">
-                                    <div class="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
-                                        <i class="ri-robot-line text-sm text-blue-300"></i>
-                                        <span class="text-[9px] font-black uppercase tracking-wider text-blue-50">AI Verified</span>
-                                    </div>
-                                </template>
+                            
                             </div>
 
                             <div class="mt-4 overflow-hidden h-2 flex rounded-full bg-white/10" x-show="detailedFeedback">
@@ -482,7 +476,7 @@
                         </div>
 
                         <div class="space-y-4">
-                            <h4 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">📋 Evaluation Breakdown</h4>
+                            <h4 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Evaluation Breakdown</h4>
                             
                             <div x-show="loadingFeedback" class="py-8 text-center bg-zinc-50 rounded-2xl border border-dashed border-zinc-200">
                                 <div class="w-6 h-6 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -508,11 +502,7 @@
                                         </div>
 
                                         <div class="flex flex-wrap items-center gap-1.5 ml-7">
-                                            <span class="text-[9px] bg-zinc-200/80 text-zinc-700 px-2.5 py-0.5 rounded-md font-bold uppercase tracking-wide border border-zinc-200/20">
-                                                <span x-text="typeIcons[score.criterion?.checking_type] || '📊'"></span>
-                                                <span x-text="typeLabels[score.criterion?.checking_type] || 'Evaluation'"></span>
-                                            </span>
-                                            <span :class="score.auto_checked ? 'bg-blue-50/80 text-blue-700 border-blue-100' : 'bg-purple-50/80 text-purple-700 border-purple-100'" class="text-[9px] px-2.5 py-0.5 rounded-md font-bold uppercase tracking-wide border" x-text="score.auto_checked ? '🤖 Auto' : '👨‍🏫 Manual'"></span>
+                                            <span :class="score.auto_checked ? 'bg-blue-50/80 text-blue-700 border-blue-100' : 'bg-purple-50/80 text-purple-700 border-purple-100'" class="text-[9px] px-2.5 py-0.5 rounded-md font-bold uppercase tracking-wide border" x-text="score.auto_checked ? 'Auto' : 'Manual'"></span>
                                         </div>
 
                                         <div class="ml-7 overflow-hidden h-1 flex rounded-full bg-zinc-200">

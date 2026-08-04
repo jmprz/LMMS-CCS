@@ -10,11 +10,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GeminiGradingService
 {
     protected string $apiKey;
-    protected string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
+    protected string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
 
     // Max characters sent to Gemini per submission (prevents excessive token cost)
     protected int $maxContentLength = 8000;
@@ -41,45 +42,58 @@ class GeminiGradingService
         return null;
     }
 
-    // Load the task relationship
-    $task = $submission->task; 
+    // Load task relationship if not loaded
+    $task = $submission->task;
 
-    // 2. Read submission file
+    // 2. Read submission file content
     $content = $this->getSubmissionContent($submission);
 
-    // 3. Create/reset the SubmissionGrade record
-    $submissionGrade = SubmissionGrade::updateOrCreate(
-        ['submission_id' => $submission->id, 'rubric_id' => $rubric->id],
-        ['total_score' => 0, 'max_score' => $rubric->total_points, 'auto_graded' => true, 'graded_by' => null]
-    );
-
-    // 4. Grade each criterion
-    $totalScore = 0;
-
-    foreach ($rubric->criteria as $criterion) {
-        // PASS $task HERE
-        $result = $this->gradeCriterion($criterion, $content, $submission, $task);
-
-        CriterionScore::updateOrCreate(
-            ['submission_grade_id' => $submissionGrade->id, 'criterion_id' => $criterion->id],
+    return DB::transaction(function () use ($submission, $rubric, $task, $content) {
+        // 3. Create or reset the SubmissionGrade record
+        $submissionGrade = SubmissionGrade::updateOrCreate(
+            ['submission_id' => $submission->id, 'rubric_id' => $rubric->id],
             [
-                'points_earned' => $result['points'],
-                'max_points'    => $criterion->max_points,
-                'feedback'      => $result['feedback'],
-                'auto_checked'  => $result['auto_checked'],
+                'total_score' => 0, 
+                'max_score'   => $rubric->total_points, 
+                'auto_graded' => true, 
+                'graded_by'   => null
             ]
         );
 
-        $totalScore += $result['points'];
-    }
+        // 4. Grade each criterion
+        $totalScore = 0;
 
-    // 5. Persist final score
-    $submissionGrade->update(['total_score' => $totalScore]);
-    $submission->update(['grade' => round($totalScore), 'auto_graded' => true]);
+        foreach ($rubric->criteria as $criterion) {
+            $result = $this->gradeCriterion($criterion, $content, $submission, $task);
 
-    Log::info("GeminiGrading: Submission #{$submission->id} scored {$totalScore}/{$rubric->total_points}");
+            CriterionScore::updateOrCreate(
+                [
+                    'submission_grade_id' => $submissionGrade->id, 
+                    'criterion_id'        => $criterion->id
+                ],
+                [
+                    'points_earned' => $result['points'],
+                    'max_points'    => $criterion['max_points'] ?? $criterion->max_points,
+                    'feedback'      => $result['feedback'],
+                    'auto_checked'  => $result['auto_checked'],
+                ]
+            );
 
-    return $submissionGrade->fresh(['criterionScores.criterion']);
+            $totalScore += $result['points'];
+        }
+
+        // 5. Persist final score & update submission status to auto_graded = true
+        $submissionGrade->update(['total_score' => $totalScore]);
+        
+        $submission->update([
+            'grade'       => round($totalScore), 
+            'auto_graded' => true 
+        ]);
+
+        Log::info("GeminiGrading: Submission #{$submission->id} scored {$totalScore}/{$rubric->total_points}");
+
+        return $submissionGrade->fresh(['criterionScores.criterion']);
+    });
 }
 
     // =========================================================================

@@ -359,65 +359,65 @@
                                     </div>
 
                                     <div class="lg:col-span-1" x-data="{
-                                                        logs: [],
-                                                        loading: false,
-                                                        refreshInterval: null,
-                                                        fetchSessionLogs() {
-                                                            this.loading = true;
-                                                            fetch('/professor/classroom/{{ $class->id }}/activity-logs')
-                                                                .then(res => res.json())
-                                                                .then(data => { this.logs = data; this.loading = false; })
-                                                                .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
-                                                        },
-                                                        init() {
-                                                            this.fetchSessionLogs();
-                                                            this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
-                                                        },
-                                                        destroy() {
-                                                            if (this.refreshInterval) clearInterval(this.refreshInterval);
-                                                        },
-                                                        getIcon(type, content = '') {
-                                                            const icons = {
-                                                                'attendance': 'ri-checkbox-circle-line',
-                                                                'navigation': 'ri-global-line',
-                                                                'submission': 'ri-file-upload-line',
-                                                                'material': 'ri-book-open-line',
-                                                                'quiz': 'ri-task-line',
-                                                                'professor_session': 'ri-broadcast-line',
-                                                                'screen_share': 'ri-projector-2-line'
-                                                            };
-                                                            
-                                                            if (type === 'professor_activity') {
-                                                                if (content.includes('Posted')) return 'ri-add-circle-line';
-                                                                if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
-                                                                if (content.includes('Deleted')) return 'ri-delete-bin-line';
-                                                                return 'ri-briefcase-line';
-                                                            }
-                                                            return icons[type] || 'ri-cursor-line';
-                                                        },
-                                                        getIconClass(type, content = '') {
-                                                            const classes = {
-                                                                'attendance': 'bg-green-50 text-green-600 border border-green-200',
-                                                                'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
-                                                                'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
-                                                                'material': 'bg-purple-50 text-purple-600 border border-purple-200',
-                                                                'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
-                                                                'professor_session': 'bg-red-50 text-red-600 border border-red-200',
-                                                                'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
-                                                            };
-                                                            
-                                                            if (type === 'professor_activity') {
-                                                                if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
-                                                                if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
-                                                                if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
-                                                                return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
-                                                            }
-                                                            return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
-                                                        },
-                                                        formatTime(dateStr) {
-                                                            return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                                                        }
-                                                    }">
+                                                                                logs: [],
+                                                                                loading: false,
+                                                                                refreshInterval: null,
+                                                                                fetchSessionLogs() {
+                                                                                    this.loading = true;
+                                                                                    fetch('/professor/classroom/{{ $class->id }}/activity-logs')
+                                                                                        .then(res => res.json())
+                                                                                        .then(data => { this.logs = data; this.loading = false; })
+                                                                                        .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
+                                                                                },
+                                                                                init() {
+                                                                                    this.fetchSessionLogs();
+                                                                                    this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
+                                                                                },
+                                                                                destroy() {
+                                                                                    if (this.refreshInterval) clearInterval(this.refreshInterval);
+                                                                                },
+                                                                                getIcon(type, content = '') {
+                                                                                    const icons = {
+                                                                                        'attendance': 'ri-checkbox-circle-line',
+                                                                                        'navigation': 'ri-global-line',
+                                                                                        'submission': 'ri-file-upload-line',
+                                                                                        'material': 'ri-book-open-line',
+                                                                                        'quiz': 'ri-task-line',
+                                                                                        'professor_session': 'ri-broadcast-line',
+                                                                                        'screen_share': 'ri-projector-2-line'
+                                                                                    };
+
+                                                                                    if (type === 'professor_activity') {
+                                                                                        if (content.includes('Posted')) return 'ri-add-circle-line';
+                                                                                        if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
+                                                                                        if (content.includes('Deleted')) return 'ri-delete-bin-line';
+                                                                                        return 'ri-briefcase-line';
+                                                                                    }
+                                                                                    return icons[type] || 'ri-cursor-line';
+                                                                                },
+                                                                                getIconClass(type, content = '') {
+                                                                                    const classes = {
+                                                                                        'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                                                                                        'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                                                                                        'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                                                                                        'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                                                                                        'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+                                                                                        'professor_session': 'bg-red-50 text-red-600 border border-red-200',
+                                                                                        'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
+                                                                                    };
+
+                                                                                    if (type === 'professor_activity') {
+                                                                                        if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
+                                                                                        if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+                                                                                        if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
+                                                                                        return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                                                                                    }
+                                                                                    return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                                                                                },
+                                                                                formatTime(dateStr) {
+                                                                                    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                                                                                }
+                                                                            }">
                                         <div
                                             class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-250px)]">
                                             <div
@@ -980,8 +980,47 @@
                                 </div>
                             </template>
                         </div>
+                        @php
+                            $preparedTasks = $tasks->map(function ($task) {
+                                $alpineCriteria = [];
+                                if ($task->rubric && $task->rubric->criteria) {
+                                    $uid = 1;
+                                    $levelUid = 1000;
+                                    foreach ($task->rubric->criteria as $c) {
+                                        $levelsWithUids = [];
+                                        foreach ($c->checking_rules['levels'] ?? [] as $lvl) {
+                                            $levelsWithUids[] = [
+                                                'uid' => $levelUid++,
+                                                'label' => $lvl['label'] ?? 'Level',
+                                                'points' => (int) ($lvl['points'] ?? 0),
+                                                'description' => $lvl['description'] ?? '',
+                                            ];
+                                        }
+                                        $alpineCriteria[] = [
+                                            'uid' => $uid++,
+                                            'name' => $c->criterion_name,
+                                            'description' => $c->description ?? '',
+                                            'levels' => $levelsWithUids,
+                                        ];
+                                    }
+                                }
 
-                        <div x-show="activeTab === 'tasks'" class="space-y-6" x-cloak x-data="taskManager()">
+                                return [
+                                    'id' => $task->id,
+                                    'title' => $task->title,
+                                    'description' => $task->description,
+                                    'deadline' => $task->deadline,
+                                    'deadline_formatted' => \Carbon\Carbon::parse($task->deadline)->format('M d, Y h:i A'),
+                                    'points' => $task->points ?? 0,
+                                    'submissions_count' => $task->submissions->count(),
+                                    'rubric' => $task->rubric,
+                                    'criteria' => $alpineCriteria,
+                                    'submissions' => $task->submissions()->with(['user', 'submissionGrade.criterionScores.criterion'])->get()
+                                ];
+                            });
+                        @endphp
+                        <div x-show="activeTab === 'tasks'" class="space-y-6" x-cloak
+                            x-data="taskManager({{ json_encode($preparedTasks) }}, {{ $session->subject_id ?? $session->id }})">
 
                             <div>
                                 <div class="flex justify-between items-center mb-8 ms-4 me-4">
@@ -997,153 +1036,98 @@
                                     </button>
                                 </div>
 
+                                {{-- Dynamic Reactive Task Grid --}}
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    @forelse($tasks as $task)
-                                                    <div x-data="{ isDeleted: false, deleting: false }" x-show="!isDeleted"
-                                                        x-transition:leave="transition ease-in duration-300 transform opacity-0 scale-95"
-                                                        class="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-[#383838] transition-all group">
+                                    <template x-for="task in taskList" :key="task.id">
+                                        <div
+                                            class="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-[#383838] transition-all group">
 
-                                                        <div>
-                                                            <div class="flex justify-between items-start mb-5">
-                                                                <div
-                                                                    class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors duration-300">
-                                                                    <i class="ri-flask-line text-xl"></i>
-                                                                </div>
-                                                                <span
-                                                                    class="bg-gray-100 text-[#383838] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200">
-                                                                    {{ $task->points ?? 0 }} PTS
-                                                                </span>
-                                                            </div>
-
-                                                            <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight">
-                                                                {{ $task->title }}
-                                                            </h4>
-
-                                                            <div class="space-y-2 mt-3 mb-6">
-                                                                <div
-                                                                    class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
-                                                                    <i class="ri-time-line mr-2 text-gray-300"></i>
-                                                                    {{ \Carbon\Carbon::parse($task->deadline)->format('M d, Y h:i A') }}
-                                                                </div>
-                                                                <div
-                                                                    class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
-                                                                    <i class="ri-group-line mr-2 text-gray-300"></i>
-                                                                    {{ $task->submissions->count() }} Submissions
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        @php
-                                                            $alpineCriteria = [];
-                                                            if ($task->rubric && $task->rubric->criteria) {
-                                                                $uid = 1;
-                                                                $levelUid = 1000;
-                                                                foreach ($task->rubric->criteria as $c) {
-                                                                    $levelsWithUids = [];
-                                                                    foreach ($c->checking_rules['levels'] ?? [] as $lvl) {
-                                                                        $levelsWithUids[] = [
-                                                                            'uid' => $levelUid++,
-                                                                            'label' => $lvl['label'] ?? 'Level',
-                                                                            'points' => (int) ($lvl['points'] ?? 0),
-                                                                            'description' => $lvl['description'] ?? '',
-                                                                        ];
-                                                                    }
-                                                                    $alpineCriteria[] = [
-                                                                        'uid' => $uid++,
-                                                                        'name' => $c->criterion_name,
-                                                                        'description' => $c->description ?? '',
-                                                                        'levels' => $levelsWithUids,
-                                                                    ];
-                                                                }
-                                                            }
-                                                        @endphp
-
-                                                        <div
-                                                            class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
-                                                            <div class="flex items-center gap-3">
-                                                                {{-- Edit Trigger Option Link --}}
-                                                                <button type="button"
-                                                                    @click="openEditor({{ json_encode($task) }}, {{ json_encode($task->rubric) }}, {{ json_encode($alpineCriteria) }})"
-                                                                    class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                                    <i class="ri-pencil-line text-xs"></i> Edit
-                                                                </button>
-
-                                                                {{-- Submissions Panel Trigger Link --}}
-                                                                <button type="button"
-                                                                    @click="openGrading({{ json_encode($task) }}, {{ json_encode($task->submissions()->with(['user', 'submissionGrade.criterionScores.criterion'])->get()) }})"
-                                                                    class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                                    <i class="ri-check-double-line text-xs"></i> Submissions
-                                                                </button>
-                                                            </div>
-
-                                                            {{-- Non-Refreshing Async Destructive Action Link --}}
-                                                            <button type="button" @click="
-                                            if (confirm('Are you sure you want to delete this task? All student submissions associated with it will be permanently removed.')) {
-                                                deleting = true;
-                                                fetch('{{ route('professor.tasks.destroy', $task->id) }}', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                                        'Content-Type': 'application/json',
-                                                        'Accept': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({ _method: 'DELETE' })
-                                                })
-                                                .then(response => {
-                                                    if (response.ok || response.redirected) {
-                                                        isDeleted = true;
-                                                    } else {
-                                                        alert('Failed to drop task registry instance.');
-                                                        deleting = false;
-                                                    }
-                                                })
-                                                .catch(err => {
-                                                    console.error(err);
-                                                    alert('A terminal transport connection exception was caught.');
-                                                    deleting = false;
-                                                });
-                                            }
-                                        " :disabled="deleting"
-                                                                class="text-red-500 hover:text-red-700 disabled:opacity-40 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                                <i class="ri-delete-bin-line text-xs" x-show="!deleting"></i>
-                                                                <i class="ri-loader-4-line animate-spin text-xs" x-show="deleting"
-                                                                    x-cloak></i>
-                                                                <span x-text="deleting ? 'Deleting...' : 'Delete'"></span>
-                                                            </button>
-                                                        </div>
-
+                                            <div>
+                                                <div class="flex justify-between items-start mb-5">
+                                                    <div
+                                                        class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors duration-300">
+                                                        <i class="ri-flask-line text-xl"></i>
                                                     </div>
-                                    @empty
+                                                    <span
+                                                        class="bg-gray-100 text-[#383838] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200"
+                                                        x-text="(task.points || 0) + ' PTS'">
+                                                    </span>
+                                                </div>
+
+                                                <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight"
+                                                    x-text="task.title"></h4>
+
+                                                <div class="space-y-2 mt-3 mb-6">
+                                                    <div
+                                                        class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                                                        <i class="ri-time-line mr-2 text-gray-300"></i>
+                                                        <span
+                                                            x-text="task.deadline_formatted || formatDate(task.deadline)"></span>
+                                                    </div>
+                                                    <div
+                                                        class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                                                        <i class="ri-group-line mr-2 text-gray-300"></i>
+                                                        <span
+                                                            x-text="(task.submissions_count !== undefined ? task.submissions_count : (task.submissions ? task.submissions.length : 0)) + ' Submissions'"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                                                <div class="flex items-center gap-3">
+                                                    {{-- Edit Trigger --}}
+                                                    <button type="button"
+                                                        @click="openEditor(task, task.rubric, task.criteria)"
+                                                        class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                        <i class="ri-pencil-line text-xs"></i> Edit
+                                                    </button>
+
+                                                    {{-- Submissions Panel Trigger --}}
+                                                    <button type="button" @click="openGrading(task, task.submissions)"
+                                                        class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                        <i class="ri-check-double-line text-xs"></i> Submissions
+                                                    </button>
+                                                </div>
+
+                                                {{-- Delete Control --}}
+                                                <button type="button" @click="deleteTask(task.id)"
+                                                    class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                    <i class="ri-delete-bin-line text-xs"></i> Delete
+                                                </button>
+                                            </div>
+
+                                        </div>
+                                    </template>
+
+                                    <template x-if="taskList.length === 0">
                                         <div
                                             class="col-span-full py-24 border-2 border-dashed border-gray-200 rounded-[2rem] text-center bg-gray-50/50">
                                             <i class="ri-inbox-2-line text-5xl text-gray-300 mb-4 block"></i>
                                             <p class="text-gray-500 font-black uppercase tracking-widest text-xs">No
                                                 laboratory tasks created yet.</p>
                                         </div>
-                                    @endforelse
+                                    </template>
                                 </div>
                             </div>
 
+                            {{-- Task Editor Modal --}}
                             <template x-teleport="body">
                                 <div x-show="showEditorModal"
                                     class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4"
                                     x-cloak x-transition.opacity>
                                     <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden transform transition-all"
-                                        @click.away="showEditorModal = false" x-transition:enter="ease-out duration-300"
-                                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+                                        @click.away="showEditorModal = false">
 
                                         <div
                                             class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-                                            <div class="flex items-center gap-4">
-                                                <div>
-                                                    <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
-                                                        x-text="isEditing ? 'Edit Laboratory Task' : 'Create New Task'">
-                                                    </h3>
-                                                    <p
-                                                        class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                        Configure details & scoring rubric</p>
-                                                </div>
+                                            <div>
+                                                <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
+                                                    x-text="isEditing ? 'Edit Laboratory Task' : 'Create New Task'">
+                                                </h3>
+                                                <p
+                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                                    Configure details & scoring rubric</p>
                                             </div>
                                             <div class="flex items-center gap-6">
                                                 <div class="text-right hidden sm:block border-r border-gray-200 pr-6">
@@ -1153,10 +1137,13 @@
                                                     <p class="text-2xl font-black text-[#383838]"
                                                         x-text="computedMaxPoints"></p>
                                                 </div>
-                                                <button @click="saveTask()"
-                                                    class="bg-[#383838] hover:bg-black text-white px-8 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition flex items-center gap-2">
-                                                    <i class="ri-save-line text-sm"></i> <span
-                                                        x-text="isEditing ? 'Update Task' : 'Save & Publish'"></span>
+                                                <button @click="saveTask()" :disabled="saving"
+                                                    class="bg-[#383838] hover:bg-black text-white px-8 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition flex items-center gap-2 disabled:opacity-50">
+                                                    <i class="ri-save-line text-sm" x-show="!saving"></i>
+                                                    <i class="ri-loader-4-line animate-spin text-sm" x-show="saving"
+                                                        x-cloak></i>
+                                                    <span
+                                                        x-text="saving ? 'Saving...' : (isEditing ? 'Update Task' : 'Save & Publish')"></span>
                                                 </button>
                                                 <button @click="showEditorModal = false"
                                                     class="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-600">
@@ -1166,9 +1153,12 @@
                                         </div>
 
                                         <div class="flex-1 overflow-y-auto p-6 md:p-8 bg-white">
-                                            <form id="unified-task-form"
+                                            <form @submit.prevent="saveTask()"
                                                 class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-
+                                                <input type="hidden" name="subject_id" :value="subjectId">
+                                                <input type="hidden" name="points" :value="computedMaxPoints">
+                                                <input type="hidden" name="rubric[criteria]"
+                                                    :value="JSON.stringify(criteria)">
                                                 <div class="lg:col-span-4 space-y-6">
                                                     <div class="bg-gray-50 rounded-3xl p-6 border border-gray-100">
                                                         <h4
@@ -1181,9 +1171,9 @@
                                                                 <label
                                                                     class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Activity
                                                                     Title *</label>
-                                                                <input type="text" x-model="taskForm.title"
+                                                                <input type="text" x-model="taskForm.title" required
                                                                     placeholder="e.g., Python Basics Lab"
-                                                                    class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] focus:border-[#383838] outline-none transition-all shadow-sm">
+                                                                    class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm">
                                                             </div>
 
                                                             <div>
@@ -1191,6 +1181,7 @@
                                                                     class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Deadline
                                                                     *</label>
                                                                 <input type="datetime-local" x-model="taskForm.deadline"
+                                                                    required
                                                                     class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm text-gray-600">
                                                             </div>
 
@@ -1226,8 +1217,10 @@
                                                                     <span
                                                                         class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Max:
                                                                         <span class="text-[#383838] text-sm"
-                                                                            x-text="getMaxPoints(criterion)"></span></span>
-                                                                    <button @click="removeCriterion(criterion.uid)"
+                                                                            x-text="getMaxPoints(criterion)"></span>
+                                                                    </span>
+                                                                    <button type="button"
+                                                                        @click="removeCriterion(criterion.uid)"
                                                                         x-show="criteria.length > 1"
                                                                         class="text-gray-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50">
                                                                         <i class="ri-delete-bin-line text-lg"></i>
@@ -1237,7 +1230,7 @@
 
                                                             <div class="p-5 overflow-x-auto">
                                                                 <div class="flex gap-4 min-w-max pb-2">
-                                                                    <template x-for="(level, lIdx) in criterion.levels"
+                                                                    <template x-for="level in criterion.levels"
                                                                         :key="level.uid">
                                                                         <div
                                                                             class="w-64 border border-gray-200 rounded-2xl overflow-hidden bg-white hover:border-gray-400 transition group flex flex-col shadow-sm">
@@ -1261,7 +1254,7 @@
                                                                                     class="w-full text-xs text-gray-600 bg-transparent border-none outline-none resize-none p-0 focus:ring-0"></textarea>
                                                                             </div>
                                                                             <div class="px-3 pb-3 text-right bg-white">
-                                                                                <button
+                                                                                <button type="button"
                                                                                     @click="removeLevel(criterion, level.uid)"
                                                                                     x-show="criterion.levels.length > 1"
                                                                                     class="text-[9px] text-gray-400 hover:text-red-500 font-black uppercase tracking-widest">Remove</button>
@@ -1269,7 +1262,8 @@
                                                                         </div>
                                                                     </template>
                                                                     <div class="w-40 flex-shrink-0">
-                                                                        <button @click="addLevel(criterion)"
+                                                                        <button type="button"
+                                                                            @click="addLevel(criterion)"
                                                                             class="w-full h-full min-h-[160px] border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-[#383838] hover:text-[#383838] transition flex flex-col items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest bg-gray-50/50 hover:bg-gray-50">
                                                                             <i class="ri-add-circle-line text-2xl"></i>
                                                                             Add Level
@@ -1278,6 +1272,7 @@
                                                                 </div>
                                                             </div>
 
+                                                            {{-- AI Context Instructions --}}
                                                             <div
                                                                 class="px-5 pb-5 border-t border-gray-100 pt-4 bg-white">
                                                                 <label
@@ -1293,7 +1288,7 @@
                                                         </div>
                                                     </template>
 
-                                                    <button @click="addCriterion()"
+                                                    <button type="button" @click="addCriterion()"
                                                         class="w-full py-5 border-2 border-dashed border-gray-200 rounded-3xl text-gray-500 hover:border-[#383838] hover:text-[#383838] font-black text-[10px] uppercase tracking-widest transition flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100">
                                                         <i class="ri-add-circle-fill text-xl"></i> Add New Criterion
                                                     </button>
@@ -1304,35 +1299,32 @@
                                 </div>
                             </template>
 
+                            {{-- Submissions & Grading Modal --}}
                             <template x-teleport="body">
                                 <div x-show="showGradingModal"
                                     class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4"
                                     x-cloak x-transition.opacity>
                                     <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden transform transition-all"
-                                        @click.away="showGradingModal = false"
-                                        x-transition:enter="ease-out duration-300"
-                                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+                                        @click.away="showGradingModal = false">
 
                                         <div
                                             class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-                                            <div class="flex items-center gap-4">
-                                                <div>
-                                                    <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
-                                                        x-text="gradingTask?.title"></h3>
-                                                    <p
-                                                        class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                        Reviewing Submissions</p>
-                                                </div>
+                                            <div>
+                                                <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
+                                                    x-text="gradingTask?.title"></h3>
+                                                <p
+                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                                    Reviewing Submissions</p>
                                             </div>
 
                                             <div class="flex items-center gap-6">
+                                                {{-- Auto-Checker Toggle Switch --}}
                                                 <div
                                                     class="flex items-center gap-3 bg-white border border-gray-200 px-4 py-2.5 rounded-2xl shadow-sm">
                                                     <p
                                                         class="text-xs font-black text-[#383838] uppercase tracking-widest">
                                                         Auto-Checker</p>
-                                                    <button @click="aiGradingEnabled = !aiGradingEnabled"
+                                                    <button @click="toggleAiGrading()"
                                                         :class="aiGradingEnabled ? 'bg-[#383838]' : 'bg-gray-200'"
                                                         class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
                                                         <span
@@ -1395,7 +1387,7 @@
                                                             <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
                                                                 x-text="formatDate(sub.created_at)"></td>
                                                             <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
-                                                                x-text="formatDuration(sub.duration || sub.duration_seconds || sub.time_taken) || '--'">
+                                                                x-text="formatDuration(sub.duration_seconds ?? sub.duration ?? sub.time_taken) || '--'">
                                                             </td>
                                                             <td class="px-6 py-6 border-y border-gray-100 align-top">
                                                                 <a :href="'{{ url('/') }}/' + sub.file_path"
@@ -1415,7 +1407,7 @@
                                                                                 class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Grading
                                                                                 Status</span>
                                                                             <p class="text-xs font-black mt-1 text-[#383838]"
-                                                                                x-text="sub.auto_graded ? 'Auto Evaluated' : (sub.grade !== null ? '✍️ Manual Entry' : '⏳ Pending')">
+                                                                                x-text="(sub.auto_graded && aiGradingEnabled) ? 'Auto Evaluated' : (sub.grade !== null ? 'Manual Entry' : 'Pending')">
                                                                             </p>
                                                                         </div>
                                                                         <button x-show="aiGradingEnabled"
@@ -1433,11 +1425,12 @@
                                                                             <span x-text="sub.grade ?? '0'"></span>
                                                                             <span
                                                                                 class="text-xs text-gray-400 font-bold tracking-widest"
-                                                                                x-text="'/ ' + gradingTask.points"></span>
+                                                                                x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
                                                                         </p>
                                                                     </div>
                                                                 </div>
 
+                                                                {{-- Rubric Breakdown --}}
                                                                 <template
                                                                     x-if="sub.submission_grade && sub.submission_grade.criterion_scores">
                                                                     <div class="mb-5 space-y-3">
@@ -1449,22 +1442,61 @@
                                                                             :key="score.id">
                                                                             <div
                                                                                 class="p-4 border border-gray-200 bg-white rounded-2xl shadow-sm">
-                                                                                <div
-                                                                                    class="flex justify-between items-center mb-2">
-                                                                                    <span
-                                                                                        class="text-xs font-black text-gray-900"
-                                                                                        x-text="score.criterion?.criterion_name || 'Criterion'"></span>
-                                                                                    <span
-                                                                                        class="text-[10px] font-black px-2.5 py-1 bg-gray-100 text-[#383838] rounded-lg border border-gray-200"
-                                                                                        x-text="score.points_earned + ' / ' + score.max_points"></span>
-                                                                                </div>
                                                                                 <p class="text-[11px] text-gray-500 leading-relaxed font-medium"
                                                                                     x-text="score.feedback"></p>
                                                                             </div>
                                                                         </template>
                                                                     </div>
                                                                 </template>
+                                                                <!-- Front-End Interactive Rubric Selector -->
+                                                                <template
+                                                                    x-if="gradingTask && (gradingTask.rubric || gradingTask.criteria)">
+                                                                    <div
+                                                                        class="mb-5 space-y-4 bg-white p-4 rounded-2xl border border-gray-200">
+                                                                        <h4
+                                                                            class="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                                            Select Criteria Levels
+                                                                        </h4>
 
+                                                                        <template
+                                                                            x-for="(criterion, cIdx) in (gradingTask.criteria || (gradingTask.rubric ? JSON.parse(gradingTask.rubric.criteria_json || '[]') : []))"
+                                                                            :key="cIdx">
+                                                                            <div
+                                                                                class="space-y-2 border-b border-gray-100 pb-3 last:border-none last:pb-0">
+                                                                                <div
+                                                                                    class="flex justify-between items-center">
+                                                                                    <span
+                                                                                        class="text-xs font-black text-gray-800"
+                                                                                        x-text="criterion.name || criterion.criterion_name"></span>
+                                                                                    <span
+                                                                                        class="text-[9px] font-black text-gray-400 uppercase"
+                                                                                        x-text="'Max: ' + getMaxPoints(criterion) + ' PTS'"></span>
+                                                                                </div>
+
+                                                                                <!-- Level Buttons -->
+                                                                                <div class="flex flex-wrap gap-2">
+                                                                                    <template
+                                                                                        x-for="level in criterion.levels"
+                                                                                        :key="level.label || level.uid">
+                                                                                        <button type="button"
+                                                                                            @click="selectCriterionLevel(sub, cIdx, level.points)"
+                                                                                            :class="isCriterionLevelSelected(sub, cIdx, level.points) 
+                                ? 'bg-[#383838] text-white border-[#383838]' 
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'"
+                                                                                            class="px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-2">
+                                                                                            <span
+                                                                                                x-text="level.label"></span>
+                                                                                            <span
+                                                                                                class="text-[10px] opacity-75"
+                                                                                                x-text="'(' + level.points + 'p)'"></span>
+                                                                                        </button>
+                                                                                    </template>
+                                                                                </div>
+                                                                            </div>
+                                                                        </template>
+                                                                    </div>
+                                                                </template>
+                                                                {{-- Non-refreshing Ajax Grade Form --}}
                                                                 <form :action="'/professor/grade/' + sub.id"
                                                                     method="POST"
                                                                     class="flex flex-col gap-3 mt-2 border-t border-gray-200 pt-5"
@@ -1482,7 +1514,7 @@
                                                                                 placeholder="0">
                                                                             <span
                                                                                 class="text-[10px] font-black text-gray-400 ml-1"
-                                                                                x-text="'/ ' + gradingTask.points"></span>
+                                                                                x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
                                                                         </div>
                                                                     </div>
                                                                     <div class="flex items-stretch gap-2 h-12">
@@ -1508,7 +1540,7 @@
                                                     <i class="ri-search-eye-line text-6xl text-gray-200 mb-4 block"></i>
                                                     <p
                                                         class="text-gray-400 font-black text-xs uppercase tracking-widest">
-                                                        No submissions match your search.</p>
+                                                        No submissions match your query.</p>
                                                 </div>
                                             </template>
                                         </div>
@@ -1571,9 +1603,8 @@
                                 </a>
                             </div>
 
-                         <div id="quizzes-list-container" 
-     class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-     x-data="{ 
+                            <div id="quizzes-list-container"
+                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" x-data="{ 
         deletedQuizzes: [],
         async removeQuiz(quizId, routeUrl) {
             if (!confirm('Are you sure you want to permanently wipe this quiz and all logged student attempts? This cannot be undone.')) {
@@ -1599,74 +1630,78 @@
             }
         }
      }">
-     
-    @forelse($session->quizzes ?? [] as $quiz)
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all duration-300 shadow-sm"
-             x-show="!deletedQuizzes.includes({{ $quiz->id }})"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-95">
-             
-            <div>
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
-                        <i class="ri-timer-line text-lg"></i>
-                    </div>
-                    <span class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                        {{ $quiz->questions->count() }} PTS
-                    </span>
-                </div>
 
-                <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
-                    {{ $quiz->title }}
-                </h4>
+                                @forelse($session->quizzes ?? [] as $quiz)
+                                    <div class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col justify-between group hover:border-[#383838] transition-all duration-300 shadow-sm"
+                                        x-show="!deletedQuizzes.includes({{ $quiz->id }})"
+                                        x-transition:leave="transition ease-in duration-200"
+                                        x-transition:leave-start="opacity-100 scale-100"
+                                        x-transition:leave-end="opacity-0 scale-95">
 
-                <div class="space-y-2 mt-4">
-                    <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                        <i class="ri-calendar-todo-line mr-2"></i>
-                        {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}
-                    </div>
-                    <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                        <i class="ri-time-line mr-2"></i>
-                        {{ $quiz->time_limit }} Mins Duration
-                    </div>
-                    <div class="flex items-center text-gray-500 text-[11px] font-medium">
-                        <i class="ri-group-line mr-2"></i>
-                        {{ $quiz->attempts->count() }} Answered
-                    </div>
-                </div>
-            </div>
+                                        <div>
+                                            <div class="flex justify-between items-start mb-4">
+                                                <div
+                                                    class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border group-hover:bg-black group-hover:text-white transition">
+                                                    <i class="ri-timer-line text-lg"></i>
+                                                </div>
+                                                <span
+                                                    class="bg-gray-100 text-[#383838] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                                                    {{ $quiz->questions->count() }} PTS
+                                                </span>
+                                            </div>
 
-            <div class="mt-6 flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
-                {{-- View Results Button (Placed prominently on the left side) --}}
-                <button type="button"
-                        @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
-                        class="flex-1 bg-gray-50 text-[#383838] border border-gray-200 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest cursor-pointer text-center">
-                    View Results
-                </button>
+                                            <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
+                                                {{ $quiz->title }}
+                                            </h4>
 
-                <a href="{{ route('professor.quizzes.export-scores', $quiz) }}"
-                   class="flex-shrink-0 bg-[#383838] text-white py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-1.5"
-                   title="Export quiz scores to Excel">
-                    <i class="ri-file-excel-2-line text-xs"></i>
-                    Export
-                </a>
+                                            <div class="space-y-2 mt-4">
+                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                                                    <i class="ri-calendar-todo-line mr-2"></i>
+                                                    {{ \Carbon\Carbon::parse($quiz->deadline)->format('M d, h:i A') }}
+                                                </div>
+                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                                                    <i class="ri-time-line mr-2"></i>
+                                                    {{ $quiz->time_limit }} Mins Duration
+                                                </div>
+                                                <div class="flex items-center text-gray-500 text-[11px] font-medium">
+                                                    <i class="ri-group-line mr-2"></i>
+                                                    {{ $quiz->attempts->count() }} Answered
+                                                </div>
+                                            </div>
+                                        </div>
 
-                {{-- Inline Asynchronous Delete Control (Aligned right) --}}
-                <button type="button"
-                        @click="removeQuiz({{ $quiz->id }}, '{{ route('professor.quizzes.destroy', $quiz->id) }}')"
-                        class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 bg-transparent border-0 cursor-pointer p-2 rounded-lg hover:bg-red-50/50 flex-shrink-0">
-                    <i class="ri-delete-bin-line text-xs"></i> Delete
-                </button>
-            </div>
-        </div>
-    @empty
-        <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
-            <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
-            <p class="text-gray-400 italic text-sm">No quizzes available for this session.</p>
-        </div>
-    @endforelse
-</div>
+                                        <div
+                                            class="mt-6 flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
+                                            {{-- View Results Button (Placed prominently on the left side) --}}
+                                            <button type="button"
+                                                @click="selectedQuiz = {{ json_encode($quiz) }}; scores = {{ json_encode($quiz->attempts()->with('user')->get()) }}"
+                                                class="flex-1 bg-gray-50 text-[#383838] border border-gray-200 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase hover:bg-[#383838] hover:text-white transition-all tracking-widest cursor-pointer text-center">
+                                                View Results
+                                            </button>
+
+                                            <a href="{{ route('professor.quizzes.export-scores', $quiz) }}"
+                                                class="flex-shrink-0 bg-[#383838] text-white py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-1.5"
+                                                title="Export quiz scores to Excel">
+                                                <i class="ri-file-excel-2-line text-xs"></i>
+                                                Export
+                                            </a>
+
+                                            {{-- Inline Asynchronous Delete Control (Aligned right) --}}
+                                            <button type="button"
+                                                @click="removeQuiz({{ $quiz->id }}, '{{ route('professor.quizzes.destroy', $quiz->id) }}')"
+                                                class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 bg-transparent border-0 cursor-pointer p-2 rounded-lg hover:bg-red-50/50 flex-shrink-0">
+                                                <i class="ri-delete-bin-line text-xs"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div
+                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center">
+                                        <i class="ri-timer-flash-line text-4xl text-gray-200 mb-3 block"></i>
+                                        <p class="text-gray-400 italic text-sm">No quizzes available for this session.</p>
+                                    </div>
+                                @endforelse
+                            </div>
 
                             <template x-teleport="body">
                                 <div x-show="selectedQuiz"
@@ -1799,76 +1834,92 @@
                             </template>
                         </div>
 
-                       <div x-show="activeTab === 'students'" x-data="studentManager()" x-cloak class="space-y-6 animate-fade-in">
+                        <div x-show="activeTab === 'students'" x-data="studentManager()" x-cloak
+                            class="space-y-6 animate-fade-in">
 
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
-        <div>
-            <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Enrolled Students</h2>
-            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                Monitor presence and activity history
-            </p>
-        </div>
+                            <div
+                                class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 ms-4 me-4 gap-4">
+                                <div>
+                                    <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Enrolled
+                                        Students</h2>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                        Monitor presence and activity history
+                                    </p>
+                                </div>
 
-        <div class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
-            <i class="ri-team-line text-lg"></i>
-            <span class="text-[10px] font-black uppercase tracking-widest">
-                Total Enrolled: <span x-text="students.length"></span>
-            </span>
-        </div>
-    </div>
+                                <div
+                                    class="bg-gray-100 text-[#383838] px-5 py-2.5 rounded-xl flex items-center gap-3 border border-gray-200 shadow-sm">
+                                    <i class="ri-team-line text-lg"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-widest">
+                                        Total Enrolled: <span x-text="students.length"></span>
+                                    </span>
+                                </div>
+                            </div>
 
-    {{-- Reactive Grid --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <template x-for="student in students" :key="student.id">
-            <div @click="viewStudentActivity(student.id, student.first_name, student.last_name, student.attendances, {{ $class->id }})"
-                :class="student.is_screen_blocked ? 'border-red-300 bg-red-50/30' : 'border-gray-100'"
-                class="bg-white p-5 rounded-3xl border flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
+                            {{-- Reactive Grid --}}
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <template x-for="student in students" :key="student.id">
+                                    <div @click="viewStudentActivity(student.id, student.first_name, student.last_name, student.attendances, {{ $class->id }})"
+                                        :class="student.is_screen_blocked ? 'border-red-300 bg-red-50/30' : 'border-gray-100'"
+                                        class="bg-white p-5 rounded-3xl border flex items-center justify-between group hover:border-[#383838] hover:shadow-lg transition-all duration-300 cursor-pointer">
 
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] font-black text-sm border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors">
-                        <span x-text="(student.first_name[0] + student.last_name[0]).toUpperCase()"></span>
-                    </div>
+                                        <div class="flex items-center gap-4">
+                                            <div
+                                                class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#383838] font-black text-sm border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors">
+                                                <span
+                                                    x-text="(student.first_name[0] + student.last_name[0]).toUpperCase()"></span>
+                                            </div>
 
-                    <div class="flex flex-col min-w-0">
-                        <h4 class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
-                            <span x-text="student.last_name.toUpperCase() + ', ' + student.first_name"></span>
-                        </h4>
-                        <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1" x-text="student.school_id"></p>
-                        
-                        <template x-if="student.violation_count > 0 || student.is_screen_blocked">
-                            <p class="text-[9px] font-black uppercase tracking-widest mt-1"
-                               :class="student.is_screen_blocked ? 'text-red-600' : 'text-amber-600'">
-                                <span x-text="student.is_screen_blocked ? 'Screen Locked' : 'Warnings'"></span>:
-                                <span x-text="student.violation_count + '/' + warningThreshold"></span>
-                            </p>
-                        </template>
-                    </div>
-                </div>
+                                            <div class="flex flex-col min-w-0">
+                                                <h4
+                                                    class="font-black text-gray-900 text-sm truncate leading-tight group-hover:text-black transition">
+                                                    <span
+                                                        x-text="student.last_name.toUpperCase() + ', ' + student.first_name"></span>
+                                                </h4>
+                                                <p class="text-[10px] text-gray-400 font-bold tracking-widest mt-1"
+                                                    x-text="student.school_id"></p>
 
-                <div class="flex items-center gap-2">
-                    {{-- Unblock Button --}}
-                    <button type="button"
-                        x-show="student.is_screen_blocked"
-                        @click.stop="unblockStudent(student.id)"
-                        class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
-                        Unblock
-                    </button>
+                                                <template
+                                                    x-if="student.violation_count > 0 || student.is_screen_blocked">
+                                                    <p class="text-[9px] font-black uppercase tracking-widest mt-1"
+                                                        :class="student.is_screen_blocked ? 'text-red-600' : 'text-amber-600'">
+                                                        <span
+                                                            x-text="student.is_screen_blocked ? 'Screen Locked' : 'Warnings'"></span>:
+                                                        <span
+                                                            x-text="student.violation_count + '/' + warningThreshold"></span>
+                                                    </p>
+                                                </template>
+                                            </div>
+                                        </div>
 
-                    {{-- Presence Indicator --}}
-                    <div x-show="student.is_present" class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" title="Active"></div>
-                    <div x-show="!student.is_present" class="w-3 h-3 rounded-full bg-gray-200" title="Offline"></div>
-                </div>
-            </div>
-        </template>
+                                        <div class="flex items-center gap-2">
+                                            {{-- Unblock Button --}}
+                                            <button type="button" x-show="student.is_screen_blocked"
+                                                @click.stop="unblockStudent(student.id)"
+                                                class="text-[9px] font-black uppercase tracking-widest bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition">
+                                                Unblock
+                                            </button>
 
-        <template x-if="students.length === 0">
-            <div class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
-                <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
-                <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.</p>
-            </div>
-        </template>
-    </div>
-</div>
+                                            {{-- Presence Indicator --}}
+                                            <div x-show="student.is_present"
+                                                class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"
+                                                title="Active"></div>
+                                            <div x-show="!student.is_present" class="w-3 h-3 rounded-full bg-gray-200"
+                                                title="Offline"></div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <template x-if="students.length === 0">
+                                    <div
+                                        class="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-white">
+                                        <i class="ri-user-unfollow-line text-4xl text-gray-200 mb-3 block"></i>
+                                        <p class="text-gray-400 font-bold text-sm">No students enrolled in this session.
+                                        </p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
 
 
 
@@ -1912,20 +1963,24 @@
                                         </h3>
 
                                         <div class="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-                                            <label class="text-[10px] font-black text-amber-700 uppercase tracking-widest block mb-2">
+                                            <label
+                                                class="text-[10px] font-black text-amber-700 uppercase tracking-widest block mb-2">
                                                 Violation Warning Limit
                                             </label>
                                             <div class="flex items-center gap-3">
-                                                <input type="number" min="1" max="10" x-model.number="violationWarningThreshold"
+                                                <input type="number" min="1" max="10"
+                                                    x-model.number="violationWarningThreshold"
                                                     class="w-20 border-none bg-white rounded-xl p-3 text-sm font-black text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none text-center">
-                                                <button type="button" @click="saveViolationSettings()" :disabled="savingThreshold"
+                                                <button type="button" @click="saveViolationSettings()"
+                                                    :disabled="savingThreshold"
                                                     class="flex-1 py-3 bg-[#383838] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition disabled:opacity-50">
                                                     <span x-show="!savingThreshold">Save Limit</span>
                                                     <span x-show="savingThreshold">Saving...</span>
                                                 </button>
                                             </div>
                                             <p class="text-[9px] text-amber-700/80 font-bold mt-2 leading-relaxed">
-                                                Students are warned on each violation. After this many violations, their screen is locked until you unblock them.
+                                                Students are warned on each violation. After this many violations, their
+                                                screen is locked until you unblock them.
                                             </p>
                                         </div>
 
@@ -2280,17 +2335,17 @@
 
     <script type="module">
         // Shared local server configuration options
-                                                                                        
-      const localPeerOptions = {
+
+        const localPeerOptions = {
             host: 'localhost',
             port: 9000,          // Default port for local PeerJS server
             path: '/myapp',
-            secure: false,      
+            secure: false,
             config: {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             },
             pingInterval: 5000,
-            debug: 3             
+            debug: 3
         };
 
         let receiverPeer = null;         // Phone 1: For receiving student screens
@@ -2334,20 +2389,20 @@
             if (!wallGrid) return;
 
             const ids = Array.from(connectedStudents);
-            
+
             // Sort students alphabetically by name
             ids.sort((a, b) => {
                 const cardA = document.getElementById(`student-card-${a}`);
                 const nameElA = cardA ? cardA.querySelector('[title]') : null;
                 const nameA = nameElA ? nameElA.getAttribute('title') : `Student ${a}`;
-                
+
                 const cardB = document.getElementById(`student-card-${b}`);
                 const nameElB = cardB ? cardB.querySelector('[title]') : null;
                 const nameB = nameElB ? nameElB.getAttribute('title') : `Student ${b}`;
-                
+
                 return nameA.localeCompare(nameB);
             });
-            
+
             if (counterLabel) {
                 counterLabel.innerText = ids.length === 1 ? '1 connected' : `${ids.length} connected`;
             }
@@ -2835,185 +2890,533 @@
         }
     </script>
 
+    @php
+        $studentsData = $class->students->map(function ($s) use ($session) {
+            return [
+                'id' => $s->id,
+                'first_name' => $s->first_name,
+                'last_name' => $s->last_name,
+                'middle_name' => $s->middle_name,
+                'school_id' => $s->school_id,
+                'is_present' => (bool) ($s->pivot->is_present ?? false),
+                'is_screen_blocked' => (bool) ($s->pivot->is_screen_blocked ?? false),
+                'violation_count' => (int) ($s->pivot->violation_count ?? 0),
+                'attendances' => $s->attendances ?? []
+            ];
+        });
+    @endphp
+
+    <script>
+        function studentManager() {
+            return {
+                // Hydrate initial state cleanly from Blade variable
+                students: @json($studentsData),
+                warningThreshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
+                logModalOpen: false,
+                pollInterval: null,
+
+                // Modal state variables
+                selectedUserName: '',
+                selectedUserId: null,
+                selectedClassId: null,
+                selectedAttendances: [],
+                logs: [],
+                studentFiles: [],
+                modalTab: 'logs',
+                loading: false,
+                logRefreshInterval: null,
+
+                init() {
+                    // Poll for student status updates every 3 seconds
+                    this.pollInterval = setInterval(() => this.fetchStudentStatuses(), 3000);
+                },
+
+                destroy() {
+                    if (this.pollInterval) clearInterval(this.pollInterval);
+                    this.stopActivityRefresh();
+                },
+
+                async fetchStudentStatuses() {
+                    try {
+                        let response = await fetch('/professor/classroom/{{ $class->id }}/students-status');
+                        if (response.ok) {
+                            let data = await response.json();
+
+                            data.forEach(updatedStudent => {
+                                let student = this.students.find(s => s.id === updatedStudent.id);
+                                if (student) {
+                                    student.is_screen_blocked = updatedStudent.is_screen_blocked;
+                                    student.violation_count = updatedStudent.violation_count;
+                                    student.is_present = updatedStudent.is_present;
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Failed to sync student statuses:', err);
+                    }
+                },
+
+                async unblockStudent(studentId) {
+                    try {
+                        let response = await fetch(`/professor/classroom/{{ $class->id }}/students/${studentId}/unblock`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            let student = this.students.find(s => s.id === studentId);
+                            if (student) {
+                                student.is_screen_blocked = false;
+                            }
+                        } else {
+                            alert('Failed to unblock student. Please try again.');
+                        }
+                    } catch (err) {
+                        console.error('Error during unblock request:', err);
+                    }
+                },
+
+                async fetchStudentWorkspace(userId, classId, attendances = [], showLoader = false) {
+                    if (showLoader) {
+                        this.loading = true;
+                    }
+                    try {
+                        const [logsRes, filesRes] = await Promise.all([
+                            fetch(`/professor/students/${userId}/activity-logs/${classId}`),
+                            fetch(`/professor/students/${userId}/files/${classId}`)
+                        ]);
+
+                        if (logsRes.ok) {
+                            let fetchedLogs = await logsRes.json();
+                            if (attendances && attendances.length > 0) {
+                                attendances.forEach(att => {
+                                    fetchedLogs.push({
+                                        id: 'att-' + att.id,
+                                        log_type: 'attendance',
+                                        content: 'Official Attendance Marked',
+                                        class_name: (att.lab_session ? att.lab_session.subject_name : null) || (att.labSession ? att.labSession.subject_name : null) || 'Academic Session',
+                                        duration_seconds: 0,
+                                        created_at: `${att.attendance_date} ${att.joined_at}`
+                                    });
+                                });
+                            }
+                            this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        }
+
+                        if (filesRes.ok) {
+                            let fetchedFiles = await filesRes.json();
+                            this.studentFiles = fetchedFiles.sort((a, b) => b.id - a.id);
+                        }
+
+                    } catch (e) {
+                        console.error("Fetch Execution Failed", e);
+                    } finally {
+                        if (showLoader) {
+                            this.loading = false;
+                        }
+                    }
+                },
+
+                async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
+                    this.selectedUserName = `${lastName}, ${firstName}`;
+                    this.selectedUserId = userId;
+                    this.selectedClassId = classId;
+                    this.selectedAttendances = attendances || [];
+                    this.logModalOpen = true;
+                    this.logs = [];
+                    this.studentFiles = [];
+                    this.modalTab = 'logs';
+                    this.stopActivityRefresh();
+
+                    await this.fetchStudentWorkspace(userId, classId, this.selectedAttendances, true);
+                    this.logRefreshInterval = setInterval(() => {
+                        if (this.logModalOpen && this.selectedUserId && this.selectedClassId) {
+                            this.fetchStudentWorkspace(this.selectedUserId, this.selectedClassId, this.selectedAttendances);
+                        }
+                    }, 3000);
+                },
+
+                closeActivityModal() {
+                    this.logModalOpen = false;
+                    this.selectedUserId = null;
+                    this.selectedClassId = null;
+                    this.selectedAttendances = [];
+                    this.stopActivityRefresh();
+                },
+
+                stopActivityRefresh() {
+                    if (this.logRefreshInterval) {
+                        clearInterval(this.logRefreshInterval);
+                        this.logRefreshInterval = null;
+                    }
+                },
+
+                get groupedLogs() {
+                    return this.logs.reduce((groups, log) => {
+                        const date = log.created_at.split(/[ T]/)[0];
+                        if (!groups[date]) { groups[date] = []; }
+                        groups[date].push(log);
+                        return groups;
+                    }, {});
+                },
+
+                formatDateHeader(dateStr) {
+                    const today = new Date().toISOString().split('T')[0];
+                    const yesterdayDate = new Date();
+                    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+                    const yesterday = yesterdayDate.toISOString().split('T')[0];
+                    if (dateStr === today) return 'Today';
+                    if (dateStr === yesterday) return 'Yesterday';
+                    return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                },
+
+                formatTime(dateStr) {
+                    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                },
+
+                getIcon(type) {
+                    const icons = {
+                        'attendance': 'ri-checkbox-circle-line',
+                        'navigation': 'ri-global-line',
+                        'submission': 'ri-file-upload-line',
+                        'material': 'ri-book-open-line',
+                        'quiz': 'ri-task-line'
+                    };
+                    return icons[type] || 'ri-cursor-line';
+                },
+
+                getIconClass(type) {
+                    const classes = {
+                        'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                        'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                        'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                        'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                        'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                    };
+                    return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                }
+            };
+        }
+    </script>
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('taskManager', () => ({
+            Alpine.data('taskManager', (initialTasks = [], subjectId = null) => ({
+                taskList: initialTasks,
+                subjectId: subjectId,
                 showEditorModal: false,
                 showGradingModal: false,
                 isEditing: false,
-                taskForm: { id: null, title: '', description: '', deadline: '' },
-                criteria: [],
-                uidCounter: 100,
+                editingTaskId: null,
+                saving: false,
 
-                // Grading State
+                taskForm: {
+                    title: '',
+                    deadline: '',
+                    description: ''
+                },
+
+                criteria: [],
                 gradingTask: null,
                 submissions: [],
                 aiGradingEnabled: true,
-
-                // 🟢 NEW: Search & Sort State
                 searchQuery: '',
-                sortBy: 'name_asc', // name_asc, name_desc, score_desc, score_asc
+                sortBy: 'name_asc',
+                pollInterval: null,
+
+                // 1. AUTO-INITIALIZE BACKGROUND POLLING (Every 4 seconds)
+                init() {
+                    if (this.subjectId) {
+                        // Poll every 4 seconds without touching the DOM or WebRTC stream
+                        this.pollInterval = setInterval(() => {
+                            this.refreshTasks();
+                        }, 4000);
+                    }
+                },
+
+                // 2. SILENT BACKGROUND FETCH & REACTIVE STATE MERGE
+                async refreshTasks() {
+                    if (!this.subjectId) return;
+
+                    try {
+                        const response = await fetch(`/professor/sessions/${this.subjectId}/tasks-json`, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+
+                        if (!response.ok) return;
+                        const freshTasks = await response.json();
+
+                        // Merge updated counters and submission lists into existing state
+                        freshTasks.forEach(freshTask => {
+                            const existingIndex = this.taskList.findIndex(t => t.id === freshTask.id);
+
+                            if (existingIndex !== -1) {
+                                // Update counter and submission array reactively
+                                this.taskList[existingIndex].submissions_count = freshTask.submissions_count;
+                                this.taskList[existingIndex].submissions = freshTask.submissions;
+
+                                // If the grading modal is currently open for this task, dynamically sync live submissions table
+                                if (this.showGradingModal && this.gradingTask && this.gradingTask.id === freshTask.id) {
+                                    this.submissions = freshTask.submissions || [];
+                                }
+                            } else {
+                                // Dynamically append new task if created elsewhere
+                                this.taskList.unshift(freshTask);
+                            }
+                        });
+                    } catch (err) {
+                        console.error('Silent refresh failed:', err);
+                    }
+                },
 
                 get computedMaxPoints() {
                     if (this.criteria.length === 0) return 0;
-                    return this.criteria.reduce((total, criterion) => total + this.getMaxPoints(criterion), 0);
+                    return this.criteria.reduce((total, c) => total + this.getMaxPoints(c), 0);
                 },
 
                 getMaxPoints(criterion) {
                     if (!criterion.levels || criterion.levels.length === 0) return 0;
-                    return criterion.levels.reduce((max, l) => Math.max(max, parseInt(l.points) || 0), 0);
+                    return Math.max(...criterion.levels.map(l => parseInt(l.points) || 0));
                 },
 
-                // 🟢 NEW: Safely format Laravel database timestamps into readable strings
-                formatDate(dateStr) {
-                    if (!dateStr) return 'No Date Recorded';
-                    const d = new Date(dateStr);
-                    if (isNaN(d.getTime())) return dateStr;
-                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                },
-
-                // 🟢 NEW: Format duration integers (minutes/seconds) into a readable "X hrs Y mins" string
-                formatDuration(val) {
-                    if (val === null || val === undefined) return '';
-
-                    const num = parseInt(val);
-                    if (isNaN(num)) return val; // Returns original text if it's already a string like "20 mins"
-
-                    // Assuming your database stores duration in MINUTES. 
-                    // (If it stores seconds, change this math to: num / 60)
-                    if (num >= 60) {
-                        const hrs = Math.floor(num / 60);
-                        const mins = num % 60;
-                        return `${hrs}h ${mins}m`;
-                    }
-                    return `${num} mins`;
-                },
-
-                // 🟢 NEW: Reactive Getter for Filtering and Sorting Submissions
-                get filteredSubmissions() {
-                    let result = this.submissions;
-
-                    // 1. Filter by Search Query
-                    if (this.searchQuery.trim() !== '') {
-                        const q = this.searchQuery.toLowerCase();
-                        result = result.filter(sub => {
-                            const fullName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
-                            return fullName.includes(q);
-                        });
-                    }
-
-                    // 2. Sort the Results
-                    return result.sort((a, b) => {
-                        const nameA = `${a.user?.last_name || ''} ${a.user?.first_name || ''}`.toLowerCase();
-                        const nameB = `${b.user?.last_name || ''} ${b.user?.first_name || ''}`.toLowerCase();
-                        const scoreA = parseFloat(a.grade) || 0;
-                        const scoreB = parseFloat(b.grade) || 0;
-
-                        if (this.sortBy === 'name_asc') return nameA.localeCompare(nameB);
-                        if (this.sortBy === 'name_desc') return nameB.localeCompare(nameA);
-                        if (this.sortBy === 'score_desc') return scoreB - scoreA;
-                        if (this.sortBy === 'score_asc') return scoreA - scoreB;
-
-                        return 0;
-                    });
-                },
-
-                openEditor(existingTask = null, existingRubric = null, existingCriteria = null) {
-                    if (existingTask) {
+                openEditor(task = null, rubric = null, criteria = []) {
+                    if (task) {
                         this.isEditing = true;
+                        this.editingTaskId = task.id;
+
+                        let formattedDeadline = '';
+                        if (task.deadline) {
+                            const d = new Date(task.deadline);
+                            if (!isNaN(d.getTime())) {
+                                formattedDeadline = d.toISOString().slice(0, 16);
+                            } else {
+                                formattedDeadline = String(task.deadline).replace(' ', 'T').slice(0, 16);
+                            }
+                        }
+
                         this.taskForm = {
-                            id: existingTask.id,
-                            title: existingTask.title,
-                            description: existingTask.description || '',
-                            deadline: existingTask.deadline ? new Date(existingTask.deadline).toISOString().slice(0, 16) : ''
+                            title: task.title || '',
+                            deadline: formattedDeadline,
+                            description: task.description || ''
                         };
 
-                        if (existingCriteria && existingCriteria.length > 0) {
-                            this.criteria = JSON.parse(JSON.stringify(existingCriteria));
+                        if (criteria && criteria.length > 0) {
+                            this.criteria = JSON.parse(JSON.stringify(criteria));
+                            let uidCounter = 1000;
                             this.criteria.forEach(c => {
-                                c.uid = this.uidCounter++;
-                                c.levels.forEach(l => l.uid = this.uidCounter++);
+                                if (!c.uid) c.uid = uidCounter++;
+                                if (c.levels) {
+                                    c.levels.forEach(l => { if (!l.uid) l.uid = uidCounter++; });
+                                }
                             });
                         } else {
-                            this.criteria = [];
-                            this.addCriterion();
+                            this.resetCriteria();
                         }
                     } else {
                         this.isEditing = false;
-                        this.taskForm = { id: null, title: '', description: '', deadline: '' };
-                        this.criteria = [];
-                        this.addCriterion();
+                        this.editingTaskId = null;
+                        this.taskForm = { title: '', deadline: '', description: '' };
+                        this.resetCriteria();
                     }
-
                     this.showEditorModal = true;
+                },
+
+                resetCriteria() {
+                    this.criteria = [{
+                        uid: Date.now(),
+                        name: 'General Criteria',
+                        description: '',
+                        levels: [
+                            { uid: Date.now() + 1, label: 'Excellent', points: 10, description: '' },
+                            { uid: Date.now() + 2, label: 'Needs Improvement', points: 5, description: '' }
+                        ]
+                    }];
                 },
 
                 addCriterion() {
                     this.criteria.push({
-                        uid: this.uidCounter++,
+                        uid: Date.now(),
                         name: '',
                         description: '',
                         levels: [
-                            { uid: this.uidCounter++, label: 'Excellent', points: 5, description: '' },
-                            { uid: this.uidCounter++, label: 'Average', points: 3, description: '' },
-                            { uid: this.uidCounter++, label: 'Poor', points: 1, description: '' }
+                            { uid: Date.now() + 1, label: 'Excellent', points: 10, description: '' }
                         ]
                     });
                 },
-                removeCriterion(uid) { this.criteria = this.criteria.filter(c => c.uid !== uid); },
-                addLevel(criterion) { criterion.levels.push({ uid: this.uidCounter++, label: 'New', points: 0, description: '' }); },
-                removeLevel(criterion, uid) { criterion.levels = criterion.levels.filter(l => l.uid !== uid); },
 
-                async saveTask() {
-                    if (!this.taskForm.title || !this.taskForm.deadline) {
-                        alert('Title and Deadline are required.');
-                        return;
+                removeCriterion(uid) {
+                    if (this.criteria.length > 1) {
+                        this.criteria = this.criteria.filter(c => c.uid !== uid);
                     }
+                },
+
+                addLevel(criterion) {
+                    criterion.levels.push({
+                        uid: Date.now(),
+                        label: '',
+                        points: 0,
+                        description: ''
+                    });
+                },
+
+                removeLevel(criterion, levelUid) {
+                    if (criterion.levels.length > 1) {
+                        criterion.levels = criterion.levels.filter(l => l.uid !== levelUid);
+                    }
+                },
+
+                saveTask() {
+                    this.saving = true;
+
+                    const formattedCriteria = this.criteria.map(c => ({
+                        name: c.name || c.criterion_name || 'Unnamed Criterion',
+                        description: c.description || '',
+                        levels: (c.levels || []).map(l => ({
+                            label: l.label || '',
+                            points: parseInt(l.points) || 0,
+                            description: l.description || ''
+                        }))
+                    }));
 
                     const payload = {
-                        subject_id: {{ $session->id }},
+                        subject_id: this.subjectId,
                         title: this.taskForm.title,
-                        description: this.taskForm.description,
                         deadline: this.taskForm.deadline,
+                        description: this.taskForm.description,
                         points: this.computedMaxPoints,
                         rubric: {
-                            name: this.taskForm.title + ' Scoring Config',
-                            criteria_json: JSON.stringify(this.criteria)
+                            name: `${this.taskForm.title} Rubric`,
+                            criteria_json: JSON.stringify(formattedCriteria)
                         }
                     };
 
-                    const endpoint = this.isEditing ? `/professor/tasks/${this.taskForm.id}` : `/professor/tasks`;
-                    const method = this.isEditing ? 'PUT' : 'POST';
+                    const url = this.isEditing
+                        ? `/professor/tasks/${this.editingTaskId}`
+                        : '/professor/tasks';
 
-                    try {
-                        const res = await fetch(endpoint, {
-                            method: method,
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (res.ok) {
-                            window.location.reload();
-                        } else {
+                    fetch(url, {
+                        method: this.isEditing ? 'PUT' : 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(async res => {
                             const data = await res.json();
-                            alert(data.message || 'Error saving task.');
-                        }
-                    } catch (err) { console.error(err); }
+                            if (!res.ok) throw data;
+                            return data;
+                        })
+                        .then(data => {
+                            this.saving = false;
+                            const savedTask = data.task || data;
+
+                            if (this.isEditing) {
+                                const index = this.taskList.findIndex(t => t.id === this.editingTaskId || t.id === savedTask.id);
+                                if (index !== -1) {
+                                    this.taskList.splice(index, 1, savedTask);
+                                }
+                            } else {
+                                this.taskList.unshift(savedTask);
+                            }
+
+                            this.showEditorModal = false;
+                        })
+                        .catch(err => {
+                            this.saving = false;
+                            console.error('Save error:', err);
+                            if (err.errors) {
+                                alert(Object.values(err.errors).flat().join('\n'));
+                            } else {
+                                alert(err.message || 'Failed to save task.');
+                            }
+                        });
                 },
 
-                openGrading(task, submissionsData) {
+                async deleteTask(taskId) {
+                    if (!confirm('Are you sure you want to delete this task?')) return;
+
+                    try {
+                        const response = await fetch(`/professor/tasks/${taskId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ _method: 'DELETE' })
+                        });
+
+                        if (response.ok) {
+                            this.taskList = this.taskList.filter(t => t.id !== taskId);
+                        } else {
+                            alert('Failed to delete task.');
+                        }
+                    } catch (err) {
+                        console.error('Delete Task Error:', err);
+                    }
+                },
+
+                openGrading(task, submissions) {
                     this.gradingTask = task;
-                    this.submissions = submissionsData || [];
-                    this.aiGradingEnabled = true;
-                    this.searchQuery = ''; // Reset search when opening
+                    this.submissions = submissions || [];
+                    if (task.ai_grading_enabled !== undefined) {
+                        this.aiGradingEnabled = Boolean(task.ai_grading_enabled);
+                    }
+                    this.searchQuery = '';
                     this.showGradingModal = true;
                 },
 
-                // 🟢 FIX: Re-grade without page reload (Mutates the 'sub' object directly)
+                async toggleAiGrading() {
+                    // 1. Instantly flip UI state
+                    this.aiGradingEnabled = !this.aiGradingEnabled;
+
+                    if (!this.gradingTask) return;
+
+                    // 2. Persist to DB via AJAX
+                    try {
+                        const res = await fetch(`/professor/tasks/${this.gradingTask.id}/toggle-ai`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ ai_grading_enabled: this.aiGradingEnabled })
+                        });
+
+                        if (!res.ok) throw new Error('Failed to save state');
+                    } catch (err) {
+                        console.error('Failed to update AI status in DB:', err);
+                        // Rollback toggle state on error
+                        this.aiGradingEnabled = !this.aiGradingEnabled;
+                    }
+                },
+
+                selectCriterionLevel(sub, criterionIndex, points) {
+                    // 1. Initialize temporary selection tracking on the submission object
+                    if (!sub.selectedCriterionScores) {
+                        sub.selectedCriterionScores = {};
+                    }
+
+                    // 2. Assign selected points for this criterion index
+                    sub.selectedCriterionScores[criterionIndex] = parseInt(points) || 0;
+
+                    // 3. Automatically update sub.grade with the total sum
+                    sub.grade = Object.values(sub.selectedCriterionScores).reduce((sum, pts) => sum + pts, 0);
+                },
+
+                isCriterionLevelSelected(sub, criterionIndex, points) {
+                    return sub.selectedCriterionScores && sub.selectedCriterionScores[criterionIndex] === parseInt(points);
+                },
+
                 async regradeSubmission(sub, event) {
                     const btn = event.currentTarget;
                     const originalHtml = btn.innerHTML;
@@ -3024,7 +3427,7 @@
                         const res = await fetch(`/professor/submissions/${sub.id}/regrade`, {
                             method: 'POST',
                             headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                                 'Accept': 'application/json',
                             }
                         });
@@ -3035,12 +3438,10 @@
                             btn.classList.replace('text-[#383838]', 'text-green-700');
                             btn.classList.replace('bg-gray-100', 'bg-green-100');
 
-                            // 🟢 FIX: Instant UI Update (Now includes the full feedback text!)
                             sub.grade = data.total_score;
                             sub.auto_graded = true;
-                            sub.submission_grade = data.submission_grade; // <--- ADD THIS LINE
+                            sub.submission_grade = data.submission_grade;
 
-                            // Revert button styling after 2 seconds
                             setTimeout(() => {
                                 btn.innerHTML = originalHtml;
                                 btn.classList.replace('text-green-700', 'text-[#383838]');
@@ -3057,7 +3458,6 @@
                     }
                 },
 
-                // 🟢 FIX: Submit manual grade without page reload
                 async submitGrade(sub, event) {
                     const form = event.target;
                     const btn = form.querySelector('button[type="submit"]');
@@ -3073,19 +3473,17 @@
                             body: formData,
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                             }
                         });
                         if (res.ok) {
                             btn.innerHTML = '<i class="ri-check-double-line text-lg"></i>';
                             btn.classList.replace('bg-[#383838]', 'bg-green-500');
 
-                            // Instant UI Update
                             sub.grade = formData.get('grade');
                             sub.feedback = formData.get('feedback');
-                            sub.auto_graded = false; // Override flag to show Manual Entry
+                            sub.auto_graded = false;
 
-                            // Revert button styling after 2 seconds
                             setTimeout(() => {
                                 btn.innerHTML = originalHtml;
                                 btn.classList.replace('bg-green-500', 'bg-[#383838]');
@@ -3099,221 +3497,63 @@
                         btn.innerHTML = originalHtml;
                         btn.disabled = false;
                     }
+                },
+
+                get filteredSubmissions() {
+                    let result = [...this.submissions];
+
+                    if (this.searchQuery.trim() !== '') {
+                        const q = this.searchQuery.toLowerCase();
+                        result = result.filter(sub => {
+                            const fullName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
+                            return fullName.includes(q);
+                        });
+                    }
+
+                    return result.sort((a, b) => {
+                        const nameA = `${a.user?.last_name || ''} ${a.user?.first_name || ''}`.toLowerCase();
+                        const nameB = `${b.user?.last_name || ''} ${b.user?.first_name || ''}`.toLowerCase();
+                        const scoreA = parseFloat(a.grade) || 0;
+                        const scoreB = parseFloat(b.grade) || 0;
+
+                        if (this.sortBy === 'name_asc') return nameA.localeCompare(nameB);
+                        if (this.sortBy === 'name_desc') return nameB.localeCompare(nameA);
+                        if (this.sortBy === 'score_desc') return scoreB - scoreA;
+                        if (this.sortBy === 'score_asc') return scoreA - scoreB;
+
+                        return 0;
+                    });
+                },
+
+                formatDate(dateStr) {
+                    if (!dateStr) return 'No Date Recorded';
+                    const d = new Date(dateStr);
+                    if (isNaN(d.getTime())) return dateStr;
+                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                },
+
+                formatDuration(val) {
+                    if (val === null || val === undefined || val === '') return '--';
+
+                    const num = parseInt(val);
+                    if (isNaN(num)) return val;
+
+                    if (num < 60) {
+                        return `${num}s`;
+                    }
+
+                    const mins = Math.floor(num / 60);
+                    const secs = num % 60;
+
+                    if (mins >= 60) {
+                        const hrs = Math.floor(mins / 60);
+                        const remMins = mins % 60;
+                        return secs > 0 ? `${hrs}h ${remMins}m ${secs}s` : `${hrs}h ${remMins}m`;
+                    }
+
+                    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
                 }
             }));
         });
     </script>
-
-  @php
-    $studentsData = $class->students->map(function($s) use ($session) {
-        return [
-            'id' => $s->id,
-            'first_name' => $s->first_name,
-            'last_name' => $s->last_name,
-            'middle_name' => $s->middle_name,
-            'school_id' => $s->school_id,
-            'is_present' => (bool)($s->pivot->is_present ?? false),
-            'is_screen_blocked' => (bool)($s->pivot->is_screen_blocked ?? false),
-            'violation_count' => (int)($s->pivot->violation_count ?? 0),
-            'attendances' => $s->attendances ?? []
-        ];
-    });
-@endphp
-
-<script>
-function studentManager() {
-    return {
-        // Hydrate initial state cleanly from Blade variable
-        students: @json($studentsData),
-        warningThreshold: {{ $session->violation_warning_threshold ?? config('lmms.violation_warning_threshold', 3) }},
-        logModalOpen: false,
-        pollInterval: null,
-        
-        // Modal state variables
-        selectedUserName: '',
-        selectedUserId: null,
-        selectedClassId: null,
-        selectedAttendances: [],
-        logs: [],
-        studentFiles: [],
-        modalTab: 'logs',
-        loading: false,
-        logRefreshInterval: null,
-
-        init() {
-            // Poll for student status updates every 3 seconds
-            this.pollInterval = setInterval(() => this.fetchStudentStatuses(), 3000);
-        },
-
-        destroy() {
-            if (this.pollInterval) clearInterval(this.pollInterval);
-            this.stopActivityRefresh();
-        },
-
-        async fetchStudentStatuses() {
-            try {
-                let response = await fetch('/professor/classroom/{{ $class->id }}/students-status');
-                if (response.ok) {
-                    let data = await response.json();
-                    
-                    data.forEach(updatedStudent => {
-                        let student = this.students.find(s => s.id === updatedStudent.id);
-                        if (student) {
-                            student.is_screen_blocked = updatedStudent.is_screen_blocked;
-                            student.violation_count = updatedStudent.violation_count;
-                            student.is_present = updatedStudent.is_present;
-                        }
-                    });
-                }
-            } catch (err) {
-                console.error('Failed to sync student statuses:', err);
-            }
-        },
-
-        async unblockStudent(studentId) {
-            try {
-                let response = await fetch(`/professor/classroom/{{ $class->id }}/students/${studentId}/unblock`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    let student = this.students.find(s => s.id === studentId);
-                    if (student) {
-                        student.is_screen_blocked = false;
-                    }
-                } else {
-                    alert('Failed to unblock student. Please try again.');
-                }
-            } catch (err) {
-                console.error('Error during unblock request:', err);
-            }
-        },
-
-        async fetchStudentWorkspace(userId, classId, attendances = [], showLoader = false) {
-            if (showLoader) {
-                this.loading = true;
-            }
-            try {
-                const [logsRes, filesRes] = await Promise.all([
-                    fetch(`/professor/students/${userId}/activity-logs/${classId}`),
-                    fetch(`/professor/students/${userId}/files/${classId}`)
-                ]);
-
-                if (logsRes.ok) {
-                    let fetchedLogs = await logsRes.json();
-                    if (attendances && attendances.length > 0) {
-                        attendances.forEach(att => {
-                            fetchedLogs.push({
-                                id: 'att-' + att.id,
-                                log_type: 'attendance',
-                                content: 'Official Attendance Marked',
-                                class_name: (att.lab_session ? att.lab_session.subject_name : null) || (att.labSession ? att.labSession.subject_name : null) || 'Academic Session',
-                                duration_seconds: 0,
-                                created_at: `${att.attendance_date} ${att.joined_at}`
-                            });
-                        });
-                    }
-                    this.logs = fetchedLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                }
-
-                if (filesRes.ok) {
-                    let fetchedFiles = await filesRes.json();
-                    this.studentFiles = fetchedFiles.sort((a, b) => b.id - a.id);
-                }
-
-            } catch (e) {
-                console.error("Fetch Execution Failed", e);
-            } finally {
-                if (showLoader) {
-                    this.loading = false;
-                }
-            }
-        },
-
-        async viewStudentActivity(userId, firstName, lastName, attendances, classId) {
-            this.selectedUserName = `${lastName}, ${firstName}`;
-            this.selectedUserId = userId;
-            this.selectedClassId = classId;
-            this.selectedAttendances = attendances || [];
-            this.logModalOpen = true;
-            this.logs = [];
-            this.studentFiles = [];
-            this.modalTab = 'logs';
-            this.stopActivityRefresh();
-
-            await this.fetchStudentWorkspace(userId, classId, this.selectedAttendances, true);
-            this.logRefreshInterval = setInterval(() => {
-                if (this.logModalOpen && this.selectedUserId && this.selectedClassId) {
-                    this.fetchStudentWorkspace(this.selectedUserId, this.selectedClassId, this.selectedAttendances);
-                }
-            }, 3000);
-        },
-
-        closeActivityModal() {
-            this.logModalOpen = false;
-            this.selectedUserId = null;
-            this.selectedClassId = null;
-            this.selectedAttendances = [];
-            this.stopActivityRefresh();
-        },
-
-        stopActivityRefresh() {
-            if (this.logRefreshInterval) {
-                clearInterval(this.logRefreshInterval);
-                this.logRefreshInterval = null;
-            }
-        },
-
-        get groupedLogs() {
-            return this.logs.reduce((groups, log) => {
-                const date = log.created_at.split(/[ T]/)[0];
-                if (!groups[date]) { groups[date] = []; }
-                groups[date].push(log);
-                return groups;
-            }, {});
-        },
-
-        formatDateHeader(dateStr) {
-            const today = new Date().toISOString().split('T')[0];
-            const yesterdayDate = new Date();
-            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-            const yesterday = yesterdayDate.toISOString().split('T')[0];
-            if (dateStr === today) return 'Today';
-            if (dateStr === yesterday) return 'Yesterday';
-            return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        },
-
-        formatTime(dateStr) {
-            return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        },
-
-        getIcon(type) {
-            const icons = {
-                'attendance': 'ri-checkbox-circle-line',
-                'navigation': 'ri-global-line',
-                'submission': 'ri-file-upload-line',
-                'material': 'ri-book-open-line',
-                'quiz': 'ri-task-line'
-            };
-            return icons[type] || 'ri-cursor-line';
-        },
-
-        getIconClass(type) {
-            const classes = {
-                'attendance': 'bg-green-50 text-green-600 border border-green-200',
-                'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
-                'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
-                'material': 'bg-purple-50 text-purple-600 border border-purple-200',
-                'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200'
-            };
-            return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
-        }
-    };
-}
-</script>
 </x-app-layout>

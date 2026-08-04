@@ -196,6 +196,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/tasks/{id}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
 
+        Route::post('/tasks/{task}/toggle-ai', [AdminController::class, 'toggleTaskAiGrading'])->name('tasks.toggle-ai');
+        
         Route::post('/grade/{id}', [AdminController::class, 'gradeSubmission'])->name('grade');
     
         Route::post('/classroom/{id}/materials', [MaterialController::class, 'store'])->name('materials.store');
@@ -227,6 +229,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/sessions/{id}/broadcast', [ClassroomController::class, 'broadcast'])->name('sessions.broadcast');
         Route::post('/sessions/{id}/end', [AdminController::class, 'endSession'])->name('sessions.end');
 
+        Route::get('/sessions/{sessionId}/tasks-json', function ($sessionId) {
+            return App\Models\Task::where('subject_id', $sessionId)
+                ->with([
+                    'submissions.user',
+                    'submissions.submissionGrade.criterionScores',
+                    'rubric',
+                    'rubric.criteria'
+                ])
+                ->withCount('submissions')
+                ->latest()
+                ->get();
+        })->name('sessions.tasks-json');
         // Allowed Sites
         Route::get('/classroom/{id}/allowed-sites', [App\Http\Controllers\AllowedSiteController::class, 'index'])->name('allowed-sites.index');
         Route::post('/allowed-sites', [App\Http\Controllers\AllowedSiteController::class, 'store'])->name('allowed-sites.store');
