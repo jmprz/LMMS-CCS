@@ -17,124 +17,108 @@ class GeminiGradingService
     protected string $apiKey;
     protected string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
 
-    // Max characters sent to Gemini per submission (prevents excessive token cost)
     protected int $maxContentLength = 8000;
 
     public function __construct()
     {
-        // 🚨 CHANGED: Read directly from .env to avoid caching/config mapping issues
         $this->apiKey = env('GEMINI_API_KEY', '');
     }
 
-    // =========================================================================
-    // PUBLIC — Main entry point. Call this right after a Submission is saved.
-    // =========================================================================
     public function gradeSubmission(Submission $submission): ?SubmissionGrade
-{
-    // 1. Find active rubric for this task
-    $rubric = Rubric::where('task_id', $submission->task_id)
-        ->where('auto_grade_enabled', true)
-        ->with('criteria')
-        ->first();
+    {
+        $rubric = Rubric::where('task_id', $submission->task_id)
+            ->where('auto_grade_enabled', true)
+            ->with('criteria')
+            ->first();
 
-    if (! $rubric) {
-        Log::info("GeminiGrading: No active rubric for task {$submission->task_id}. Skipping.");
-        return null;
-    }
+        if (! $rubric) {
+            Log::info("GeminiGrading: No active rubric for task {$submission->task_id}. Skipping.");
+            return null;
+        }
 
-    // Load task relationship if not loaded
-    $task = $submission->task;
+        $task = $submission->task;
+        $content = $this->getSubmissionContent($submission);
 
-    // 2. Read submission file content
-    $content = $this->getSubmissionContent($submission);
-
-    return DB::transaction(function () use ($submission, $rubric, $task, $content) {
-        // 3. Create or reset the SubmissionGrade record
-        $submissionGrade = SubmissionGrade::updateOrCreate(
-            ['submission_id' => $submission->id, 'rubric_id' => $rubric->id],
-            [
-                'total_score' => 0, 
-                'max_score'   => $rubric->total_points, 
-                'auto_graded' => true, 
-                'graded_by'   => null
-            ]
-        );
-
-        // 4. Grade each criterion
-        $totalScore = 0;
-
-        foreach ($rubric->criteria as $criterion) {
-            $result = $this->gradeCriterion($criterion, $content, $submission, $task);
-
-            CriterionScore::updateOrCreate(
+        return DB::transaction(function () use ($submission, $rubric, $task, $content) {
+            $submissionGrade = SubmissionGrade::updateOrCreate(
+                ['submission_id' => $submission->id, 'rubric_id' => $rubric->id],
                 [
-                    'submission_grade_id' => $submissionGrade->id, 
-                    'criterion_id'        => $criterion->id
-                ],
-                [
-                    'points_earned' => $result['points'],
-                    'max_points'    => $criterion['max_points'] ?? $criterion->max_points,
-                    'feedback'      => $result['feedback'],
-                    'auto_checked'  => $result['auto_checked'],
+                    'total_score' => 0, 
+                    'max_score'   => $rubric->total_points, 
+                    'auto_graded' => true, 
+                    'graded_by'   => null
                 ]
             );
 
-            $totalScore += $result['points'];
+            $totalScore = 0;
+
+            foreach ($rubric->criteria as $criterion) {
+                $result = $this->gradeCriterion($criterion, $content, $submission, $task);
+
+                CriterionScore::updateOrCreate(
+                    [
+                        'submission_grade_id' => $submissionGrade->id, 
+                        'criterion_id'        => $criterion->id
+                    ],
+                    [
+                        'points_earned' => $result['points'],
+                        'max_points'    => $criterion->max_points,
+                        'feedback'      => $result['feedback'],
+                        'auto_checked'  => $result['auto_checked'],
+                    ]
+                );
+
+                $totalScore += $result['points'];
+            }
+
+            $submissionGrade->update(['total_score' => $totalScore]);
+            
+            $submission->update([
+                'grade'       => round($totalScore), 
+                'auto_graded' => true 
+            ]);
+
+            Log::info("GeminiGrading: Submission #{$submission->id} scored {$totalScore}/{$rubric->total_points}");
+
+            return $submissionGrade->fresh(['criterionScores.criterion']);
+        });
+    }
+
+    protected function gradeCriterion($criterion, string $content, Submission $submission, $task): array
+    {
+        $rules = is_array($criterion->checking_rules) 
+            ? $criterion->checking_rules 
+            : json_decode($criterion->checking_rules, true) ?? [];
+
+        if (! empty($rules['levels'])) {
+            return $this->gradeWithLevels($criterion, $rules['levels'], $content, $task);
         }
 
-        // 5. Persist final score & update submission status to auto_graded = true
-        $submissionGrade->update(['total_score' => $totalScore]);
-        
-        $submission->update([
-            'grade'       => round($totalScore), 
-            'auto_graded' => true 
-        ]);
-
-        Log::info("GeminiGrading: Submission #{$submission->id} scored {$totalScore}/{$rubric->total_points}");
-
-        return $submissionGrade->fresh(['criterionScores.criterion']);
-    });
-}
-
-    // =========================================================================
-    // PRIVATE — Route to the right grading strategy
-    // =========================================================================
-   protected function gradeCriterion($criterion, string $content, Submission $submission, $task): array
-{
-    $rules = $criterion->checking_rules ?? [];
-
-    if (! empty($rules['levels'])) {
-        return $this->gradeWithLevels($criterion, $rules['levels'], $content, $task);
+        return match ($criterion->checking_type) {
+            'ai', 'text', 'code' => $this->gradeWithAI($criterion, $content, $task),
+            'keyword'            => $this->gradeByKeyword($criterion, $content),
+            'file'               => $this->gradeByFile($criterion, $submission),
+            default              => [
+                'points'       => 0,
+                'feedback'     => 'Pending manual review.',
+                'auto_checked' => false,
+            ],
+        };
     }
 
-    return match ($criterion->checking_type) {
-        'ai', 'text', 'code' => $this->gradeWithAI($criterion, $content, $task),
-        'keyword'            => $this->gradeByKeyword($criterion, $content),
-        'file'               => $this->gradeByFile($criterion, $submission),
-        default              => [
-            'points'       => 0,
-            'feedback'     => 'Pending manual review.',
-            'auto_checked' => false,
-        ],
-    };
-}
+    protected function gradeWithLevels($criterion, array $levels, string $content, $task): array
+    {
+        if (empty($this->apiKey)) return $this->apiKeyMissing();
 
-    // =========================================================================
-    // STRATEGY 1 — Level-based AI grading (primary strategy for new rubrics)
-    // =========================================================================
-   protected function gradeWithLevels($criterion, array $levels, string $content, $task): array
-{
-    if (empty($this->apiKey)) return $this->apiKeyMissing();
+        usort($levels, fn($a, $b) => (int)($b['points'] ?? 0) - (int)($a['points'] ?? 0));
 
-    usort($levels, fn($a, $b) => (int)($b['points'] ?? 0) - (int)($a['points'] ?? 0));
+        $maxPts = $criterion->max_points;
+        $levelsText = '';
+        foreach ($levels as $lvl) {
+            $levelsText .= "\n[{$lvl['label']} — {$lvl['points']} pts]\n{$lvl['description']}\n";
+        }
 
-    $maxPts = $criterion->max_points;
-    $levelsText = '';
-    foreach ($levels as $lvl) {
-        $levelsText .= "\n[{$lvl['label']} — {$lvl['points']} pts]\n{$lvl['description']}\n";
-    }
-
-    $prompt = <<<EOT
+        $prompt = <<<EOT
 You are a strict and fair academic grader. 
 
 ## TASK CONTEXT
@@ -151,10 +135,10 @@ Name: {$criterion->criterion_name}
 {$content}
 
 ## GRADING INSTRUCTIONS
-1. FIRST: Evaluate if the code solves the Task Instructions. 
-2. If the code does not address the task (e.g. is irrelevant), score 0 points.
-3. Compare the submission against the performance levels above.
-4. Provide constructive feedback referencing the task instructions.
+1. Evaluate if the code/file submission solves the Task Instructions.
+2. Select the EXACT level tier from the performance levels above that best fits the work.
+3. Assign the EXACT 'points_earned' integer corresponding to that matched level tier.
+4. If the submission is invalid or incomplete, assign 0 points.
 
 ## RESPONSE — JSON only
 {
@@ -164,8 +148,7 @@ Name: {$criterion->criterion_name}
 }
 EOT;
 
-       try {
-            // 🚨 FIX 1 & 2: Added withoutVerifying() for local SSL and bumped timeout to 60
+        try {
             $response = Http::withoutVerifying()->timeout(60)->post("{$this->apiUrl}?key={$this->apiKey}", [
                 'contents'         => [['parts' => [['text' => $prompt]]]],
                 'generationConfig' => [
@@ -178,7 +161,6 @@ EOT;
                 $data   = $response->json();
                 $text   = $data['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
                 
-                // 🚨 FIX 3: Strip out Markdown formatting Gemini often sneaks in
                 $cleanJson = str_replace(['```json', '```JSON', '```'], '', $text);
                 $result = json_decode(trim($cleanJson), true);
 
@@ -186,18 +168,16 @@ EOT;
                     throw new \RuntimeException('Invalid JSON from Gemini: ' . $text);
                 }
 
-                $points = (float)($result['points_earned'] ?? 0);
-                $points = max(0, min($maxPts, $points));
+                $points = (float)($result['points_earned'] ?? 0);$points = max(0, min($maxPts,$points));
 
                 $levelLabel = trim($result['level_matched'] ?? '');
                 $feedback   = trim($result['feedback'] ?? 'No feedback provided.');
 
-                // Prefix the level name so students know which tier they hit
                 if ($levelLabel) {
-                    $feedback = "Level: {$levelLabel}\n\n{$feedback}";
+                    $feedback = "Level Matched: {$levelLabel} ({$points} pts)\n\n{$feedback}";
                 }
 
-                return ['points' => $points, 'feedback' => $feedback, 'auto_checked' => true];
+                return ['points' => $points, 'feedback' =>$feedback, 'auto_checked' => true];
             }
 
             Log::error("GeminiGrading: HTTP {$response->status()} — {$response->body()}");
@@ -209,16 +189,13 @@ EOT;
         return ['points' => 0, 'feedback' => 'Auto-grading failed (API error). Pending manual review.', 'auto_checked' => false];
     }
 
-    // =========================================================================
-    // STRATEGY 2 — Basic AI grading (fallback for criteria without levels)
-    // =========================================================================
-   protected function gradeWithAI($criterion, string $content, $task): array
-{
-    if (empty($this->apiKey)) return $this->apiKeyMissing();
+    protected function gradeWithAI($criterion, string $content,$task): array
+    {
+        if (empty($this->apiKey)) return$this->apiKeyMissing();
 
-    $maxPts = $criterion->max_points;
+        $maxPts =$criterion->max_points;
 
-    $prompt = <<<EOT
+        $prompt = <<<EOT
 You are a strict and fair academic grader. 
 
 ## TASK CONTEXT
@@ -232,11 +209,6 @@ Max Points: {$maxPts}
 ## STUDENT SUBMISSION
 {$content}
 
-## GRADING INSTRUCTIONS
-1. Evaluate if the code solves the Task Instructions. 
-2. If the code does not match the task, award 0 points.
-3. Be objective and specific in feedback.
-
 ## RESPONSE — JSON only
 {
   "points_earned": <number>,
@@ -244,19 +216,13 @@ Max Points: {$maxPts}
 }
 EOT;
 
-       try {
-            // 🚨 FIX 1 & 2: Added withoutVerifying() and bumped timeout
+        try {
             $response = Http::withoutVerifying()->timeout(60)->post("{$this->apiUrl}?key={$this->apiKey}", [
                 'contents'         => [['parts' => [['text' => $prompt]]]],
                 'generationConfig' => ['temperature' => 0.1, 'responseMimeType' => 'application/json'],
             ]);
 
-            if ($response->successful()) {
-                $data   = $response->json();
-                $text   = $data['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
-                
-                // 🚨 FIX 3: Strip out Markdown formatting
-                $cleanJson = str_replace(['```json', '```JSON', '```'], '', $text);
+            if ($response->successful()) {$data   = $response->json();$text   = $data['candidates'][0]['content']['parts'][0]['text'] ?? '{}';$cleanJson = str_replace(['```json', '```JSON', '```'], '', $text);
                 $result = json_decode(trim($cleanJson), true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
@@ -273,12 +239,12 @@ EOT;
         return ['points' => 0, 'feedback' => 'Auto-grading failed. Pending manual review.', 'auto_checked' => false];
     }
 
-    // =========================================================================
-    // STRATEGY 3 — Keyword matching
-    // =========================================================================
     protected function gradeByKeyword($criterion, string $content): array
     {
-        $rules    = $criterion->checking_rules ?? [];
+        $rules = is_array($criterion->checking_rules) 
+            ? $criterion->checking_rules 
+            : json_decode($criterion->checking_rules, true) ?? [];
+
         $keywords = $rules['keywords'] ?? [];
         $matchAll = $rules['match_all']  ?? false;
 
@@ -308,12 +274,12 @@ EOT;
         return ['points' => $points, 'feedback' => $feedback, 'auto_checked' => true];
     }
 
-    // =========================================================================
-    // STRATEGY 4 — File validation
-    // =========================================================================
     protected function gradeByFile($criterion, Submission $submission): array
     {
-        $rules     = $criterion->checking_rules ?? [];
+        $rules = is_array($criterion->checking_rules) 
+            ? $criterion->checking_rules 
+            : json_decode($criterion->checking_rules, true) ?? [];
+
         $allowedEx = array_map('strtolower', $rules['allowed_extensions'] ?? []);
         $ext       = strtolower(pathinfo($submission->original_filename, PATHINFO_EXTENSION));
 
@@ -332,9 +298,6 @@ EOT;
         ];
     }
 
-    // =========================================================================
-    // HELPER — Read submission text content
-    // =========================================================================
     protected function getSubmissionContent(Submission $submission): string
     {
         $textExtensions = [
@@ -346,11 +309,10 @@ EOT;
         $ext = strtolower(pathinfo($submission->original_filename, PATHINFO_EXTENSION));
 
         if (! in_array($ext, $textExtensions)) {
-            return "File submitted: {$submission->original_filename} (binary format — Gemini cannot read this directly. Grade based on file presence only.)";
+            return "File submitted: {$submission->original_filename} (binary format — Gemini cannot read directly. Grade based on file presence only.)";
         }
 
         try {
-            // 🚨 CHANGED: Check the public directory where the controller actually saved it
             $absolutePath = public_path($submission->file_path); 
 
             if (file_exists($absolutePath)) {
@@ -368,9 +330,6 @@ EOT;
         return "File: {$submission->original_filename} (content unavailable)";
     }
 
-    // =========================================================================
-    // HELPER — Missing API key fallback
-    // =========================================================================
     protected function apiKeyMissing(): array
     {
         Log::warning('GeminiGrading: GEMINI_API_KEY is not set in .env');
@@ -380,32 +339,4 @@ EOT;
             'auto_checked' => false,
         ];
     }
-
-    public function storeCode(Request $request)
-{
-    $code = $request->input('code');
-    $extension = $request->input('language') === 'python' ? 'py' : 'js';
-    
-    // 1. Create a filename
-    $fileName = 'submission_' . auth()->id() . '_' . time() . '.' . $extension;
-    $path = "submissions/{$fileName}";
-
-    // 2. Save the string content as a physical file
-    // This allows your GeminiGradingService to read it exactly like an upload
-    Storage::disk('public')->put($path, $code);
-
-    // 3. Create the Submission Record
-    $submission = Submission::create([
-        'task_id' => $request->task_id,
-        'user_id' => auth()->id(),
-        'file_path' => $path,
-        'original_filename' => $fileName,
-    ]);
-
-    // 4. Run your grading service
-    $gradingService = new \App\Services\GeminiGradingService();
-    $gradingService->gradeSubmission($submission);
-
-    return response()->json(['success' => true]);
-}
 }

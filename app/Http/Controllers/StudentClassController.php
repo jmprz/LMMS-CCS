@@ -33,12 +33,11 @@ class StudentClassController extends Controller
 
         $activeSessions = \App\Models\LabSession::where('is_active', true)->get();
 
-        // 🟢 FIXED: Fetch tasks that the student has submitted but are not yet graded
+        // Fetch tasks that the student has submitted but are not yet graded
         $pendingTasks = \App\Models\Task::whereHas('submissions', function ($q) use ($user) {
             $q->where('user_id', $user->id)->whereNull('grade');
         })->with('labSession.faculty')->latest()->get();
 
-        // Pass 'pendingTasks' to the view
         return view('student.dashboard', compact('joinedClasses', 'activeSessions', 'pendingTasks'));
     }
 
@@ -122,102 +121,105 @@ class StudentClassController extends Controller
     }
 
     public function submitTask(Request $request, $taskId)
-{
-    // 1. Fetch task along with its associated session details
-    $task = Task::with('labSession')->findOrFail($taskId);
-    $user = auth()->user();
-    $userId = $user->id;
+    {
+        // 1. Fetch task along with its associated session details
+        $task = Task::with('labSession')->findOrFail($taskId);
+        $user = auth()->user();
+        $userId = $user->id;
 
-    // 2. Deadline Check
-    if ($task->deadline && now()->gt(Carbon::parse($task->deadline))) {
-        return response()->json(['status' => 'error', 'message' => 'The deadline has passed.'], 403);
-    }
-
-    $request->validate([
-        'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:10240',
-    ]);
-
-    // 3. LIVE SESSION DURATION CALCULATION
-    $submittedAt = now();
-    $taskCreatedAt = \Carbon\Carbon::parse($task->created_at);
-
-    // Calculate elapsed time from when teacher posted the task to when student submitted
-    $durationSeconds = max(0, $submittedAt->getTimestamp() - $taskCreatedAt->getTimestamp());
-
-    // 4. File Handling & Folder Path Building
-    if ($request->hasFile('submission')) {
-        $file = $request->file('submission');
-
-        // Format Subject Code
-        $subjectCode = strtoupper($task->labSession->class_code ?? 'GENERAL');
-
-        // Format Section string
-        $section = strtoupper(($user->year_level ?? '') . ($user->section ?? 'NA'));
-
-        // Format Student Folder Identity (LASTNAME_FIRSTNAME)
-        $nameParts = explode(' ', trim($user->name));
-        if (count($nameParts) > 1) {
-            $lastName = array_pop($nameParts);
-            $firstName = implode('_', $nameParts);
-            $formattedName = strtoupper($lastName . '_' . $firstName);
-        } else {
-            $formattedName = strtoupper($user->name);
+        // 2. Deadline Check
+        if ($task->deadline && now()->gt(Carbon::parse($task->deadline))) {
+            return response()->json(['status' => 'error', 'message' => 'The deadline has passed. Submission closed.'], 403);
         }
 
-        // Build Public Storage Destination Path
-        $folderPath = "submissions/{$subjectCode}/{$section}/{$formattedName}";
-        $filename = time() . '_' . $file->getClientOriginalName();
+        $request->validate([
+            'submission' => 'required|file|mimes:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:10240',
+        ]);
 
-        // Move the file into the public uploads directory
-        $file->move(public_path($folderPath), $filename);
-        $fullPath = $folderPath . '/' . $filename;
+        // 3. LIVE SESSION DURATION CALCULATION
+        $submittedAt = now();
+        $taskCreatedAt = \Carbon\Carbon::parse($task->created_at);
 
-        // 5. Cleanup Obsolete/Prior Uploads
-        $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', $userId)->first();
-        if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
-            @unlink(public_path($oldSubmission->file_path));
-        }
+        $durationSeconds = max(0, $submittedAt->getTimestamp() - $taskCreatedAt->getTimestamp());
 
-        // 6. Save or Update Submission data with accurate live duration
-        $submission = Submission::updateOrCreate(
-            ['task_id' => $taskId, 'user_id' => $userId],
-            [
-                'file_path' => $fullPath,
-                'original_filename' => $file->getClientOriginalName(),
+        // 4. File Handling & Folder Path Building
+        if ($request->hasFile('submission')) {
+            $file = $request->file('submission');
+
+            // Format Subject Code
+            $subjectCode = strtoupper($task->labSession->class_code ?? 'GENERAL');
+
+            // Format Section string
+            $section = strtoupper(($user->year_level ?? '') . ($user->section ?? 'NA'));
+
+            // Format Student Folder Identity (LASTNAME_FIRSTNAME)
+            $nameParts = explode(' ', trim($user->name));
+            if (count($nameParts) > 1) {
+                $lastName = array_pop($nameParts);
+                $firstName = implode('_', $nameParts);
+                $formattedName = strtoupper($lastName . '_' . $firstName);
+            } else {
+                $formattedName = strtoupper($user->name);
+            }
+
+            // Build Public Storage Destination Path
+            $folderPath = "submissions/{$subjectCode}/{$section}/{$formattedName}";
+            $filename = time() . '_' . $file->getClientOriginalName();
+
+            // Move file to public directory
+            $file->move(public_path($folderPath), $filename);
+            $fullPath = $folderPath . '/' . $filename;
+
+            // 5. Cleanup Obsolete/Prior Uploads
+            $oldSubmission = Submission::where('task_id', $taskId)->where('user_id', $userId)->first();
+            if ($oldSubmission && file_exists(public_path($oldSubmission->file_path))) {
+                @unlink(public_path($oldSubmission->file_path));
+            }
+
+            // 6. Save or Update Submission data
+            $submission = Submission::updateOrCreate(
+                ['task_id' => $taskId, 'user_id' => $userId],
+                [
+                    'file_path' => $fullPath,
+                    'original_filename' => $file->getClientOriginalName(),
+                    'duration_seconds' => $durationSeconds,
+                    'submitted_at' => $submittedAt,
+                ]
+            );
+
+            // 7. Activity Log row
+            \App\Models\ActivityLog::create([
+                'user_id' => $userId,
+                'log_type' => 'submission',
+                'content' => "Student submitted activity: \"" . $task->title . "\"",
+                'lab_session_id' => $task->subject_id ?? $task->lab_session_id,
                 'duration_seconds' => $durationSeconds,
-                'submitted_at' => $submittedAt,
-            ]
-        );
+            ]);
 
-        // 7. Create Timeline Log row
-        \App\Models\ActivityLog::create([
-            'user_id' => $userId,
-            'log_type' => 'submission',
-            'content' => "Student submitted activity: \"" . $task->title . "\"",
-            'lab_session_id' => $task->subject_id,
-            'duration_seconds' => $durationSeconds,
-        ]);
+            // Auto-grade submission using Gemini if configured
+            try {
+                $gradingService = new \App\Services\GeminiGradingService();
+                $gradingService->gradeSubmission($submission);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Auto-grading failed: ' . $e->getMessage());
+            }
 
-        // Auto-grade the submission using Gemini
-        try {
-            $gradingService = new \App\Services\GeminiGradingService();
-            $gradingService->gradeSubmission($submission);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Auto-grading failed: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Uploaded successfully to ' . $formattedName,
+                'submission' => $submission
+            ]);
         }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Uploaded to ' . $formattedName
-        ]);
     }
-}
 
-    public function deleteTask($taskId)
+    public function deleteTask(Request $request, $taskId)
     {
         $task = Task::findOrFail($taskId);
 
         if ($task->deadline && Carbon::now()->gt(Carbon::parse($task->deadline))) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'The deadline has passed. You can no longer delete your submission.'], 403);
+            }
             return back()->with('error', 'The deadline has passed. You can no longer delete your submission.');
         }
 
@@ -228,11 +230,29 @@ class StudentClassController extends Controller
         if ($submission) {
             $filePath = public_path($submission->file_path);
             if (file_exists($filePath)) {
-                unlink($filePath);
+                @unlink($filePath);
             }
 
             $submission->delete();
+
+            // Log activity
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'log_type' => 'submission_removed',
+                'content' => "Student unsubmitted activity: \"" . $task->title . "\"",
+                'lab_session_id' => $task->subject_id ?? $task->lab_session_id,
+                'duration_seconds' => 0,
+            ]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['status' => 'success', 'message' => 'Submission deleted successfully.']);
+            }
+
             return back()->with('success', 'Submission deleted successfully.');
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['status' => 'error', 'message' => 'No submission found to delete.'], 404);
         }
 
         return back()->with('error', 'No submission found to delete.');
@@ -301,18 +321,14 @@ class StudentClassController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-
     public function enterClassroom($id)
     {
-        // 1. Fetch class with students and materials
         $class = LabSession::with(['students', 'materials', 'faculty'])->findOrFail($id);
 
-        // 2. Fetch quizzes for this specific subject
         $quizzes = \App\Models\Quiz::where('subject_id', $id)
             ->where('published_at', '<=', now())
             ->get();
 
-        // 3. Check if THIS student is marked as present
         $isPresent = $class->students()
             ->where('user_id', auth()->id())
             ->first()?->pivot->is_present ?? false;
@@ -327,24 +343,21 @@ class StudentClassController extends Controller
             'violationStatus' => $violationStatus,
         ]);
     }
+
     public function refreshClassStatuses()
     {
         $classes = auth()->user()->joinedClasses;
         $statusMap = $classes->mapWithKeys(function ($item) {
-            // 🟢 FIX: Return the active status so the dashboard turns "LIVE" instantly
             return [$item->id => (bool) $item->is_active];
         });
 
         return response()->json($statusMap);
     }
-    /**
-     * Get tasks that have been graded for the student
-     */
+
     public function getGradedTasks()
     {
         $userId = auth()->id();
 
-        // Get all tasks where user has a submission that's been graded
         $gradedTasks = Task::whereHas('submissions', function ($query) use ($userId) {
             $query->where('user_id', $userId)
                 ->whereNotNull('grade');
@@ -356,7 +369,7 @@ class StudentClassController extends Controller
                 }
             ])
             ->latest()
-            ->take(6) // Only show 6 most recent
+            ->take(6)
             ->get()
             ->map(function ($task) {
                 return [
@@ -381,17 +394,15 @@ class StudentClassController extends Controller
         return response()->json($gradedTasks);
     }
 
-    // 🌐 Safe integrated browser landing page to prevent iframe loops
     public function browserHome($id)
     {
         return view('student.browser-home', compact('id'));
     }
 
-   public function customSearch(Request $request, $id)
+    public function customSearch(Request $request, $id)
     {
         $query = trim($request->input('q', ''));
 
-        // Log search event to activity timeline
         try {
             \App\Models\ActivityLog::create([
                 'user_id' => auth()->id(),
@@ -410,7 +421,6 @@ class StudentClassController extends Controller
             return view('student.search', compact('query', 'results', 'id'));
         }
 
-        // Filter out search engine homepages, portal aggregators, and ad networks
         $forbiddenDomains = [
             'duckduckgo.com',
             'bing.com',
@@ -426,7 +436,6 @@ class StudentClassController extends Controller
             '#'
         ];
 
-        // 🟢 1. PRIMARY ENGINE: DuckDuckGo HTML Endpoint (Supports all real tech sites & articles)
         try {
             $response = Http::withoutVerifying()
                 ->timeout(5)
@@ -444,14 +453,12 @@ class StudentClassController extends Controller
                 @$dom->loadHTML(mb_convert_encoding($response->body(), 'HTML-ENTITIES', 'UTF-8'));
                 $xpath = new \DOMXPath($dom);
 
-                // Fetch result links from DDG HTML structure
                 $nodeList = $xpath->query("//a[contains(@class, 'result__a')]");
 
                 foreach ($nodeList as $node) {
                     $rawHref = trim($node->getAttribute('href'));
                     $title = trim(preg_replace('/\s+/', ' ', $node->nodeValue));
 
-                    // Decode DuckDuckGo redirect wrapper URL (/l/?uddg=...)
                     $actualUrl = $rawHref;
                     if (strpos($rawHref, 'uddg=') !== false) {
                         parse_str(parse_url($rawHref, PHP_URL_QUERY), $queryParameters);
@@ -460,12 +467,9 @@ class StudentClassController extends Controller
                         }
                     }
 
-                    // Must be a valid HTTP/HTTPS URL
-                    if (strpos($actualUrl, 'http') !== 0) {
+                    if (strpos($actualUrl, 'http') !== 0)
                         continue;
-                    }
 
-                    // Filter out forbidden search engine portals/ads
                     $isForbidden = false;
                     foreach ($forbiddenDomains as $forbidden) {
                         if (strpos(strtolower($actualUrl), $forbidden) !== false) {
@@ -473,11 +477,9 @@ class StudentClassController extends Controller
                             break;
                         }
                     }
-                    if ($isForbidden) {
+                    if ($isForbidden)
                         continue;
-                    }
 
-                    // De-duplicate results
                     $alreadyExists = false;
                     foreach ($results as $existing) {
                         if ($existing['FirstURL'] === $actualUrl) {
@@ -493,72 +495,14 @@ class StudentClassController extends Controller
                         ];
                     }
 
-                    if (count($results) >= 15) {
+                    if (count($results) >= 15)
                         break;
-                    }
                 }
             }
         } catch (\Exception $e) {
             \Log::warning("DuckDuckGo HTML search failed: " . $e->getMessage());
         }
 
-        // 🟢 2. SECONDARY ENGINE: Mojeek (Backup scraper)
-        if (count($results) === 0) {
-            try {
-                $response = Http::withoutVerifying()
-                    ->timeout(4)
-                    ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                    ])
-                    ->get('https://www.mojeek.com/search', ['q' => $query]);
-
-                if ($response->successful()) {
-                    $dom = new \DOMDocument();
-                    @$dom->loadHTML(mb_convert_encoding($response->body(), 'HTML-ENTITIES', 'UTF-8'));
-                    $xpath = new \DOMXPath($dom);
-
-                    $links = $xpath->query("//a[contains(@class, 'ob') or contains(@class, 'title')] | //h2/a");
-
-                    foreach ($links as $link) {
-                        $href = trim($link->getAttribute('href'));
-                        $title = trim(preg_replace('/\s+/', ' ', $link->nodeValue));
-
-                        if (strpos($href, 'http') !== 0) continue;
-
-                        $isForbidden = false;
-                        foreach ($forbiddenDomains as $forbidden) {
-                            if (strpos(strtolower($href), $forbidden) !== false) {
-                                $isForbidden = true;
-                                break;
-                            }
-                        }
-                        if ($isForbidden) continue;
-
-                        $alreadyExists = false;
-                        foreach ($results as $existing) {
-                            if ($existing['FirstURL'] === $href) {
-                                $alreadyExists = true;
-                                break;
-                            }
-                        }
-
-                        if (!$alreadyExists && strlen($title) > 5) {
-                            $results[] = [
-                                'FirstURL' => $href,
-                                'Text' => $title
-                            ];
-                        }
-
-                        if (count($results) >= 15) break;
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::warning("Mojeek search failed: " . $e->getMessage());
-            }
-        }
-
-        // 🟢 3. EMERGENCY OFFLINE FAILSAFE
-        // If internet/live scraping is completely down on the local server, provide direct technical search entry points.
         if (count($results) === 0) {
             $urlEncodedQuery = urlencode($query);
             $displayQuery = htmlspecialchars($query);

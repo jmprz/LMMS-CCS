@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\DB;
 use App\Models\Submission;
 use App\Models\SubmissionGrade;
@@ -14,20 +15,14 @@ use App\Models\ActivityLog;
 
 class TaskController extends Controller
 {
-    // -------------------------------------------------------------------------
-    // STUDENT — View a graded task with detailed per-criterion feedback
-    // GET /student/tasks/{taskId}
-    // -------------------------------------------------------------------------
     public function show($taskId)
     {
-        $task = Task::with('labSession.faculty')->findOrFail($taskId);
+        $task = Task::with(['labSession.faculty', 'rubric.criteria'])->findOrFail($taskId);
 
-        // Get this student's submission
         $submission = Submission::where('task_id', $taskId)
             ->where('user_id', auth()->id())
             ->first();
 
-        // Get the detailed rubric grade (with all criterion scores loaded)
         $submissionGrade = null;
         if ($submission) {
             $submissionGrade = SubmissionGrade::where('submission_id', $submission->id)
@@ -35,7 +30,6 @@ class TaskController extends Controller
                 ->first();
         }
 
-        // Return JSON response if requested by Alpine.js modal workspace
         if (request()->wantsJson() || request()->ajax()) {
             return response()->json([
                 'task' => $task,
@@ -47,20 +41,16 @@ class TaskController extends Controller
         return view('student.tasks.show', compact('task', 'submission', 'submissionGrade'));
     }
 
-    // -------------------------------------------------------------------------
-    // PROFESSOR — Create a new task
-    // POST /professor/tasks
-    // -------------------------------------------------------------------------
-  public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
-            'subject_id'           => 'required|integer',
-            'title'                => 'required|string|max:255',
-            'description'          => 'nullable|string',
-            'deadline'             => 'required|date',
-            'points'               => 'required|integer|min:0',
-            'rubric'               => 'required|array',
-            'rubric.name'          => 'required|string',
+            'subject_id' => 'required|integer',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'deadline' => 'required|date',
+            'points' => 'required|integer|min:0',
+            'rubric' => 'required|array',
+            'rubric.name' => 'required|string',
             'rubric.criteria_json' => 'required|string',
         ]);
 
@@ -68,61 +58,54 @@ class TaskController extends Controller
 
         try {
             $task = Task::create([
-                'subject_id'  => $request->subject_id,
-                'title'       => $request->title,
+                'subject_id' => $request->subject_id,
+                'title' => $request->title,
                 'description' => $request->description,
-                'deadline'    => $request->deadline,
-                'points'      => $request->points,
+                'deadline' => $request->deadline,
+                'points' => $request->points,
             ]);
 
             $criteriaData = json_decode($request->rubric['criteria_json'], true) ?? [];
-            
-            // Re-calculate absolute total points for the rubric
+
             $totalPoints = 0;
             foreach ($criteriaData as $c) {
-                $totalPoints += collect($c['levels'] ?? [])->max(fn($l) => (int)($l['points'] ?? 0)) ?? 0;
+                $totalPoints += collect($c['levels'] ?? [])->max(fn($l) => (int) ($l['points'] ?? 0)) ?? 0;
             }
 
-            // Create the Root Rubric
             $rubric = Rubric::create([
-                'task_id'            => $task->id,
-                'name'               => $request->rubric['name'],
-                'total_points'       => $totalPoints,
+                'task_id' => $task->id,
+                'name' => $request->rubric['name'],
+                'total_points' => $totalPoints,
                 'auto_grade_enabled' => 1,
-                'created_by'         => auth()->id(),
+                'created_by' => auth()->id(),
             ]);
 
-            // Create the Relational Criteria rows required by Gemini Grading Service
             foreach ($criteriaData as $index => $c) {
                 $levels = $c['levels'] ?? [];
-                usort($levels, fn($a, $b) => (int)($b['points'] ?? 0) - (int)($a['points'] ?? 0));
+                usort($levels, fn($a, $b) => (int) ($b['points'] ?? 0) - (int) ($a['points'] ?? 0));
 
                 $cleanLevels = array_map(fn($l) => [
-                    'label'       => trim($l['label'] ?? ''),
-                    'points'      => (int)($l['points'] ?? 0),
+                    'label' => trim($l['label'] ?? ''),
+                    'points' => (int) ($l['points'] ?? 0),
                     'description' => trim($l['description'] ?? ''),
                 ], $levels);
 
                 $maxPoints = !empty($cleanLevels) ? $cleanLevels[0]['points'] : 0;
 
                 RubricCriterion::create([
-                    'rubric_id'      => $rubric->id,
+                    'rubric_id' => $rubric->id,
                     'criterion_name' => trim($c['name'] ?? 'Unnamed Criterion'),
-                    'description'    => trim($c['description'] ?? ''),
-                    'max_points'     => $maxPoints,
-                    'checking_type'  => 'ai',
+                    'description' => trim($c['description'] ?? ''),
+                    'max_points' => $maxPoints,
+                    'checking_type' => 'ai',
                     'checking_rules' => ['levels' => $cleanLevels],
-                    'weight'         => 1.0,
-                    'order_index'    => $index,
+                    'weight' => 1.0,
+                    'order_index' => $index,
                 ]);
             }
 
-            // DISTRIBUTE EMAIL ALERTS TO ALL ENROLLED STUDENTS USING EXISTING MODELS
-            // =========================================================================
-            // Query users who have joined this active LabSession ID via 'joinedClasses'
-           $task->load('labSession');
+            $task->load('rubric.criteria');
 
-            // Query users who have joined this active LabSession ID via 'joinedClasses'
             $students = User::whereHas('joinedClasses', function ($query) use ($request) {
                 $query->where('lab_sessions.id', $request->subject_id);
             })->get();
@@ -130,10 +113,9 @@ class TaskController extends Controller
             foreach ($students as $student) {
                 Mail::send('emails.new_task_notification', ['student' => $student, 'task' => $task], function ($message) use ($student, $task) {
                     $message->to($student->email)
-                            ->subject('LMMS - New Task Assigned: ' . $task->title);
+                        ->subject('LMMS - New Task Assigned: ' . $task->title);
                 });
             }
-            // =========================================================================
 
             $this->logProfessorActivity(
                 $request->subject_id,
@@ -153,12 +135,12 @@ class TaskController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'title'                => 'required|string|max:255',
-            'description'          => 'nullable|string',
-            'deadline'             => 'required|date',
-            'points'               => 'required|integer|min:0',
-            'rubric'               => 'required|array',
-            'rubric.name'          => 'required|string',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'deadline' => 'required|date',
+            'points' => 'required|integer|min:0',
+            'rubric' => 'required|array',
+            'rubric.name' => 'required|string',
             'rubric.criteria_json' => 'required|string',
         ]);
 
@@ -166,15 +148,14 @@ class TaskController extends Controller
 
         try {
             $task = Task::findOrFail($id);
-            
+
             $task->update([
-                'title'       => $request->title,
+                'title' => $request->title,
                 'description' => $request->description,
-                'deadline'    => $request->deadline,
-                'points'      => $request->points,
+                'deadline' => $request->deadline,
+                'points' => $request->points,
             ]);
 
-            // Clear old relationships securely
             if ($task->rubric) {
                 $task->rubric->criteria()->delete();
                 $task->rubric()->delete();
@@ -183,41 +164,42 @@ class TaskController extends Controller
             $criteriaData = json_decode($request->rubric['criteria_json'], true) ?? [];
             $totalPoints = 0;
             foreach ($criteriaData as $c) {
-                $totalPoints += collect($c['levels'] ?? [])->max(fn($l) => (int)($l['points'] ?? 0)) ?? 0;
+                $totalPoints += collect($c['levels'] ?? [])->max(fn($l) => (int) ($l['points'] ?? 0)) ?? 0;
             }
 
-            // Create new updated relationships
             $rubric = Rubric::create([
-                'task_id'            => $task->id,
-                'name'               => $request->rubric['name'],
-                'total_points'       => $totalPoints,
+                'task_id' => $task->id,
+                'name' => $request->rubric['name'],
+                'total_points' => $totalPoints,
                 'auto_grade_enabled' => 1,
-                'created_by'         => auth()->id(),
+                'created_by' => auth()->id(),
             ]);
 
             foreach ($criteriaData as $index => $c) {
                 $levels = $c['levels'] ?? [];
-                usort($levels, fn($a, $b) => (int)($b['points'] ?? 0) - (int)($a['points'] ?? 0));
+                usort($levels, fn($a, $b) => (int) ($b['points'] ?? 0) - (int) ($a['points'] ?? 0));
 
                 $cleanLevels = array_map(fn($l) => [
-                    'label'       => trim($l['label'] ?? ''),
-                    'points'      => (int)($l['points'] ?? 0),
+                    'label' => trim($l['label'] ?? ''),
+                    'points' => (int) ($l['points'] ?? 0),
                     'description' => trim($l['description'] ?? ''),
                 ], $levels);
 
                 $maxPoints = !empty($cleanLevels) ? $cleanLevels[0]['points'] : 0;
 
                 RubricCriterion::create([
-                    'rubric_id'      => $rubric->id,
+                    'rubric_id' => $rubric->id,
                     'criterion_name' => trim($c['name'] ?? 'Unnamed Criterion'),
-                    'description'    => trim($c['description'] ?? ''),
-                    'max_points'     => $maxPoints,
-                    'checking_type'  => 'ai',
+                    'description' => trim($c['description'] ?? ''),
+                    'max_points' => $maxPoints,
+                    'checking_type' => 'ai',
                     'checking_rules' => ['levels' => $cleanLevels],
-                    'weight'         => 1.0,
-                    'order_index'    => $index,
+                    'weight' => 1.0,
+                    'order_index' => $index,
                 ]);
             }
+
+            $task->load('rubric.criteria');
 
             $this->logProfessorActivity(
                 $task->subject_id,
@@ -233,6 +215,7 @@ class TaskController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to update.'], 500);
         }
     }
+
     public function destroy($id)
     {
         try {
@@ -240,21 +223,18 @@ class TaskController extends Controller
 
             $task = Task::findOrFail($id);
 
-            // Optional: Manual cleanup if DB cascade is not set up
             if ($task->rubric) {
                 $task->rubric->criteria()->delete();
                 $task->rubric->delete();
             }
-            
-            // Clean up submissions linked to this task
+
             $task->submissions()->delete();
 
-            // Delete the main task record
             $taskTitle = $task->title;
             $labSessionId = $task->subject_id;
 
             $task->delete();
-            
+
             $this->logProfessorActivity(
                 $labSessionId,
                 'Deleted task: "' . $taskTitle . '"'
@@ -268,7 +248,7 @@ class TaskController extends Controller
             return redirect()->back()->with('error', 'Failed to delete task: ' . $e->getMessage());
         }
     }
-    
+
     private function logProfessorActivity($labSessionId, $content)
     {
         ActivityLog::create([

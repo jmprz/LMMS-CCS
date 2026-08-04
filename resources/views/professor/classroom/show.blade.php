@@ -741,7 +741,6 @@
                                                     <select name="type" x-model="type"
                                                         class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none cursor-pointer focus:ring-2 focus:ring-black font-bold text-[#383838]">
                                                         <option value="pdf">PDF Document</option>
-                                                        <option value="pptx">PowerPoint Presentation</option>
                                                         <option value="youtube">YouTube Video</option>
                                                     </select>
                                                 </div>
@@ -1019,535 +1018,398 @@
                                 ];
                             });
                         @endphp
-                        <div x-show="activeTab === 'tasks'" class="space-y-6" x-cloak
-                            x-data="taskManager({{ json_encode($preparedTasks) }}, {{ $session->subject_id ?? $session->id }})">
+                    <div x-show="activeTab === 'tasks'" class="space-y-6" x-cloak
+    x-data="taskManager({{ json_encode($preparedTasks) }}, {{ $session->subject_id ?? $session->id }})">
 
-                            <div>
-                                <div class="flex justify-between items-center mb-8 ms-4 me-4">
+    <div>
+        <div class="flex justify-between items-center mb-8 ms-4 me-4">
+            <div>
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">Laboratory Tasks</h2>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Manage activities, rubrics, and grades</p>
+            </div>
+            <button @click="openEditor()"
+                class="bg-[#383838] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200 active:scale-95">
+                + Create New Task
+            </button>
+        </div>
+
+        {{-- Task Grid --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <template x-for="task in taskList" :key="task.id">
+                <div class="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-[#383838] transition-all group">
+
+                    <div>
+                        <div class="flex justify-between items-start mb-5">
+                            <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors duration-300">
+                                <i class="ri-flask-line text-xl"></i>
+                            </div>
+                            <span class="bg-gray-100 text-[#383838] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200"
+                                x-text="(task.points || 0) + ' PTS'">
+                            </span>
+                        </div>
+
+                        <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight" x-text="task.title"></h4>
+
+                        <div class="space-y-2 mt-3 mb-6">
+                            <div class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                                <i class="ri-time-line mr-2 text-gray-300"></i>
+                                <span x-text="task.deadline_formatted || formatDate(task.deadline)"></span>
+                            </div>
+                            <div class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                                <i class="ri-group-line mr-2 text-gray-300"></i>
+                                <span x-text="(task.submissions_count !== undefined ? task.submissions_count : (task.submissions ? task.submissions.length : 0)) + ' Submissions'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <button type="button" @click="openEditor(task)"
+                                class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                <i class="ri-pencil-line text-xs"></i> Edit
+                            </button>
+
+                            <button type="button" @click="openGrading(task, task.submissions)"
+                                class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                                <i class="ri-check-double-line text-xs"></i> Submissions
+                            </button>
+                        </div>
+
+                        <button type="button" @click="deleteTask(task.id)"
+                            class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
+                            <i class="ri-delete-bin-line text-xs"></i> Delete
+                        </button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+    </div>
+
+    {{-- Task Editor Modal --}}
+    <template x-teleport="body">
+        <div x-show="showEditorModal"
+            class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4"
+            x-cloak x-transition.opacity>
+            <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden transform transition-all"
+                @click.away="showEditorModal = false">
+
+                <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
+                            x-text="isEditing ? 'Edit Laboratory Task' : 'Create New Task'"></h3>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Configure details & scoring rubric</p>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right hidden sm:block border-r border-gray-200 pr-6">
+                            <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest">Auto-Calculated Max Points</p>
+                            <p class="text-2xl font-black text-[#383838]" x-text="computedMaxPoints"></p>
+                        </div>
+                        <button @click="saveTask()" :disabled="saving"
+                            class="bg-[#383838] hover:bg-black text-white px-8 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition flex items-center gap-2 disabled:opacity-50">
+                            <i class="ri-save-line text-sm" x-show="!saving"></i>
+                            <i class="ri-loader-4-line animate-spin text-sm" x-show="saving" x-cloak></i>
+                            <span x-text="saving ? 'Saving...' : (isEditing ? 'Update Task' : 'Save & Publish')"></span>
+                        </button>
+                        <button @click="showEditorModal = false"
+                            class="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-600">
+                            <i class="ri-close-line text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6 md:p-8 bg-white">
+                    <form @submit.prevent="saveTask()" class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <input type="hidden" name="subject_id" :value="subjectId">
+                        <input type="hidden" name="points" :value="computedMaxPoints">
+                        <input type="hidden" name="rubric[criteria]" :value="JSON.stringify(criteria)">
+
+                        <div class="lg:col-span-4 space-y-6">
+                            <div class="bg-gray-50 rounded-3xl p-6 border border-gray-100">
+                                <h4 class="font-black text-[#383838] uppercase tracking-widest text-xs mb-5 flex items-center gap-2">
+                                    <i class="ri-information-line"></i> Task Details
+                                </h4>
+
+                                <div class="space-y-4">
                                     <div>
-                                        <h2 class="font-black text-2xl text-gray-900 tracking-tight uppercase">
-                                            Laboratory Tasks</h2>
-                                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                            Manage activities, rubrics, and grades</p>
+                                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Activity Title *</label>
+                                        <input type="text" x-model="taskForm.title" required placeholder="e.g., Python Basics Lab"
+                                            class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm">
                                     </div>
-                                    <button @click="openEditor()"
-                                        class="bg-[#383838] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200 active:scale-95">
-                                        + Create New Task
-                                    </button>
-                                </div>
 
-                                {{-- Dynamic Reactive Task Grid --}}
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    <template x-for="task in taskList" :key="task.id">
-                                        <div
-                                            class="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-[#383838] transition-all group">
+                                    <div>
+                                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Deadline *</label>
+                                        <input type="datetime-local" x-model="taskForm.deadline" required
+                                            class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm text-gray-600">
+                                    </div>
 
-                                            <div>
-                                                <div class="flex justify-between items-start mb-5">
-                                                    <div
-                                                        class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-[#383838] group-hover:text-white transition-colors duration-300">
-                                                        <i class="ri-flask-line text-xl"></i>
-                                                    </div>
-                                                    <span
-                                                        class="bg-gray-100 text-[#383838] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200"
-                                                        x-text="(task.points || 0) + ' PTS'">
-                                                    </span>
-                                                </div>
-
-                                                <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight"
-                                                    x-text="task.title"></h4>
-
-                                                <div class="space-y-2 mt-3 mb-6">
-                                                    <div
-                                                        class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
-                                                        <i class="ri-time-line mr-2 text-gray-300"></i>
-                                                        <span
-                                                            x-text="task.deadline_formatted || formatDate(task.deadline)"></span>
-                                                    </div>
-                                                    <div
-                                                        class="flex items-center text-gray-400 text-[11px] font-bold uppercase tracking-wider">
-                                                        <i class="ri-group-line mr-2 text-gray-300"></i>
-                                                        <span
-                                                            x-text="(task.submissions_count !== undefined ? task.submissions_count : (task.submissions ? task.submissions.length : 0)) + ' Submissions'"></span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div
-                                                class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
-                                                <div class="flex items-center gap-3">
-                                                    {{-- Edit Trigger --}}
-                                                    <button type="button"
-                                                        @click="openEditor(task, task.rubric, task.criteria)"
-                                                        class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                        <i class="ri-pencil-line text-xs"></i> Edit
-                                                    </button>
-
-                                                    {{-- Submissions Panel Trigger --}}
-                                                    <button type="button" @click="openGrading(task, task.submissions)"
-                                                        class="text-gray-500 hover:text-[#383838] text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                        <i class="ri-check-double-line text-xs"></i> Submissions
-                                                    </button>
-                                                </div>
-
-                                                {{-- Delete Control --}}
-                                                <button type="button" @click="deleteTask(task.id)"
-                                                    class="text-red-500 hover:text-red-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                    <i class="ri-delete-bin-line text-xs"></i> Delete
-                                                </button>
-                                            </div>
-
-                                        </div>
-                                    </template>
-
-                                    <template x-if="taskList.length === 0">
-                                        <div
-                                            class="col-span-full py-24 border-2 border-dashed border-gray-200 rounded-[2rem] text-center bg-gray-50/50">
-                                            <i class="ri-inbox-2-line text-5xl text-gray-300 mb-4 block"></i>
-                                            <p class="text-gray-500 font-black uppercase tracking-widest text-xs">No
-                                                laboratory tasks created yet.</p>
-                                        </div>
-                                    </template>
+                                    <div>
+                                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Instructions</label>
+                                        <textarea x-model="taskForm.description" rows="5" placeholder="Provide clear instructions for the students..."
+                                            class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm resize-none"></textarea>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {{-- Task Editor Modal --}}
-                            <template x-teleport="body">
-                                <div x-show="showEditorModal"
-                                    class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4"
-                                    x-cloak x-transition.opacity>
-                                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden transform transition-all"
-                                        @click.away="showEditorModal = false">
+                        <div class="lg:col-span-8 space-y-4">
+                            <h4 class="font-black text-[#383838] uppercase tracking-widest text-xs mb-2 flex items-center gap-2 px-1">
+                                <i class="ri-list-check-2"></i> Grading Criteria (Rubric)
+                            </h4>
 
-                                        <div
-                                            class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-                                            <div>
-                                                <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
-                                                    x-text="isEditing ? 'Edit Laboratory Task' : 'Create New Task'">
-                                                </h3>
-                                                <p
-                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                    Configure details & scoring rubric</p>
-                                            </div>
-                                            <div class="flex items-center gap-6">
-                                                <div class="text-right hidden sm:block border-r border-gray-200 pr-6">
-                                                    <p
-                                                        class="text-[9px] text-gray-400 font-black uppercase tracking-widest">
-                                                        Auto-Calculated Max Points</p>
-                                                    <p class="text-2xl font-black text-[#383838]"
-                                                        x-text="computedMaxPoints"></p>
-                                                </div>
-                                                <button @click="saveTask()" :disabled="saving"
-                                                    class="bg-[#383838] hover:bg-black text-white px-8 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition flex items-center gap-2 disabled:opacity-50">
-                                                    <i class="ri-save-line text-sm" x-show="!saving"></i>
-                                                    <i class="ri-loader-4-line animate-spin text-sm" x-show="saving"
-                                                        x-cloak></i>
-                                                    <span
-                                                        x-text="saving ? 'Saving...' : (isEditing ? 'Update Task' : 'Save & Publish')"></span>
-                                                </button>
-                                                <button @click="showEditorModal = false"
-                                                    class="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-600">
-                                                    <i class="ri-close-line text-lg"></i>
-                                                </button>
-                                            </div>
+                            <template x-for="(criterion, cIdx) in criteria" :key="criterion.uid">
+                                <div class="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm transition-all focus-within:border-[#383838]">
+                                    <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
+                                        <div class="w-7 h-7 rounded-full bg-[#383838] text-white flex items-center justify-center text-[10px] font-black shrink-0" x-text="cIdx + 1"></div>
+                                        <input x-model="criterion.name" type="text" placeholder="Criterion Name (e.g., Code Logic)"
+                                            class="flex-1 bg-transparent border-b-2 border-dashed border-gray-300 focus:border-[#383838] outline-none text-sm font-black text-gray-900 py-1 transition">
+                                        <div class="flex items-center gap-4 shrink-0">
+                                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Max:
+                                                <span class="text-[#383838] text-sm" x-text="getMaxPoints(criterion)"></span>
+                                            </span>
+                                            <button type="button" @click="removeCriterion(criterion.uid)" x-show="criteria.length > 1"
+                                                class="text-gray-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50">
+                                                <i class="ri-delete-bin-line text-lg"></i>
+                                            </button>
                                         </div>
+                                    </div>
 
-                                        <div class="flex-1 overflow-y-auto p-6 md:p-8 bg-white">
-                                            <form @submit.prevent="saveTask()"
-                                                class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                                <input type="hidden" name="subject_id" :value="subjectId">
-                                                <input type="hidden" name="points" :value="computedMaxPoints">
-                                                <input type="hidden" name="rubric[criteria]"
-                                                    :value="JSON.stringify(criteria)">
-                                                <div class="lg:col-span-4 space-y-6">
-                                                    <div class="bg-gray-50 rounded-3xl p-6 border border-gray-100">
-                                                        <h4
-                                                            class="font-black text-[#383838] uppercase tracking-widest text-xs mb-5 flex items-center gap-2">
-                                                            <i class="ri-information-line"></i> Task Details
-                                                        </h4>
-
-                                                        <div class="space-y-4">
-                                                            <div>
-                                                                <label
-                                                                    class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Activity
-                                                                    Title *</label>
-                                                                <input type="text" x-model="taskForm.title" required
-                                                                    placeholder="e.g., Python Basics Lab"
-                                                                    class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm">
-                                                            </div>
-
-                                                            <div>
-                                                                <label
-                                                                    class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Deadline
-                                                                    *</label>
-                                                                <input type="datetime-local" x-model="taskForm.deadline"
-                                                                    required
-                                                                    class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm text-gray-600">
-                                                            </div>
-
-                                                            <div>
-                                                                <label
-                                                                    class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Instructions</label>
-                                                                <textarea x-model="taskForm.description" rows="5"
-                                                                    placeholder="Provide clear instructions for the students..."
-                                                                    class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm resize-none"></textarea>
-                                                            </div>
+                                    <div class="p-5 overflow-x-auto">
+                                        <div class="flex gap-4 min-w-max pb-2">
+                                            <template x-for="level in criterion.levels" :key="level.uid">
+                                                <div class="w-64 border border-gray-200 rounded-2xl overflow-hidden bg-white hover:border-gray-400 transition group flex flex-col shadow-sm">
+                                                    <div class="border-b border-gray-100 p-3 bg-gray-50">
+                                                        <input x-model="level.label" type="text" placeholder="Level label"
+                                                            class="w-full text-xs font-black text-gray-800 bg-transparent border-none outline-none mb-2 p-0 focus:ring-0">
+                                                        <div class="flex items-center gap-2">
+                                                            <input x-model.number="level.points" type="number" min="0"
+                                                                class="w-16 text-sm font-black text-[#383838] bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-[#383838] outline-none text-center">
+                                                            <span class="text-[9px] text-gray-400 font-black uppercase tracking-widest">Points</span>
                                                         </div>
                                                     </div>
+                                                    <div class="p-3 flex-grow bg-white">
+                                                        <textarea x-model="level.description" placeholder="Requirements for this level..." rows="3"
+                                                            class="w-full text-xs text-gray-600 bg-transparent border-none outline-none resize-none p-0 focus:ring-0"></textarea>
+                                                    </div>
+                                                    <div class="px-3 pb-3 text-right bg-white">
+                                                        <button type="button" @click="removeLevel(criterion, level.uid)" x-show="criterion.levels.length > 1"
+                                                            class="text-[9px] text-gray-400 hover:text-red-500 font-black uppercase tracking-widest">Remove</button>
+                                                    </div>
                                                 </div>
-
-                                                <div class="lg:col-span-8 space-y-4">
-                                                    <h4
-                                                        class="font-black text-[#383838] uppercase tracking-widest text-xs mb-2 flex items-center gap-2 px-1">
-                                                        <i class="ri-list-check-2"></i> Grading Criteria (Rubric)
-                                                    </h4>
-
-                                                    <template x-for="(criterion, cIdx) in criteria"
-                                                        :key="criterion.uid">
-                                                        <div
-                                                            class="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm transition-all focus-within:border-[#383838]">
-                                                            <div
-                                                                class="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-                                                                <div class="w-7 h-7 rounded-full bg-[#383838] text-white flex items-center justify-center text-[10px] font-black shrink-0"
-                                                                    x-text="cIdx + 1"></div>
-                                                                <input x-model="criterion.name" type="text"
-                                                                    placeholder="Criterion Name (e.g., Code Logic)"
-                                                                    class="flex-1 bg-transparent border-b-2 border-dashed border-gray-300 focus:border-[#383838] outline-none text-sm font-black text-gray-900 py-1 transition">
-                                                                <div class="flex items-center gap-4 shrink-0">
-                                                                    <span
-                                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Max:
-                                                                        <span class="text-[#383838] text-sm"
-                                                                            x-text="getMaxPoints(criterion)"></span>
-                                                                    </span>
-                                                                    <button type="button"
-                                                                        @click="removeCriterion(criterion.uid)"
-                                                                        x-show="criteria.length > 1"
-                                                                        class="text-gray-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50">
-                                                                        <i class="ri-delete-bin-line text-lg"></i>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="p-5 overflow-x-auto">
-                                                                <div class="flex gap-4 min-w-max pb-2">
-                                                                    <template x-for="level in criterion.levels"
-                                                                        :key="level.uid">
-                                                                        <div
-                                                                            class="w-64 border border-gray-200 rounded-2xl overflow-hidden bg-white hover:border-gray-400 transition group flex flex-col shadow-sm">
-                                                                            <div
-                                                                                class="border-b border-gray-100 p-3 bg-gray-50">
-                                                                                <input x-model="level.label" type="text"
-                                                                                    placeholder="Level label"
-                                                                                    class="w-full text-xs font-black text-gray-800 bg-transparent border-none outline-none mb-2 p-0 focus:ring-0">
-                                                                                <div class="flex items-center gap-2">
-                                                                                    <input x-model.number="level.points"
-                                                                                        type="number" min="0"
-                                                                                        class="w-16 text-sm font-black text-[#383838] bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-[#383838] outline-none text-center">
-                                                                                    <span
-                                                                                        class="text-[9px] text-gray-400 font-black uppercase tracking-widest">Points</span>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div class="p-3 flex-grow bg-white">
-                                                                                <textarea x-model="level.description"
-                                                                                    placeholder="Requirements for this level..."
-                                                                                    rows="3"
-                                                                                    class="w-full text-xs text-gray-600 bg-transparent border-none outline-none resize-none p-0 focus:ring-0"></textarea>
-                                                                            </div>
-                                                                            <div class="px-3 pb-3 text-right bg-white">
-                                                                                <button type="button"
-                                                                                    @click="removeLevel(criterion, level.uid)"
-                                                                                    x-show="criterion.levels.length > 1"
-                                                                                    class="text-[9px] text-gray-400 hover:text-red-500 font-black uppercase tracking-widest">Remove</button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </template>
-                                                                    <div class="w-40 flex-shrink-0">
-                                                                        <button type="button"
-                                                                            @click="addLevel(criterion)"
-                                                                            class="w-full h-full min-h-[160px] border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-[#383838] hover:text-[#383838] transition flex flex-col items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest bg-gray-50/50 hover:bg-gray-50">
-                                                                            <i class="ri-add-circle-line text-2xl"></i>
-                                                                            Add Level
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {{-- AI Context Instructions --}}
-                                                            <div
-                                                                class="px-5 pb-5 border-t border-gray-100 pt-4 bg-white">
-                                                                <label
-                                                                    class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                                    <i class="ri-robot-line text-sm text-[#383838]"></i>
-                                                                    AI Context Instructions (Optional)
-                                                                </label>
-                                                                <textarea x-model="criterion.description"
-                                                                    placeholder="Tell the AI exactly what to check for regarding this criterion..."
-                                                                    rows="2"
-                                                                    class="w-full text-xs border-gray-200 bg-gray-50 rounded-xl p-3 resize-none focus:ring-2 focus:ring-[#383838] outline-none transition"></textarea>
-                                                            </div>
-                                                        </div>
-                                                    </template>
-
-                                                    <button type="button" @click="addCriterion()"
-                                                        class="w-full py-5 border-2 border-dashed border-gray-200 rounded-3xl text-gray-500 hover:border-[#383838] hover:text-[#383838] font-black text-[10px] uppercase tracking-widest transition flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100">
-                                                        <i class="ri-add-circle-fill text-xl"></i> Add New Criterion
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-
-                            {{-- Submissions & Grading Modal --}}
-                            <template x-teleport="body">
-                                <div x-show="showGradingModal"
-                                    class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4"
-                                    x-cloak x-transition.opacity>
-                                    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden transform transition-all"
-                                        @click.away="showGradingModal = false">
-
-                                        <div
-                                            class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-                                            <div>
-                                                <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight"
-                                                    x-text="gradingTask?.title"></h3>
-                                                <p
-                                                    class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                    Reviewing Submissions</p>
-                                            </div>
-
-                                            <div class="flex items-center gap-6">
-                                                {{-- Auto-Checker Toggle Switch --}}
-                                                <div
-                                                    class="flex items-center gap-3 bg-white border border-gray-200 px-4 py-2.5 rounded-2xl shadow-sm">
-                                                    <p
-                                                        class="text-xs font-black text-[#383838] uppercase tracking-widest">
-                                                        Auto-Checker</p>
-                                                    <button @click="toggleAiGrading()"
-                                                        :class="aiGradingEnabled ? 'bg-[#383838]' : 'bg-gray-200'"
-                                                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
-                                                        <span
-                                                            :class="aiGradingEnabled ? 'translate-x-5' : 'translate-x-0'"
-                                                            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                                                    </button>
-                                                </div>
-
-                                                <button @click="showGradingModal = false"
-                                                    class="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-600">
-                                                    <i class="ri-close-line text-lg"></i>
+                                            </template>
+                                            <div class="w-40 flex-shrink-0">
+                                                <button type="button" @click="addLevel(criterion)"
+                                                    class="w-full h-full min-h-[160px] border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-[#383838] hover:text-[#383838] transition flex flex-col items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest bg-gray-50/50 hover:bg-gray-50">
+                                                    <i class="ri-add-circle-line text-2xl"></i> Add Level
                                                 </button>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div
-                                            class="px-6 py-4 border-b border-gray-100 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-                                            <div class="relative w-full sm:w-96">
-                                                <i
-                                                    class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                                                <input type="text" x-model="searchQuery"
-                                                    placeholder="Search by student name..."
-                                                    class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:bg-white focus:ring-2 focus:ring-[#383838] outline-none transition-all">
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <span
-                                                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sort
-                                                    By:</span>
-                                                <select x-model="sortBy"
-                                                    class="bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-[#383838] outline-none cursor-pointer">
-                                                    <option value="name_asc">Name (A-Z)</option>
-                                                    <option value="name_desc">Name (Z-A)</option>
-                                                    <option value="score_desc">Highest Score</option>
-                                                    <option value="score_asc">Lowest Score</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex-1 overflow-y-auto p-6 bg-white">
-                                            <table class="w-full text-left border-separate border-spacing-y-4">
-                                                <thead>
-                                                    <tr
-                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                        <th class="px-6 pb-2">Student</th>
-                                                        <th class="px-6 pb-2">Submitted</th>
-                                                        <th class="px-6 pb-2">Duration</th>
-                                                        <th class="px-6 pb-2">File</th>
-                                                        <th class="px-6 pb-2 text-right">Grading & Feedback</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <template x-for="sub in filteredSubmissions" :key="sub.id">
-                                                        <tr
-                                                            class="bg-gray-50/50 hover:bg-gray-50 transition-all rounded-3xl group border border-gray-100">
-                                                            <td
-                                                                class="px-6 py-6 font-bold text-gray-900 rounded-l-3xl border-y border-l border-gray-100 align-top">
-                                                                <span class="block text-sm text-[#383838]"
-                                                                    x-text="sub.user ? `${sub.user.last_name}, ${sub.user.first_name}` : 'N/A'"></span>
-                                                            </td>
-                                                            <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
-                                                                x-text="formatDate(sub.created_at)"></td>
-                                                            <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
-                                                                x-text="formatDuration(sub.duration_seconds ?? sub.duration ?? sub.time_taken) || '--'">
-                                                            </td>
-                                                            <td class="px-6 py-6 border-y border-gray-100 align-top">
-                                                                <a :href="'{{ url('/') }}/' + sub.file_path"
-                                                                    target="_blank"
-                                                                    class="inline-flex items-center text-[10px] font-black text-gray-700 bg-white px-4 py-2.5 rounded-xl hover:bg-[#383838] hover:text-white transition-all uppercase tracking-widest border border-gray-200 shadow-sm">
-                                                                    <i class="ri-download-2-line mr-2 text-sm"></i>
-                                                                    Download
-                                                                </a>
-                                                            </td>
-                                                            <td
-                                                                class="px-6 py-6 rounded-r-3xl border-y border-r border-gray-100 align-top">
-                                                                <div
-                                                                    class="mb-5 flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                                                                    <div class="flex items-center gap-4">
-                                                                        <div>
-                                                                            <span
-                                                                                class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Grading
-                                                                                Status</span>
-                                                                            <p class="text-xs font-black mt-1 text-[#383838]"
-                                                                                x-text="(sub.auto_graded && aiGradingEnabled) ? 'Auto Evaluated' : (sub.grade !== null ? 'Manual Entry' : 'Pending')">
-                                                                            </p>
-                                                                        </div>
-                                                                        <button x-show="aiGradingEnabled"
-                                                                            @click="regradeSubmission(sub, $event)"
-                                                                            class="ml-2 bg-gray-100 hover:bg-gray-200 text-[#383838] text-[9px] font-black px-3 py-2 rounded-xl transition flex items-center gap-1.5 uppercase tracking-widest border border-gray-200">
-                                                                            <i class="ri-magic-line text-sm"></i> Auto
-                                                                            Grade
-                                                                        </button>
-                                                                    </div>
-                                                                    <div class="text-right">
-                                                                        <span
-                                                                            class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Achieved
-                                                                            Score</span>
-                                                                        <p class="text-lg font-black text-[#383838]">
-                                                                            <span x-text="sub.grade ?? '0'"></span>
-                                                                            <span
-                                                                                class="text-xs text-gray-400 font-bold tracking-widest"
-                                                                                x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-
-                                                                {{-- Rubric Breakdown --}}
-                                                                <template
-                                                                    x-if="sub.submission_grade && sub.submission_grade.criterion_scores">
-                                                                    <div class="mb-5 space-y-3">
-                                                                        <h4
-                                                                            class="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                                                                            Rubric Breakdown</h4>
-                                                                        <template
-                                                                            x-for="score in sub.submission_grade.criterion_scores"
-                                                                            :key="score.id">
-                                                                            <div
-                                                                                class="p-4 border border-gray-200 bg-white rounded-2xl shadow-sm">
-                                                                                <p class="text-[11px] text-gray-500 leading-relaxed font-medium"
-                                                                                    x-text="score.feedback"></p>
-                                                                            </div>
-                                                                        </template>
-                                                                    </div>
-                                                                </template>
-                                                                <!-- Front-End Interactive Rubric Selector -->
-                                                                <template
-                                                                    x-if="gradingTask && (gradingTask.rubric || gradingTask.criteria)">
-                                                                    <div
-                                                                        class="mb-5 space-y-4 bg-white p-4 rounded-2xl border border-gray-200">
-                                                                        <h4
-                                                                            class="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                                                                            Select Criteria Levels
-                                                                        </h4>
-
-                                                                        <template
-                                                                            x-for="(criterion, cIdx) in (gradingTask.criteria || (gradingTask.rubric ? JSON.parse(gradingTask.rubric.criteria_json || '[]') : []))"
-                                                                            :key="cIdx">
-                                                                            <div
-                                                                                class="space-y-2 border-b border-gray-100 pb-3 last:border-none last:pb-0">
-                                                                                <div
-                                                                                    class="flex justify-between items-center">
-                                                                                    <span
-                                                                                        class="text-xs font-black text-gray-800"
-                                                                                        x-text="criterion.name || criterion.criterion_name"></span>
-                                                                                    <span
-                                                                                        class="text-[9px] font-black text-gray-400 uppercase"
-                                                                                        x-text="'Max: ' + getMaxPoints(criterion) + ' PTS'"></span>
-                                                                                </div>
-
-                                                                                <!-- Level Buttons -->
-                                                                                <div class="flex flex-wrap gap-2">
-                                                                                    <template
-                                                                                        x-for="level in criterion.levels"
-                                                                                        :key="level.label || level.uid">
-                                                                                        <button type="button"
-                                                                                            @click="selectCriterionLevel(sub, cIdx, level.points)"
-                                                                                            :class="isCriterionLevelSelected(sub, cIdx, level.points) 
-                                ? 'bg-[#383838] text-white border-[#383838]' 
-                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'"
-                                                                                            class="px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-2">
-                                                                                            <span
-                                                                                                x-text="level.label"></span>
-                                                                                            <span
-                                                                                                class="text-[10px] opacity-75"
-                                                                                                x-text="'(' + level.points + 'p)'"></span>
-                                                                                        </button>
-                                                                                    </template>
-                                                                                </div>
-                                                                            </div>
-                                                                        </template>
-                                                                    </div>
-                                                                </template>
-                                                                {{-- Non-refreshing Ajax Grade Form --}}
-                                                                <form :action="'/professor/grade/' + sub.id"
-                                                                    method="POST"
-                                                                    class="flex flex-col gap-3 mt-2 border-t border-gray-200 pt-5"
-                                                                    @submit.prevent="submitGrade(sub, $event)">
-                                                                    @csrf
-                                                                    <div class="flex items-center justify-between">
-                                                                        <span
-                                                                            class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Final
-                                                                            Score Override</span>
-                                                                        <div
-                                                                            class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-[#383838] transition">
-                                                                            <input type="number" name="grade"
-                                                                                :value="sub.grade"
-                                                                                class="w-14 bg-transparent border-none p-0 text-sm font-black text-center focus:ring-0 text-[#383838]"
-                                                                                placeholder="0">
-                                                                            <span
-                                                                                class="text-[10px] font-black text-gray-400 ml-1"
-                                                                                x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="flex items-stretch gap-2 h-12">
-                                                                        <input type="text" name="feedback"
-                                                                            :value="sub.feedback"
-                                                                            class="w-full border-gray-200 rounded-xl text-xs px-4 focus:ring-2 focus:ring-[#383838] transition-all bg-white"
-                                                                            placeholder="Enter manual comments...">
-                                                                        <button type="submit"
-                                                                            class="bg-[#383838] text-white px-5 rounded-xl hover:bg-black transition shadow-sm h-full flex items-center justify-center w-16 shrink-0">
-                                                                            <i class="ri-check-line text-lg"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                </form>
-                                                            </td>
-                                                        </tr>
-                                                    </template>
-                                                </tbody>
-                                            </table>
-
-                                            <template x-if="filteredSubmissions.length === 0">
-                                                <div
-                                                    class="text-center py-24 bg-gray-50/50 rounded-[2rem] border border-gray-100 shadow-inner mt-4">
-                                                    <i class="ri-search-eye-line text-6xl text-gray-200 mb-4 block"></i>
-                                                    <p
-                                                        class="text-gray-400 font-black text-xs uppercase tracking-widest">
-                                                        No submissions match your query.</p>
-                                                </div>
-                                            </template>
-                                        </div>
+                                    <div class="px-5 pb-5 border-t border-gray-100 pt-4 bg-white">
+                                        <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                            <i class="ri-robot-line text-sm text-[#383838]"></i> AI Context Instructions (Optional)
+                                        </label>
+                                        <textarea x-model="criterion.description" placeholder="Tell the AI exactly what to check for regarding this criterion..."
+                                            rows="2" class="w-full text-xs border-gray-200 bg-gray-50 rounded-xl p-3 resize-none focus:ring-2 focus:ring-[#383838] outline-none transition"></textarea>
                                     </div>
                                 </div>
                             </template>
+
+                            <button type="button" @click="addCriterion()"
+                                class="w-full py-5 border-2 border-dashed border-gray-200 rounded-3xl text-gray-500 hover:border-[#383838] hover:text-[#383838] font-black text-[10px] uppercase tracking-widest transition flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100">
+                                <i class="ri-add-circle-fill text-xl"></i> Add New Criterion
+                            </button>
                         </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    {{-- Submissions & Grading Modal --}}
+    <template x-teleport="body">
+        <div x-show="showGradingModal"
+            class="fixed inset-0 z-[99999] flex items-center justify-center bg-[#383838]/80 backdrop-blur-sm p-4"
+            x-cloak x-transition.opacity>
+            <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden transform transition-all"
+                @click.away="showGradingModal = false">
+
+                <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight" x-text="gradingTask?.title"></h3>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Reviewing Submissions</p>
+                    </div>
+
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-3 bg-white border border-gray-200 px-4 py-2.5 rounded-2xl shadow-sm">
+                            <p class="text-xs font-black text-[#383838] uppercase tracking-widest">Auto-Checker</p>
+                            <button @click="toggleAiGrading()" :class="aiGradingEnabled ? 'bg-[#383838]' : 'bg-gray-200'"
+                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
+                                <span :class="aiGradingEnabled ? 'translate-x-5' : 'translate-x-0'"
+                                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                            </button>
+                        </div>
+
+                        <button @click="showGradingModal = false"
+                            class="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-600">
+                            <i class="ri-close-line text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-b border-gray-100 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                    <div class="relative w-full sm:w-96">
+                        <i class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" x-model="searchQuery" placeholder="Search by student name..."
+                            class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:bg-white focus:ring-2 focus:ring-[#383838] outline-none transition-all">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sort By:</span>
+                        <select x-model="sortBy"
+                            class="bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-[#383838] outline-none cursor-pointer">
+                            <option value="name_asc">Name (A-Z)</option>
+                            <option value="name_desc">Name (Z-A)</option>
+                            <option value="score_desc">Highest Score</option>
+                            <option value="score_asc">Lowest Score</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6 bg-white">
+                    <table class="w-full text-left border-separate border-spacing-y-4">
+                        <thead>
+                            <tr class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th class="px-6 pb-2">Student</th>
+                                <th class="px-6 pb-2">Submitted</th>
+                                <th class="px-6 pb-2">Duration</th>
+                                <th class="px-6 pb-2">File</th>
+                                <th class="px-6 pb-2 text-right">Grading & Feedback</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="sub in filteredSubmissions" :key="sub.id">
+                                <tr class="bg-gray-50/50 hover:bg-gray-50 transition-all rounded-3xl group border border-gray-100">
+                                    <td class="px-6 py-6 font-bold text-gray-900 rounded-l-3xl border-y border-l border-gray-100 align-top">
+                                        <span class="block text-sm text-[#383838]" x-text="sub.user ? `${sub.user.last_name}, ${sub.user.first_name}` : 'N/A'"></span>
+                                    </td>
+                                    <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top" x-text="formatDate(sub.created_at)"></td>
+                                    <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
+                                        x-text="formatDuration(sub.duration_seconds ?? sub.duration ?? sub.time_taken) || '--'">
+                                    </td>
+                                    <td class="px-6 py-6 border-y border-gray-100 align-top">
+                                        <a :href="'{{ url('/') }}/' + sub.file_path" target="_blank"
+                                            class="inline-flex items-center text-[10px] font-black text-gray-700 bg-white px-4 py-2.5 rounded-xl hover:bg-[#383838] hover:text-white transition-all uppercase tracking-widest border border-gray-200 shadow-sm">
+                                            <i class="ri-download-2-line mr-2 text-sm"></i> Download
+                                        </a>
+                                    </td>
+                                    <td class="px-6 py-6 rounded-r-3xl border-y border-r border-gray-100 align-top">
+                                        <div class="mb-5 flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                            <div class="flex items-center gap-4">
+                                                <div>
+                                                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Grading Status</span>
+                                                    <p class="text-xs font-black mt-1 text-[#383838]"
+                                                        x-text="(sub.auto_graded && aiGradingEnabled) ? 'Auto Evaluated' : (sub.grade !== null ? 'Manual Entry' : 'Pending')">
+                                                    </p>
+                                                </div>
+                                                <button x-show="aiGradingEnabled" @click="regradeSubmission(sub, $event)"
+                                                    class="ml-2 bg-gray-100 hover:bg-gray-200 text-[#383838] text-[9px] font-black px-3 py-2 rounded-xl transition flex items-center gap-1.5 uppercase tracking-widest border border-gray-200">
+                                                    <i class="ri-magic-line text-sm"></i> Auto Grade
+                                                </button>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Achieved Score</span>
+                                                <p class="text-lg font-black text-[#383838]">
+                                                    <span x-text="sub.grade ?? '0'"></span>
+                                                    <span class="text-xs text-gray-400 font-bold tracking-widest" x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {{-- AI Feedback Breakdown --}}
+                                        <template x-if="sub.submission_grade && sub.submission_grade.criterion_scores">
+                                            <div class="mb-5 space-y-3">
+                                                <h4 class="text-[9px] font-black uppercase tracking-widest text-gray-400">Rubric Feedback & Breakdown</h4>
+                                                <template x-for="score in sub.submission_grade.criterion_scores" :key="score.id">
+                                                    <div class="p-4 border border-gray-200 bg-white rounded-2xl shadow-sm">
+                                                        <p class="text-[11px] text-gray-700 leading-relaxed font-semibold" x-text="score.feedback"></p>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        {{-- Interactive Rubric Level Selector --}}
+                                        <template x-if="getTaskCriteria().length > 0">
+                                            <div class="mb-5 space-y-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                                <h4 class="text-[9px] font-black uppercase tracking-widest text-gray-400">Select Criteria Levels</h4>
+
+                                                <template x-for="(criterion, cIdx) in getTaskCriteria()" :key="cIdx">
+                                                    <div class="space-y-2 border-b border-gray-100 pb-3 last:border-none last:pb-0">
+                                                        <div class="flex justify-between items-center">
+                                                            <span class="text-xs font-black text-gray-800" x-text="criterion.name"></span>
+                                                            <span class="text-[9px] font-black text-gray-400 uppercase" x-text="'Max: ' + getMaxPoints(criterion) + ' PTS'"></span>
+                                                        </div>
+
+                                                        <div class="flex flex-wrap gap-2">
+                                                            <template x-for="level in criterion.levels" :key="level.label || level.uid">
+                                                                <button type="button"
+                                                                    @click="selectCriterionLevel(sub, cIdx, level.points)"
+                                                                    :class="isCriterionLevelSelected(sub, cIdx, level.points) 
+                                                                        ? 'bg-[#383838] text-white border-[#383838] shadow-sm' 
+                                                                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'"
+                                                                    class="px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-2">
+                                                                    <span x-text="level.label"></span>
+                                                                    <span class="text-[10px] opacity-75" x-text="'(' + level.points + 'p)'"></span>
+                                                                </button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        {{-- Final Manual Override Grade Form --}}
+                                        <form :action="'/professor/grade/' + sub.id" method="POST"
+                                            class="flex flex-col gap-3 mt-2 border-t border-gray-200 pt-5"
+                                            @submit.prevent="submitGrade(sub, $event)">
+                                            @csrf
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Final Score Override</span>
+                                                <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-[#383838] transition">
+                                                    <input type="number" name="grade" :value="sub.grade"
+                                                        @input="sub.grade = $event.target.value"
+                                                        class="w-14 bg-transparent border-none p-0 text-sm font-black text-center focus:ring-0 text-[#383838]"
+                                                        placeholder="0">
+                                                    <span class="text-[10px] font-black text-gray-400 ml-1" x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-stretch gap-2 h-12">
+                                                <input type="text" name="feedback" :value="sub.feedback"
+                                                    class="w-full border-gray-200 rounded-xl text-xs px-4 focus:ring-2 focus:ring-[#383838] transition-all bg-white"
+                                                    placeholder="Enter manual comments...">
+                                                <button type="submit"
+                                                    class="bg-[#383838] text-white px-5 rounded-xl hover:bg-black transition shadow-sm h-full flex items-center justify-center w-16 shrink-0">
+                                                    <i class="ri-check-line text-lg"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+
+                    <template x-if="filteredSubmissions.length === 0">
+                        <div class="text-center py-24 bg-gray-50/50 rounded-[2rem] border border-gray-100 shadow-inner mt-4">
+                            <i class="ri-search-eye-line text-6xl text-gray-200 mb-4 block"></i>
+                            <p class="text-gray-400 font-black text-xs uppercase tracking-widest">No submissions match your query.</p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
 
                         <div x-show="activeTab === 'quizzes'" x-data="{ 
         selectedQuiz: null, 
@@ -3102,458 +2964,505 @@
             };
         }
     </script>
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('taskManager', (initialTasks = [], subjectId = null) => ({
-                taskList: initialTasks,
-                subjectId: subjectId,
-                showEditorModal: false,
-                showGradingModal: false,
-                isEditing: false,
-                editingTaskId: null,
-                saving: false,
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('taskManager', (initialTasks = [], subjectId = null) => ({
+            taskList: initialTasks,
+            subjectId: subjectId,
+            showEditorModal: false,
+            showGradingModal: false,
+            isEditing: false,
+            editingTaskId: null,
+            saving: false,
 
-                taskForm: {
-                    title: '',
-                    deadline: '',
-                    description: ''
-                },
+            taskForm: {
+                title: '',
+                deadline: '',
+                description: ''
+            },
 
-                criteria: [],
-                gradingTask: null,
-                submissions: [],
-                aiGradingEnabled: true,
-                searchQuery: '',
-                sortBy: 'name_asc',
-                pollInterval: null,
+            criteria: [],
+            gradingTask: null,
+            submissions: [],
+            aiGradingEnabled: true,
+            searchQuery: '',
+            sortBy: 'name_asc',
+            pollInterval: null,
 
-                // 1. AUTO-INITIALIZE BACKGROUND POLLING (Every 4 seconds)
-                init() {
-                    if (this.subjectId) {
-                        // Poll every 4 seconds without touching the DOM or WebRTC stream
-                        this.pollInterval = setInterval(() => {
-                            this.refreshTasks();
-                        }, 4000);
-                    }
-                },
+            init() {
+                if (this.subjectId) {
+                    this.pollInterval = setInterval(() => {
+                        this.refreshTasks();
+                    }, 4000);
+                }
+            },
 
-                // 2. SILENT BACKGROUND FETCH & REACTIVE STATE MERGE
-                async refreshTasks() {
-                    if (!this.subjectId) return;
+            async refreshTasks() {
+                if (!this.subjectId) return;
 
-                    try {
-                        const response = await fetch(`/professor/sessions/${this.subjectId}/tasks-json`, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-
-                        if (!response.ok) return;
-                        const freshTasks = await response.json();
-
-                        // Merge updated counters and submission lists into existing state
-                        freshTasks.forEach(freshTask => {
-                            const existingIndex = this.taskList.findIndex(t => t.id === freshTask.id);
-
-                            if (existingIndex !== -1) {
-                                // Update counter and submission array reactively
-                                this.taskList[existingIndex].submissions_count = freshTask.submissions_count;
-                                this.taskList[existingIndex].submissions = freshTask.submissions;
-
-                                // If the grading modal is currently open for this task, dynamically sync live submissions table
-                                if (this.showGradingModal && this.gradingTask && this.gradingTask.id === freshTask.id) {
-                                    this.submissions = freshTask.submissions || [];
-                                }
-                            } else {
-                                // Dynamically append new task if created elsewhere
-                                this.taskList.unshift(freshTask);
-                            }
-                        });
-                    } catch (err) {
-                        console.error('Silent refresh failed:', err);
-                    }
-                },
-
-                get computedMaxPoints() {
-                    if (this.criteria.length === 0) return 0;
-                    return this.criteria.reduce((total, c) => total + this.getMaxPoints(c), 0);
-                },
-
-                getMaxPoints(criterion) {
-                    if (!criterion.levels || criterion.levels.length === 0) return 0;
-                    return Math.max(...criterion.levels.map(l => parseInt(l.points) || 0));
-                },
-
-                openEditor(task = null, rubric = null, criteria = []) {
-                    if (task) {
-                        this.isEditing = true;
-                        this.editingTaskId = task.id;
-
-                        let formattedDeadline = '';
-                        if (task.deadline) {
-                            const d = new Date(task.deadline);
-                            if (!isNaN(d.getTime())) {
-                                formattedDeadline = d.toISOString().slice(0, 16);
-                            } else {
-                                formattedDeadline = String(task.deadline).replace(' ', 'T').slice(0, 16);
-                            }
+                try {
+                    const response = await fetch(`/professor/sessions/${this.subjectId}/tasks-json`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
+                    });
 
-                        this.taskForm = {
-                            title: task.title || '',
-                            deadline: formattedDeadline,
-                            description: task.description || ''
-                        };
+                    if (!response.ok) return;
+                    const freshTasks = await response.json();
 
-                        if (criteria && criteria.length > 0) {
-                            this.criteria = JSON.parse(JSON.stringify(criteria));
-                            let uidCounter = 1000;
-                            this.criteria.forEach(c => {
-                                if (!c.uid) c.uid = uidCounter++;
-                                if (c.levels) {
-                                    c.levels.forEach(l => { if (!l.uid) l.uid = uidCounter++; });
-                                }
-                            });
+                    freshTasks.forEach(freshTask => {
+                        const existingIndex = this.taskList.findIndex(t => t.id === freshTask.id);
+
+                        if (existingIndex !== -1) {
+                            this.taskList[existingIndex].submissions_count = freshTask.submissions_count;
+                            this.taskList[existingIndex].submissions = freshTask.submissions;
+
+                            if (this.showGradingModal && this.gradingTask && this.gradingTask.id === freshTask.id) {
+                                this.submissions = freshTask.submissions || [];
+                                this.submissions.forEach(sub => this.hydrateSubmissionScores(sub));
+                            }
                         } else {
-                            this.resetCriteria();
+                            this.taskList.unshift(freshTask);
                         }
-                    } else {
-                        this.isEditing = false;
-                        this.editingTaskId = null;
-                        this.taskForm = { title: '', deadline: '', description: '' };
-                        this.resetCriteria();
-                    }
-                    this.showEditorModal = true;
-                },
-
-                resetCriteria() {
-                    this.criteria = [{
-                        uid: Date.now(),
-                        name: 'General Criteria',
-                        description: '',
-                        levels: [
-                            { uid: Date.now() + 1, label: 'Excellent', points: 10, description: '' },
-                            { uid: Date.now() + 2, label: 'Needs Improvement', points: 5, description: '' }
-                        ]
-                    }];
-                },
-
-                addCriterion() {
-                    this.criteria.push({
-                        uid: Date.now(),
-                        name: '',
-                        description: '',
-                        levels: [
-                            { uid: Date.now() + 1, label: 'Excellent', points: 10, description: '' }
-                        ]
                     });
-                },
+                } catch (err) {
+                    console.error('Silent refresh failed:', err);
+                }
+            },
 
-                removeCriterion(uid) {
-                    if (this.criteria.length > 1) {
-                        this.criteria = this.criteria.filter(c => c.uid !== uid);
-                    }
-                },
+            get computedMaxPoints() {
+                if (this.criteria.length === 0) return 0;
+                return this.criteria.reduce((total, c) => total + this.getMaxPoints(c), 0);
+            },
 
-                addLevel(criterion) {
-                    criterion.levels.push({
-                        uid: Date.now(),
-                        label: '',
-                        points: 0,
-                        description: ''
-                    });
-                },
+            getMaxPoints(criterion) {
+                if (criterion.max_points !== undefined && criterion.max_points !== null) {
+                    return parseInt(criterion.max_points) || 0;
+                }
+                if (!criterion.levels || criterion.levels.length === 0) return 0;
+                return Math.max(...criterion.levels.map(l => parseInt(l.points) || 0));
+            },
 
-                removeLevel(criterion, levelUid) {
-                    if (criterion.levels.length > 1) {
-                        criterion.levels = criterion.levels.filter(l => l.uid !== levelUid);
-                    }
-                },
+            getTaskCriteria() {
+                if (!this.gradingTask) return [];
 
-                saveTask() {
-                    this.saving = true;
-
-                    const formattedCriteria = this.criteria.map(c => ({
-                        name: c.name || c.criterion_name || 'Unnamed Criterion',
-                        description: c.description || '',
-                        levels: (c.levels || []).map(l => ({
-                            label: l.label || '',
-                            points: parseInt(l.points) || 0,
-                            description: l.description || ''
-                        }))
+                if (this.gradingTask.criteria && Array.isArray(this.gradingTask.criteria) && this.gradingTask.criteria.length > 0) {
+                    return this.gradingTask.criteria.map(c => ({
+                        id: c.id || null,
+                        name: c.name || c.criterion_name || 'Criterion',
+                        max_points: c.max_points,
+                        levels: c.levels || (c.checking_rules ? c.checking_rules.levels : []) || []
                     }));
+                }
 
-                    const payload = {
-                        subject_id: this.subjectId,
-                        title: this.taskForm.title,
-                        deadline: this.taskForm.deadline,
-                        description: this.taskForm.description,
-                        points: this.computedMaxPoints,
-                        rubric: {
-                            name: `${this.taskForm.title} Rubric`,
-                            criteria_json: JSON.stringify(formattedCriteria)
+                if (this.gradingTask.rubric && this.gradingTask.rubric.criteria) {
+                    return this.gradingTask.rubric.criteria.map(c => ({
+                        id: c.id,
+                        name: c.criterion_name || c.name || 'Criterion',
+                        max_points: c.max_points,
+                        levels: c.levels || (c.checking_rules ? (typeof c.checking_rules === 'string' ? JSON.parse(c.checking_rules).levels : c.checking_rules.levels) : []) || []
+                    }));
+                }
+
+                return [];
+            },
+
+            hydrateSubmissionScores(sub) {
+                if (!sub.selectedCriterionScores) {
+                    sub.selectedCriterionScores = {};
+                }
+                const criteriaList = this.getTaskCriteria();
+
+                if (sub.submission_grade && sub.submission_grade.criterion_scores) {
+                    sub.submission_grade.criterion_scores.forEach((cs) => {
+                        const cIdx = criteriaList.findIndex(c => c.id === cs.criterion_id || c.name === cs.criterion?.criterion_name);
+                        if (cIdx !== -1) {
+                            sub.selectedCriterionScores[cIdx] = parseInt(cs.points_earned) || 0;
                         }
+                    });
+                }
+            },
+
+            openEditor(task = null) {
+                if (task) {
+                    this.isEditing = true;
+                    this.editingTaskId = task.id;
+
+                    let formattedDeadline = '';
+                    if (task.deadline) {
+                        const d = new Date(task.deadline);
+                        if (!isNaN(d.getTime())) {
+                            formattedDeadline = d.toISOString().slice(0, 16);
+                        } else {
+                            formattedDeadline = String(task.deadline).replace(' ', 'T').slice(0, 16);
+                        }
+                    }
+
+                    this.taskForm = {
+                        title: task.title || '',
+                        deadline: formattedDeadline,
+                        description: task.description || ''
                     };
 
-                    const url = this.isEditing
-                        ? `/professor/tasks/${this.editingTaskId}`
-                        : '/professor/tasks';
+                    const loadedCriteria = task.criteria || (task.rubric ? task.rubric.criteria : []);
 
-                    fetch(url, {
-                        method: this.isEditing ? 'PUT' : 'POST',
+                    if (loadedCriteria && loadedCriteria.length > 0) {
+                        let uidCounter = Date.now();
+                        this.criteria = loadedCriteria.map(c => {
+                            const rawLevels = c.levels || (c.checking_rules ? (typeof c.checking_rules === 'string' ? JSON.parse(c.checking_rules).levels : c.checking_rules.levels) : []);
+                            return {
+                                uid: uidCounter++,
+                                name: c.name || c.criterion_name || '',
+                                description: c.description || '',
+                                levels: (rawLevels || []).map(l => ({
+                                    uid: uidCounter++,
+                                    label: l.label || '',
+                                    points: parseInt(l.points) || 0,
+                                    description: l.description || ''
+                                }))
+                            };
+                        });
+                    } else {
+                        this.resetCriteria();
+                    }
+                } else {
+                    this.isEditing = false;
+                    this.editingTaskId = null;
+                    this.taskForm = { title: '', deadline: '', description: '' };
+                    this.resetCriteria();
+                }
+                this.showEditorModal = true;
+            },
+
+            resetCriteria() {
+                this.criteria = [{
+                    uid: Date.now(),
+                    name: 'General Criteria',
+                    description: '',
+                    levels: [
+                        { uid: Date.now() + 1, label: 'Excellent', points: 10, description: '' },
+                        { uid: Date.now() + 2, label: 'Needs Improvement', points: 5, description: '' }
+                    ]
+                }];
+            },
+
+            addCriterion() {
+                this.criteria.push({
+                    uid: Date.now(),
+                    name: '',
+                    description: '',
+                    levels: [
+                        { uid: Date.now() + 1, label: 'Excellent', points: 10, description: '' }
+                    ]
+                });
+            },
+
+            removeCriterion(uid) {
+                if (this.criteria.length > 1) {
+                    this.criteria = this.criteria.filter(c => c.uid !== uid);
+                }
+            },
+
+            addLevel(criterion) {
+                criterion.levels.push({
+                    uid: Date.now(),
+                    label: '',
+                    points: 0,
+                    description: ''
+                });
+            },
+
+            removeLevel(criterion, levelUid) {
+                if (criterion.levels.length > 1) {
+                    criterion.levels = criterion.levels.filter(l => l.uid !== levelUid);
+                }
+            },
+
+            saveTask() {
+                this.saving = true;
+
+                const formattedCriteria = this.criteria.map(c => ({
+                    name: c.name || c.criterion_name || 'Unnamed Criterion',
+                    description: c.description || '',
+                    levels: (c.levels || []).map(l => ({
+                        label: l.label || '',
+                        points: parseInt(l.points) || 0,
+                        description: l.description || ''
+                    }))
+                }));
+
+                const payload = {
+                    subject_id: this.subjectId,
+                    title: this.taskForm.title,
+                    deadline: this.taskForm.deadline,
+                    description: this.taskForm.description,
+                    points: this.computedMaxPoints,
+                    rubric: {
+                        name: `${this.taskForm.title} Rubric`,
+                        criteria_json: JSON.stringify(formattedCriteria)
+                    }
+                };
+
+                const url = this.isEditing
+                    ? `/professor/tasks/${this.editingTaskId}`
+                    : '/professor/tasks';
+
+                fetch(url, {
+                    method: this.isEditing ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(async res => {
+                    const data = await res.json();
+                    if (!res.ok) throw data;
+                    return data;
+                })
+                .then(data => {
+                    this.saving = false;
+                    const savedTask = data.task || data;
+
+                    if (this.isEditing) {
+                        const index = this.taskList.findIndex(t => t.id === this.editingTaskId || t.id === savedTask.id);
+                        if (index !== -1) {
+                            this.taskList.splice(index, 1, savedTask);
+                        }
+                    } else {
+                        this.taskList.unshift(savedTask);
+                    }
+
+                    this.showEditorModal = false;
+                })
+                .catch(err => {
+                    this.saving = false;
+                    console.error('Save error:', err);
+                    if (err.errors) {
+                        alert(Object.values(err.errors).flat().join('\n'));
+                    } else {
+                        alert(err.message || 'Failed to save task.');
+                    }
+                });
+            },
+
+            async deleteTask(taskId) {
+                if (!confirm('Are you sure you want to delete this task?')) return;
+
+                try {
+                    const response = await fetch(`/professor/tasks/${taskId}`, {
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
                         },
-                        body: JSON.stringify(payload)
-                    })
-                        .then(async res => {
-                            const data = await res.json();
-                            if (!res.ok) throw data;
-                            return data;
-                        })
-                        .then(data => {
-                            this.saving = false;
-                            const savedTask = data.task || data;
-
-                            if (this.isEditing) {
-                                const index = this.taskList.findIndex(t => t.id === this.editingTaskId || t.id === savedTask.id);
-                                if (index !== -1) {
-                                    this.taskList.splice(index, 1, savedTask);
-                                }
-                            } else {
-                                this.taskList.unshift(savedTask);
-                            }
-
-                            this.showEditorModal = false;
-                        })
-                        .catch(err => {
-                            this.saving = false;
-                            console.error('Save error:', err);
-                            if (err.errors) {
-                                alert(Object.values(err.errors).flat().join('\n'));
-                            } else {
-                                alert(err.message || 'Failed to save task.');
-                            }
-                        });
-                },
-
-                async deleteTask(taskId) {
-                    if (!confirm('Are you sure you want to delete this task?')) return;
-
-                    try {
-                        const response = await fetch(`/professor/tasks/${taskId}`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({ _method: 'DELETE' })
-                        });
-
-                        if (response.ok) {
-                            this.taskList = this.taskList.filter(t => t.id !== taskId);
-                        } else {
-                            alert('Failed to delete task.');
-                        }
-                    } catch (err) {
-                        console.error('Delete Task Error:', err);
-                    }
-                },
-
-                openGrading(task, submissions) {
-                    this.gradingTask = task;
-                    this.submissions = submissions || [];
-                    if (task.ai_grading_enabled !== undefined) {
-                        this.aiGradingEnabled = Boolean(task.ai_grading_enabled);
-                    }
-                    this.searchQuery = '';
-                    this.showGradingModal = true;
-                },
-
-                async toggleAiGrading() {
-                    // 1. Instantly flip UI state
-                    this.aiGradingEnabled = !this.aiGradingEnabled;
-
-                    if (!this.gradingTask) return;
-
-                    // 2. Persist to DB via AJAX
-                    try {
-                        const res = await fetch(`/professor/tasks/${this.gradingTask.id}/toggle-ai`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({ ai_grading_enabled: this.aiGradingEnabled })
-                        });
-
-                        if (!res.ok) throw new Error('Failed to save state');
-                    } catch (err) {
-                        console.error('Failed to update AI status in DB:', err);
-                        // Rollback toggle state on error
-                        this.aiGradingEnabled = !this.aiGradingEnabled;
-                    }
-                },
-
-                selectCriterionLevel(sub, criterionIndex, points) {
-                    // 1. Initialize temporary selection tracking on the submission object
-                    if (!sub.selectedCriterionScores) {
-                        sub.selectedCriterionScores = {};
-                    }
-
-                    // 2. Assign selected points for this criterion index
-                    sub.selectedCriterionScores[criterionIndex] = parseInt(points) || 0;
-
-                    // 3. Automatically update sub.grade with the total sum
-                    sub.grade = Object.values(sub.selectedCriterionScores).reduce((sum, pts) => sum + pts, 0);
-                },
-
-                isCriterionLevelSelected(sub, criterionIndex, points) {
-                    return sub.selectedCriterionScores && sub.selectedCriterionScores[criterionIndex] === parseInt(points);
-                },
-
-                async regradeSubmission(sub, event) {
-                    const btn = event.currentTarget;
-                    const originalHtml = btn.innerHTML;
-                    btn.disabled = true;
-                    btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Analyzing...';
-
-                    try {
-                        const res = await fetch(`/professor/submissions/${sub.id}/regrade`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                                'Accept': 'application/json',
-                            }
-                        });
-                        const data = await res.json();
-
-                        if (data.success) {
-                            btn.innerHTML = '<i class="ri-check-line"></i> Success';
-                            btn.classList.replace('text-[#383838]', 'text-green-700');
-                            btn.classList.replace('bg-gray-100', 'bg-green-100');
-
-                            sub.grade = data.total_score;
-                            sub.auto_graded = true;
-                            sub.submission_grade = data.submission_grade;
-
-                            setTimeout(() => {
-                                btn.innerHTML = originalHtml;
-                                btn.classList.replace('text-green-700', 'text-[#383838]');
-                                btn.classList.replace('bg-green-100', 'bg-gray-100');
-                                btn.disabled = false;
-                            }, 2000);
-                        } else {
-                            throw new Error(data.message);
-                        }
-                    } catch (err) {
-                        alert('Grading failed: ' + err.message);
-                        btn.innerHTML = originalHtml;
-                        btn.disabled = false;
-                    }
-                },
-
-                async submitGrade(sub, event) {
-                    const form = event.target;
-                    const btn = form.querySelector('button[type="submit"]');
-                    const originalHtml = btn.innerHTML;
-
-                    btn.disabled = true;
-                    btn.innerHTML = '<i class="ri-loader-4-line animate-spin text-lg"></i>';
-
-                    try {
-                        const formData = new FormData(form);
-                        const res = await fetch(form.action, {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            }
-                        });
-                        if (res.ok) {
-                            btn.innerHTML = '<i class="ri-check-double-line text-lg"></i>';
-                            btn.classList.replace('bg-[#383838]', 'bg-green-500');
-
-                            sub.grade = formData.get('grade');
-                            sub.feedback = formData.get('feedback');
-                            sub.auto_graded = false;
-
-                            setTimeout(() => {
-                                btn.innerHTML = originalHtml;
-                                btn.classList.replace('bg-green-500', 'bg-[#383838]');
-                                btn.disabled = false;
-                            }, 2000);
-                        } else {
-                            throw new Error("Failed to save.");
-                        }
-                    } catch (err) {
-                        alert('Save failed.');
-                        btn.innerHTML = originalHtml;
-                        btn.disabled = false;
-                    }
-                },
-
-                get filteredSubmissions() {
-                    let result = [...this.submissions];
-
-                    if (this.searchQuery.trim() !== '') {
-                        const q = this.searchQuery.toLowerCase();
-                        result = result.filter(sub => {
-                            const fullName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
-                            return fullName.includes(q);
-                        });
-                    }
-
-                    return result.sort((a, b) => {
-                        const nameA = `${a.user?.last_name || ''} ${a.user?.first_name || ''}`.toLowerCase();
-                        const nameB = `${b.user?.last_name || ''} ${b.user?.first_name || ''}`.toLowerCase();
-                        const scoreA = parseFloat(a.grade) || 0;
-                        const scoreB = parseFloat(b.grade) || 0;
-
-                        if (this.sortBy === 'name_asc') return nameA.localeCompare(nameB);
-                        if (this.sortBy === 'name_desc') return nameB.localeCompare(nameA);
-                        if (this.sortBy === 'score_desc') return scoreB - scoreA;
-                        if (this.sortBy === 'score_asc') return scoreA - scoreB;
-
-                        return 0;
+                        body: JSON.stringify({ _method: 'DELETE' })
                     });
-                },
 
-                formatDate(dateStr) {
-                    if (!dateStr) return 'No Date Recorded';
-                    const d = new Date(dateStr);
-                    if (isNaN(d.getTime())) return dateStr;
-                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                },
-
-                formatDuration(val) {
-                    if (val === null || val === undefined || val === '') return '--';
-
-                    const num = parseInt(val);
-                    if (isNaN(num)) return val;
-
-                    if (num < 60) {
-                        return `${num}s`;
+                    if (response.ok) {
+                        this.taskList = this.taskList.filter(t => t.id !== taskId);
+                    } else {
+                        alert('Failed to delete task.');
                     }
-
-                    const mins = Math.floor(num / 60);
-                    const secs = num % 60;
-
-                    if (mins >= 60) {
-                        const hrs = Math.floor(mins / 60);
-                        const remMins = mins % 60;
-                        return secs > 0 ? `${hrs}h ${remMins}m ${secs}s` : `${hrs}h ${remMins}m`;
-                    }
-
-                    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+                } catch (err) {
+                    console.error('Delete Task Error:', err);
                 }
-            }));
-        });
-    </script>
+            },
+
+            openGrading(task, submissions) {
+                this.gradingTask = task;
+                this.submissions = submissions || [];
+
+                this.submissions.forEach(sub => this.hydrateSubmissionScores(sub));
+
+                if (task.ai_grading_enabled !== undefined) {
+                    this.aiGradingEnabled = Boolean(task.ai_grading_enabled);
+                }
+                this.searchQuery = '';
+                this.showGradingModal = true;
+            },
+
+            async toggleAiGrading() {
+                this.aiGradingEnabled = !this.aiGradingEnabled;
+                if (!this.gradingTask) return;
+
+                try {
+                    const res = await fetch(`/professor/tasks/${this.gradingTask.id}/toggle-ai`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ ai_grading_enabled: this.aiGradingEnabled })
+                    });
+
+                    if (!res.ok) throw new Error('Failed to save state');
+                } catch (err) {
+                    console.error('Failed to update AI status in DB:', err);
+                    this.aiGradingEnabled = !this.aiGradingEnabled;
+                }
+            },
+
+            selectCriterionLevel(sub, criterionIndex, points) {
+                if (!sub.selectedCriterionScores) {
+                    sub.selectedCriterionScores = {};
+                }
+
+                sub.selectedCriterionScores[criterionIndex] = parseInt(points) || 0;
+
+                let calculatedTotal = 0;
+                Object.keys(sub.selectedCriterionScores).forEach(key => {
+                    calculatedTotal += (parseInt(sub.selectedCriterionScores[key]) || 0);
+                });
+
+                sub.grade = calculatedTotal;
+            },
+
+            isCriterionLevelSelected(sub, criterionIndex, points) {
+                if (!sub.selectedCriterionScores) return false;
+                return parseInt(sub.selectedCriterionScores[criterionIndex]) === parseInt(points);
+            },
+
+            async regradeSubmission(sub, event) {
+                const btn = event.currentTarget;
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Analyzing...';
+
+                try {
+                    const res = await fetch(`/professor/submissions/${sub.id}/regrade`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                        }
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        btn.innerHTML = '<i class="ri-check-line"></i> Success';
+                        btn.classList.replace('text-[#383838]', 'text-green-700');
+                        btn.classList.replace('bg-gray-100', 'bg-green-100');
+
+                        sub.grade = data.total_score;
+                        sub.auto_graded = true;
+                        sub.submission_grade = data.submission_grade;
+
+                        this.hydrateSubmissionScores(sub);
+
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            btn.classList.replace('text-green-700', 'text-[#383838]');
+                            btn.classList.replace('bg-green-100', 'bg-gray-100');
+                            btn.disabled = false;
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (err) {
+                    alert('Grading failed: ' + err.message);
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            },
+
+            async submitGrade(sub, event) {
+                const form = event.target;
+                const btn = form.querySelector('button[type="submit"]');
+                const originalHtml = btn.innerHTML;
+
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ri-loader-4-line animate-spin text-lg"></i>';
+
+                try {
+                    const formData = new FormData(form);
+                    const res = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    });
+
+                    if (res.ok) {
+                        btn.innerHTML = '<i class="ri-check-double-line text-lg"></i>';
+                        btn.classList.replace('bg-[#383838]', 'bg-green-500');
+
+                        sub.grade = formData.get('grade');
+                        sub.feedback = formData.get('feedback');
+                        sub.auto_graded = false;
+
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            btn.classList.replace('bg-green-500', 'bg-[#383838]');
+                            btn.disabled = false;
+                        }, 2000);
+                    } else {
+                        throw new Error("Failed to save.");
+                    }
+                } catch (err) {
+                    alert('Save failed.');
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            },
+
+            get filteredSubmissions() {
+                let result = [...this.submissions];
+
+                if (this.searchQuery.trim() !== '') {
+                    const q = this.searchQuery.toLowerCase();
+                    result = result.filter(sub => {
+                        const fullName = `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.toLowerCase();
+                        return fullName.includes(q);
+                    });
+                }
+
+                return result.sort((a, b) => {
+                    const nameA = `${a.user?.last_name || ''} ${a.user?.first_name || ''}`.toLowerCase();
+                    const nameB = `${b.user?.last_name || ''} ${b.user?.first_name || ''}`.toLowerCase();
+                    const scoreA = parseFloat(a.grade) || 0;
+                    const scoreB = parseFloat(b.grade) || 0;
+
+                    if (this.sortBy === 'name_asc') return nameA.localeCompare(nameB);
+                    if (this.sortBy === 'name_desc') return nameB.localeCompare(nameA);
+                    if (this.sortBy === 'score_desc') return scoreB - scoreA;
+                    if (this.sortBy === 'score_asc') return scoreA - scoreB;
+
+                    return 0;
+                });
+            },
+
+            formatDate(dateStr) {
+                if (!dateStr) return 'No Date Recorded';
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            },
+
+            formatDuration(val) {
+                if (val === null || val === undefined || val === '') return '--';
+                const num = parseInt(val);
+                if (isNaN(num)) return val;
+
+                if (num < 60) return `${num}s`;
+                const mins = Math.floor(num / 60);
+                const secs = num % 60;
+
+                if (mins >= 60) {
+                    const hrs = Math.floor(mins / 60);
+                    const remMins = mins % 60;
+                    return secs > 0 ? `${hrs}h ${remMins}m ${secs}s` : `${hrs}h ${remMins}m`;
+                }
+
+                return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+            }
+        }));
+    });
+</script>
 </x-app-layout>

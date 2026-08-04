@@ -403,13 +403,27 @@
     </div>
 
    <!-- Modals and script architectures remain below -->
-  <div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" x-data="taskModal()" @open-task.window="openModal($event.detail)" @click.self="closeModal()">
+  <!-- UPDATED: Task Submission, Editing, Deletion & Score Modal -->
+<div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" x-data="taskModal()" @open-task.window="openModal($event.detail)" @click.self="closeModal()">
     <div class="bg-white rounded-[40px] shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-fade-in border border-zinc-100/80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors" @click.stop>
         
+        <!-- Header -->
         <div class="border-b border-zinc-100 p-8 flex justify-between items-start bg-gradient-to-b from-zinc-50/50 to-white rounded-t-[40px]">
             <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <template x-if="currentTask?.current_user_submission?.grade !== null && currentTask?.current_user_submission?.grade !== undefined">
+                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                            <i class="ri-checkbox-circle-fill"></i> Graded
+                        </span>
+                    </template>
+                    <template x-if="currentTask?.current_user_submission && (currentTask?.current_user_submission?.grade === null || currentTask?.current_user_submission?.grade === undefined)">
+                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                            <i class="ri-time-line"></i> Awaiting Evaluation
+                        </span>
+                    </template>
+                </div>
                 <h2 class="text-3xl font-black text-zinc-900 tracking-tight leading-tight" x-text="currentTask?.title"></h2>
-                <p class="text-sm text-zinc-500 mt-2 font-medium max-w-md" x-text="currentTask?.description"></p>
+                <p class="text-sm text-zinc-500 mt-2 font-medium max-w-md leading-relaxed" x-text="currentTask?.description"></p>
             </div>
             <button @click="closeModal()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-all shadow-sm border border-zinc-100">
                 <i class="ri-close-line text-2xl"></i>
@@ -417,10 +431,11 @@
         </div>
 
         <div class="p-8 space-y-8">
+            <!-- Metadata Grid -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-zinc-50/60 p-5 rounded-[24px] border border-zinc-100/80">
                     <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Max Weight</span>
-                    <span class="text-xl font-black text-zinc-900" x-text="currentTask?.points + ' PTS'"></span>
+                    <span class="text-xl font-black text-zinc-900" x-text="(currentTask?.points || 0) + ' PTS'"></span>
                 </div>
                 <div class="bg-zinc-50/60 p-5 rounded-[24px] border border-zinc-100/80">
                     <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Due Date</span>
@@ -428,9 +443,19 @@
                 </div>
             </div>
 
-            <div x-show="currentTask?.current_user_submission" class="space-y-4 animate-fade-in">
-                <h3 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Current Submission</h3>
+            <!-- Existing Submission View -->
+            <div x-show="currentTask?.current_user_submission" class="space-y-6 animate-fade-in">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Current Submission</h3>
+                    <template x-if="isDeadlinePassed()">
+                        <span class="text-[9px] font-black text-rose-500 uppercase tracking-wider bg-rose-50 px-2.5 py-1 rounded-md border border-rose-100">
+                            Deadline Passed (Locked)
+                        </span>
+                    </template>
+                </div>
+
                 <div class="bg-white p-2 rounded-[32px] border border-zinc-100 shadow-sm">
+                    <!-- File Badge & Action Links -->
                     <div class="flex items-center justify-between p-4 bg-zinc-50/50 rounded-[24px] border border-zinc-100/40">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 bg-white rounded-xl border border-zinc-100 flex items-center justify-center text-zinc-800 shadow-sm">
@@ -441,40 +466,85 @@
                                 <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">Logged: <span x-text="formatDate(currentTask?.current_user_submission?.submitted_at)"></span></p>
                             </div>
                         </div>
-                        <a :href="'/' + currentTask?.current_user_submission?.file_path" target="_blank" class="w-10 h-10 flex items-center justify-center bg-white border border-zinc-100 rounded-xl text-zinc-400 hover:text-zinc-900 hover:border-zinc-300 shadow-sm transition-all">
+                        <a :href="'/' + currentTask?.current_user_submission?.file_path" target="_blank" title="Download File" class="w-10 h-10 flex items-center justify-center bg-white border border-zinc-100 rounded-xl text-zinc-400 hover:text-zinc-900 hover:border-zinc-300 shadow-sm transition-all">
                             <i class="ri-download-2-line"></i>
                         </a>
                     </div>
 
-                    <div x-show="currentTask?.current_user_submission?.grade !== null" class="m-2 space-y-6">
+                    <!-- Submission Management (Edit & Unsubmit/Delete) when Ungraded -->
+                    <div x-show="currentTask?.current_user_submission?.grade === null || currentTask?.current_user_submission?.grade === undefined" class="p-3 border-t border-zinc-100/60 mt-2">
+                        <template x-if="!isDeadlinePassed()">
+                            <div class="flex flex-col gap-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button @click="showResubmitForm = !showResubmitForm" class="py-3 px-4 bg-zinc-100 hover:bg-zinc-900 hover:text-white text-zinc-800 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+                                        <i class="ri-edit-line"></i> <span x-text="showResubmitForm ? 'Cancel Edit' : 'Edit Submission'"></span>
+                                    </button>
+                                    <button @click="deleteSubmission()" :disabled="deleting" class="py-3 px-4 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-rose-100">
+                                        <i class="ri-delete-bin-line" x-show="!deleting"></i>
+                                        <svg x-show="deleting" class="animate-spin h-3 w-3 text-rose-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                        <span x-text="deleting ? 'Deleting...' : 'Unsubmit Work'"></span>
+                                    </button>
+                                </div>
+
+                                <!-- Resubmit / Replace File Form -->
+                                <form x-show="showResubmitForm" @submit.prevent="resubmitTask($event)" class="p-5 bg-zinc-50 rounded-[24px] border border-zinc-200/80 animate-fade-in" enctype="multipart/form-data">
+                                    <div class="flex items-center gap-2 text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-wider">
+                                        <i class="ri-information-line text-sm text-zinc-400"></i> Note: Uploading a new file will overwrite your existing file.
+                                    </div>
+                                    <input type="file" name="submission" required class="block w-full text-xs text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-zinc-900 file:text-white mb-4 cursor-pointer bg-white p-2 rounded-2xl border border-zinc-200">
+                                    <button type="submit" :disabled="resubmitting" class="w-full py-3.5 bg-zinc-900 text-white font-black rounded-xl hover:bg-black transition-all text-[10px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2">
+                                        <span x-show="!resubmitting"><i class="ri-upload-cloud-line mr-1"></i> Update & Overwrite Submission</span>
+                                        <span x-show="resubmitting" class="flex items-center gap-2">
+                                            <svg class="animate-spin h-3 w-3 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                            Processing Upload...
+                                        </span>
+                                    </button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <template x-if="isDeadlinePassed()">
+                            <div class="text-center py-3 bg-zinc-50 rounded-xl text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                                Submission modifications closed after deadline.
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Graded Score Hero Card & Criteria Breakdown -->
+                    <div x-show="currentTask?.current_user_submission?.grade !== null && currentTask?.current_user_submission?.grade !== undefined" class="m-2 space-y-6">
                         
+                        <!-- Fixed Score Hero Banner -->
                         <div class="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white p-6 rounded-[24px] shadow-xl">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <span class="text-[10px] font-black uppercase tracking-widest opacity-60 block mb-1">Resulting Grade</span>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-4xl font-black text-white" x-text="detailedFeedback ? Number(detailedFeedback.total_score).toFixed(1) : currentTask?.current_user_submission?.grade"></span>
-                                        <span class="text-xl opacity-50" x-text="'/ ' + (detailedFeedback ? detailedFeedback.max_score : currentTask?.points)"></span>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-4xl font-black text-white" x-text="finalScore"></span>
+                                        <span class="text-xl opacity-50" x-text="'/ ' + maxScore"></span>
                                     </div>
                                 </div>
-                            
+                                <div class="text-right">
+                                    <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/10 text-white border border-white/10" x-text="scorePercentage.toFixed(0) + '% Score'"></span>
+                                </div>
                             </div>
 
-                            <div class="mt-4 overflow-hidden h-2 flex rounded-full bg-white/10" x-show="detailedFeedback">
-                                <div :style="`width: ${(detailedFeedback?.total_score / Math.max(1, detailedFeedback?.max_score)) * 100}%`"
-                                     :class="detailedFeedback?.total_score >= (detailedFeedback?.max_score * 0.7) ? 'bg-emerald-400 shadow-emerald-500/20' : 'bg-amber-400 shadow-amber-500/20'"
+                            <div class="mt-4 overflow-hidden h-2 flex rounded-full bg-white/10">
+                                <div :style="`width: ${scorePercentage}%`"
+                                     :class="scorePercentage >= 70 ? 'bg-emerald-400 shadow-emerald-500/20' : (scorePercentage >= 50 ? 'bg-amber-400 shadow-amber-500/20' : 'bg-rose-400 shadow-rose-500/20')"
                                      class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-500 rounded-full">
                                 </div>
                             </div>
                         </div>
 
-                        <div x-show="currentTask?.current_user_submission?.feedback" class="pt-5 border-t border-zinc-100">
-                            <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 ml-1">Remarks</p>
+                        <!-- General Teacher Remarks -->
+                        <div x-show="currentTask?.current_user_submission?.feedback" class="pt-2 border-t border-zinc-100">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 ml-1">Instructor Remarks</p>
                             <div class="bg-zinc-50 border border-zinc-100 rounded-2xl p-4">
                                 <p class="text-sm font-medium leading-relaxed text-zinc-700 whitespace-pre-line" x-text="currentTask?.current_user_submission?.feedback"></p>
                             </div>
                         </div>
 
+                        <!-- Criteria Matrix Breakdown -->
                         <div class="space-y-4">
                             <h4 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Evaluation Breakdown</h4>
                             
@@ -484,31 +554,18 @@
                             </div>
 
                             <div x-show="!loadingFeedback && detailedFeedback" class="space-y-4 max-h-[38vh] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors">
-                                <template x-for="(score, index) in (detailedFeedback?.criterion_scores || detailedFeedback?.criterionScores || [])" :key="score.id">
-                                    <div :class="getBorderClass(score)" class="border-l-4 bg-zinc-50/50 rounded-r-2xl p-4 border border-zinc-100 flex flex-col gap-2.5 transition hover:bg-zinc-50">
+                                <template x-for="(score, index) in (detailedFeedback?.criterion_scores || detailedFeedback?.criterionScores || [])" :key="score.id || index">
+                                    <div class="border-l-4 bg-zinc-50/50 rounded-r-2xl p-4 border border-zinc-100 flex flex-col gap-2.5 transition hover:bg-zinc-50">
                                         
                                         <div class="flex justify-between items-start gap-4">
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center gap-2 mb-0.5">
                                                     <span class="bg-zinc-200 text-zinc-700 font-black text-[10px] rounded-full w-5 h-5 flex items-center justify-center shrink-0" x-text="index + 1"></span>
-                                                    <h5 class="font-black text-zinc-900 text-sm tracking-tight truncate" x-text="score.criterion?.criterion_name"></h5>
+                                                    <h5 class="font-black text-zinc-900 text-sm tracking-tight truncate" x-text="score.criterion?.criterion_name || ('Criterion #' + (index + 1))"></h5>
                                                 </div>
                                                 <p x-show="score.criterion?.description" class="text-[11px] text-zinc-500 ml-7 leading-tight" x-text="score.criterion?.description"></p>
                                             </div>
-                                            <div class="text-right shrink-0">
-                                                <span :class="getTextColorClass(score)" class="text-lg font-black" x-text="Number(score.points_earned).toFixed(1)"></span>
-                                                <span class="text-xs font-bold text-zinc-400" x-text="'/ ' + score.max_points"></span>
-                                            </div>
                                         </div>
-
-                                        <div class="flex flex-wrap items-center gap-1.5 ml-7">
-                                            <span :class="score.auto_checked ? 'bg-blue-50/80 text-blue-700 border-blue-100' : 'bg-purple-50/80 text-purple-700 border-purple-100'" class="text-[9px] px-2.5 py-0.5 rounded-md font-bold uppercase tracking-wide border" x-text="score.auto_checked ? 'Auto' : 'Manual'"></span>
-                                        </div>
-
-                                        <div class="ml-7 overflow-hidden h-1 flex rounded-full bg-zinc-200">
-                                            <div :style="`width: ${getPercentage(score)}%`" :class="getBgProgressClass(score)" class="shadow-none flex flex-col justify-center text-center rounded-full"></div>
-                                        </div>
-
                                         <template x-if="score.feedback">
                                             <div class="ml-7 bg-white border border-zinc-100 rounded-xl p-3 shadow-sm">
                                                 <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Feedback Remarks</p>
@@ -527,7 +584,7 @@
                                                 <span class="text-amber-600 flex items-center gap-1"><i class="ri-information-line text-sm"></i> Acceptable</span>
                                             </template>
                                             <template x-if="getPercentage(score) < 50">
-                                                <span class="text-rose-600 flex items-center gap-1"><i class="ri-close-circle-line text-sm"></i> Needs Re-evaluation</span>
+                                                <span class="text-rose-600 flex items-center gap-1"><i class="ri-close-circle-line text-sm"></i> Needs Improvement</span>
                                             </template>
                                         </div>
 
@@ -536,31 +593,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <div x-show="currentTask?.current_user_submission?.grade === null" class="p-2">
-                        <button @click="showResubmitForm = !showResubmitForm" class="w-full py-4 bg-zinc-100 text-zinc-800 border border-zinc-200/50 font-black rounded-[20px] hover:bg-zinc-900 hover:text-white hover:border-zinc-900 transition-all text-xs uppercase tracking-widest shadow-sm">
-                            <i class="ri-edit-line mr-2"></i> Edit Submission
-                        </button>
-                        
-                        <form x-show="showResubmitForm" @submit.prevent="resubmitTask($event)" class="mt-4 p-6 bg-zinc-50 rounded-[24px] border border-zinc-200/80 animate-fade-in" enctype="multipart/form-data">
-                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 font-bold mb-4 uppercase tracking-wider">
-                                <i class="ri-information-line text-sm text-zinc-400"></i> Note: Existing file will be overwritten
-                            </div>
-                            <input type="file" name="submission" required class="block w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-zinc-900 file:text-white mb-4 cursor-pointer">
-                            <button type="submit" :disabled="resubmitting" class="w-full py-3 bg-zinc-900 text-white font-black rounded-xl hover:bg-zinc-800 transition-all text-[10px] uppercase tracking-widest shadow-md">
-                                <span x-show="!resubmitting">Update Work</span>
-                                <span x-show="resubmitting" class="flex items-center justify-center gap-2">
-                                    <svg class="animate-spin h-3 w-3 text-white" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                    </svg> Processing...
-                                </span>
-                            </button>
-                        </form>
-                    </div>
                 </div>
             </div>
 
+            <!-- Initial Upload Zone when No Submission Exists -->
             <div x-show="!currentTask?.current_user_submission" class="space-y-4 animate-fade-in">
                 <h3 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Upload Work</h3>
                 <form @submit.prevent="resubmitTask($event)" enctype="multipart/form-data" x-data="{ fileName: '' }" class="bg-zinc-50/50 border-2 border-dashed border-zinc-200 rounded-[32px] p-10 text-center transition-all hover:border-zinc-900 hover:bg-zinc-50 group relative">
@@ -570,24 +606,24 @@
                                 <i class="ri-upload-cloud-2-line text-3xl"></i>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-zinc-800" x-text="fileName ? fileName : 'Drag & drop or browse'"></p>
+                                <p class="text-sm font-bold text-zinc-800" x-text="fileName ? fileName : 'Drag & drop or click to browse'"></p>
                                 <p class="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">
                                     <span x-show="!fileName">Select file for evaluation</span>
-                                    <span x-show="fileName" class="text-emerald-600">File attached and ready</span>
+                                    <span x-show="fileName" class="text-emerald-600">File attached and ready for upload</span>
                                 </p>
                             </div>
                         </div>
-                        <input type="file" name="submission" required class="hidden" @change="fileName = $event.target.files[0].name">
+                        <input type="file" name="submission" required class="hidden" @change="fileName = $event.target.files[0] ? $event.target.files[0].name : ''">
                     </label>
                     
-                    <button type="submit" :disabled="resubmitting || !fileName" :class="fileName ? 'bg-zinc-900 hover:bg-zinc-800 text-white shadow-xl shadow-zinc-200/50' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'" class="mt-8 w-full py-4 font-black rounded-2xl transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-3">
-                        <span x-show="!resubmitting">Upload Work</span>
+                    <button type="submit" :disabled="resubmitting || !fileName" :class="fileName ? 'bg-zinc-900 hover:bg-black text-white shadow-xl shadow-zinc-200/50' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'" class="mt-8 w-full py-4 font-black rounded-2xl transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-3">
+                        <span x-show="!resubmitting">Submit Work</span>
                         <template x-if="resubmitting">
                             <div class="flex items-center gap-2">
                                 <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                </svg> Sending...
+                                </svg> Submitting...
                             </div>
                         </template>
                     </button>
@@ -997,91 +1033,176 @@ function materialViewer() {
     };
 }
 
-       function taskModal() {
-            return {
-                currentTask: null, 
-                showResubmitForm: false, 
-                resubmitting: false,
-                loadingFeedback: false, 
-                detailedFeedback: null,
-                typeIcons: { code: '💻', keyword: '🔍', text: '📝', file: '📁', ai: '🤖', manual: '✋' },
-                typeLabels: { code: 'Code Execution', keyword: 'Keyword Detection', text: 'Text Analysis', file: 'File Validation', ai: 'AI Evaluation', manual: 'Manual Grading' },
-                
-                formatDate(dateString) {
-                    if (!dateString) return 'N/A'; const date = new Date(dateString);
-                    return isNaN(date.getTime()) ? dateString : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-                },
-                formatDeadline(deadline) {
-                    if (!deadline) return 'No deadline'; const date = new Date(deadline);
-                    return isNaN(date.getTime()) ? deadline : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-                },
-                openModal(task) { 
-                    this.currentTask = task; 
-                    this.showResubmitForm = false; 
-                    this.detailedFeedback = null;
-                    document.getElementById('task-modal').classList.remove('hidden'); 
-                    
-                    // Fire asynchronous request to grab criteria breakdowns if the task has already been graded
-                    if (task.current_user_submission && task.current_user_submission.grade !== null) {
-                        this.fetchDetailedFeedback(task.id);
-                    }
-                },
-                closeModal() { 
-                    document.getElementById('task-modal').classList.add('hidden'); 
-                    this.currentTask = null; 
-                    this.detailedFeedback = null; 
-                },
-                async fetchDetailedFeedback(taskId) {
-                    this.loadingFeedback = true;
-                    try {
-                        const res = await fetch(`/student/tasks/${taskId}`, {
-                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            this.detailedFeedback = data.submissionGrade;
-                        }
-                    } catch (err) {
-                        console.error("Failed to load task criteria feedback logs:", err);
-                    } finally {
-                        this.loadingFeedback = false;
-                    }
-                },
-                getPercentage(score) {
-                    return score.max_points > 0 ? (score.points_earned / score.max_points) * 100 : 0;
-                },
-                getBorderClass(score) {
-                    let pct = this.getPercentage(score);
-                    if (Number(score.points_earned) >= Number(score.max_points)) return 'border-green-500';
-                    if (pct >= 70) return 'border-blue-500';
-                    if (pct >= 50) return 'border-yellow-500';
-                    return 'border-red-500';
-                },
-                getTextColorClass(score) {
-                    let pct = this.getPercentage(score);
-                    if (Number(score.points_earned) >= Number(score.max_points)) return 'text-green-600';
-                    if (pct >= 70) return 'text-blue-600';
-                    if (pct >= 50) return 'text-yellow-600';
-                    return 'text-red-600';
-                },
-                getBgProgressClass(score) {
-                    let pct = this.getPercentage(score);
-                    if (Number(score.points_earned) >= Number(score.max_points)) return 'bg-green-500';
-                    if (pct >= 70) return 'bg-blue-500';
-                    if (pct >= 50) return 'bg-yellow-500';
-                    return 'bg-red-500';
-                },
-                async resubmitTask(event) {
-                    if (event) event.preventDefault(); if (!confirm('Upload Work?')) return;
-                    this.resubmitting = true; const formData = new FormData(event.target);
-                    try {
-                        const res = await fetch(`/student/tasks/${this.currentTask.id}/submit`, { method: 'POST', body: formData, headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
-                        if (res.ok) { alert('✅ Upload Successful!'); this.closeModal(); window.dispatchEvent(new CustomEvent('task-updated')); }
-                        else { const err = await res.json(); alert('❌ Error: ' + (err.message || 'Upload failed')); }
-                    } catch (error) { alert('❌ Network Error'); } finally { this.resubmitting = false; }
+      function taskModal() {
+    return {
+        currentTask: null, 
+        showResubmitForm: false, 
+        resubmitting: false,
+        deleting: false,
+        loadingFeedback: false, 
+        detailedFeedback: null,
+
+        // Robust score calculations
+        get finalScore() {
+            if (!this.currentTask || !this.currentTask.current_user_submission) return '--';
+            const grade = this.currentTask.current_user_submission.grade;
+            if (grade !== null && grade !== undefined) {
+                return Number(grade).toFixed(1).replace(/\.0$/, '');
+            }
+            if (this.detailedFeedback && this.detailedFeedback.total_score !== null && this.detailedFeedback.total_score !== undefined) {
+                return Number(this.detailedFeedback.total_score).toFixed(1).replace(/\.0$/, '');
+            }
+            return '--';
+        },
+        get maxScore() {
+            if (this.currentTask && this.currentTask.points) {
+                return this.currentTask.points;
+            }
+            if (this.detailedFeedback && this.detailedFeedback.max_score) {
+                return this.detailedFeedback.max_score;
+            }
+            return 100;
+        },
+        get scorePercentage() {
+            const score = parseFloat(this.finalScore);
+            const max = parseFloat(this.maxScore);
+            if (isNaN(score) || isNaN(max) || max <= 0) return 0;
+            return Math.min(100, Math.max(0, (score / max) * 100));
+        },
+
+        isDeadlinePassed() {
+            if (!this.currentTask?.deadline) return false;
+            return new Date() > new Date(this.currentTask.deadline);
+        },
+
+        formatDate(dateString) {
+            if (!dateString) return 'N/A'; 
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? dateString : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+        },
+
+        formatDeadline(deadline) {
+            if (!deadline) return 'No deadline'; 
+            const date = new Date(deadline);
+            return isNaN(date.getTime()) ? deadline : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+        },
+
+        openModal(task) { 
+            this.currentTask = task; 
+            this.showResubmitForm = false; 
+            this.detailedFeedback = null;
+            document.getElementById('task-modal').classList.remove('hidden'); 
+            
+            if (task.current_user_submission && task.current_user_submission.grade !== null) {
+                this.fetchDetailedFeedback(task.id);
+            }
+        },
+
+        closeModal() { 
+            document.getElementById('task-modal').classList.add('hidden'); 
+            this.currentTask = null; 
+            this.detailedFeedback = null; 
+            this.showResubmitForm = false;
+        },
+
+        async fetchDetailedFeedback(taskId) {
+            this.loadingFeedback = true;
+            try {
+                const res = await fetch(`/student/tasks/${taskId}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.detailedFeedback = data.submissionGrade;
                 }
+            } catch (err) {
+                console.error("Failed to load task criteria feedback logs:", err);
+            } finally {
+                this.loadingFeedback = false;
+            }
+        },
+
+        getPercentage(score) {
+            return score.max_points > 0 ? (score.points_earned / score.max_points) * 100 : 0;
+        },
+
+        getTextColorClass(score) {
+            let pct = this.getPercentage(score);
+            if (Number(score.points_earned) >= Number(score.max_points)) return 'text-emerald-600';
+            if (pct >= 70) return 'text-blue-600';
+            if (pct >= 50) return 'text-amber-600';
+            return 'text-rose-600';
+        },
+
+        getBgProgressClass(score) {
+            let pct = this.getPercentage(score);
+            if (Number(score.points_earned) >= Number(score.max_points)) return 'bg-emerald-500';
+            if (pct >= 70) return 'bg-blue-500';
+            if (pct >= 50) return 'bg-amber-500';
+            return 'bg-rose-500';
+        },
+
+        async deleteSubmission() {
+            if (!confirm('Are you sure you want to delete/unsubmit your work? This cannot be undone.')) return;
+            this.deleting = true;
+            try {
+                const res = await fetch(`/student/tasks/${this.currentTask.id}/delete`, {
+                    method: 'POST',
+                    headers: { 
+                        'X-CSRF-TOKEN': csrfToken, 
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    alert('🗑️ Submission unsubmitted successfully!');
+                    this.currentTask.current_user_submission = null;
+                    this.detailedFeedback = null;
+                    this.showResubmitForm = false;
+                    window.dispatchEvent(new CustomEvent('task-updated'));
+                } else {
+                    alert('❌ ' + (data.message || 'Failed to delete submission.'));
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+                alert('❌ Network error while attempting to delete submission.');
+            } finally {
+                this.deleting = false;
+            }
+        },
+
+        async resubmitTask(event) {
+            if (event) event.preventDefault(); 
+            this.resubmitting = true; 
+            const formData = new FormData(event.target);
+            try {
+                const res = await fetch(`/student/tasks/${this.currentTask.id}/submit`, { 
+                    method: 'POST', 
+                    body: formData, 
+                    headers: { 
+                        'X-CSRF-TOKEN': csrfToken, 
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest' 
+                    } 
+                });
+                const data = await res.json();
+                if (res.ok) { 
+                    alert('✅ Submission uploaded successfully!'); 
+                    this.showResubmitForm = false;
+                    this.closeModal(); 
+                    window.dispatchEvent(new CustomEvent('task-updated')); 
+                } else { 
+                    alert('❌ Error: ' + (data.message || 'Upload failed')); 
+                }
+            } catch (error) { 
+                alert('❌ Network Error during file submission.'); 
+            } finally { 
+                this.resubmitting = false; 
             }
         }
+    }
+}
 
         function browserManager() { 
             return {
