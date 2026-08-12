@@ -1,0 +1,51 @@
+school_id,first_name,middle_name,last_name,email,program,year_level,section
+10000,Juan,Dela Cruz,Santos,,BSCS,1,A
+10001,Maria,Santos,Reyes,,BSIT,2,B
+10002,Jose,Reyes,Cruz,,BSCS,3,C
+10003,Ana,Garcia,Bautista,,BSIT,4,A
+10004,Pedro,Torres,Ocampo,,BSCS,1,B
+10005,Carmen,Ramos,Garcia,,BSIT,2,C
+10006,Luis,Flores,Torres,,BSCS,3,A
+10007,Rosa,Mendoza,Ramos,,BSIT,4,B
+10008,Miguel,Castro,Flores,,BSCS,1,C
+10009,Elena,Aquino,Mendoza,,BSIT,2,A
+10010,Antonio,Bautista,Castro,,BSCS,3,B
+10011,Sofia,Ocampo,Villanueva,,BSIT,4,C
+10012,Carlos,Villanueva,De Leon,,BSCS,1,A
+10013,Isabel,Fernandez,Aquino,,BSIT,2,B
+10014,Manuel,Gonzales,Del Rosario,,BSCS,3,C
+10015,Teresa,Pascual,Fernandez,,BSIT,4,A
+10016,Francisco,Salazar,Gonzales,,BSCS,1,B
+10017,Patricia,Navarro,Pascual,,BSIT,2,C
+10018,Ricardo,Domingo,Salazar,,BSCS,3,A
+10019,Angela,Aguilar,Navarro,,BSIT,4,B
+10020,Eduardo,Dela Cruz,Domingo,,BSCS,1,C
+10021,Cristina,Santos,Aguilar,,BSIT,2,A
+10022,Roberto,Reyes,Marquez,,BSCS,3,B
+10023,Diana,Garcia,Rivera,,BSIT,4,C
+10024,Fernando,Torres,Soriano,,BSCS,1,A
+10025,Gabriela,Ramos,Tolentino,,BSIT,2,B
+10026,Alfredo,Flores,Valdez,,BSCS,3,C
+10027,Monica,Mendoza,Ignacio,,BSIT,4,A
+10028,Alberto,Castro,Manalo,,BSCS,1,B
+10029,Veronica,Aquino,Roque,,BSIT,2,C
+10030,Rafael,Bautista,Lim,,BSCS,3,A
+10031,Beatriz,Ocampo,Tan,,BSIT,4,B
+10032,Enrique,Villanueva,Uy,,BSCS,1,C
+10033,Lourdes,Fernandez,Sy,,BSIT,2,A
+10034,Victor,Gonzales,Chua,,BSCS,3,B
+10035,Silvia,Pascual,Yap,,BSIT,4,C
+10036,Arturo,Salazar,Cordero,,BSCS,1,A
+10037,Claudia,Navarro,Espino,,BSIT,2,B
+10038,Gerardo,Domingo,Malabanan,,BSCS,3,C
+10039,Marisol,Aguilar,Panganiban,,BSIT,4,A
+10040,Nestor,Dela Cruz,Rosario,,BSCS,1,B
+10041,Erika,Santos,Sarmiento,,BSIT,2,C
+10042,Marco,Reyes,Vergara,,BSCS,3,A
+10043,Katrina,Garcia,Zamora,,BSIT,4,B
+10044,Danilo,Torres,Alcantara,,BSCS,1,C
+10045,Jasmine,Ramos,Bernardo,,BSIT,2,A
+10046,Rene,Flores,Cabrera,,BSCS,3,B
+10047,Michelle,Mendoza,Dizon,,BSIT,4,C
+10048,Bryan,Castro,Estrella,,BSCS,1,A
+10049,Angelica,Aquino,Fajardo,,BSIT,2,B

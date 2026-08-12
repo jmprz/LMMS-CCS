@@ -24,4 +24,6 @@ Homestead.yaml
 Thumbs.db
 /public/submissions
 /public/materials
-/database/data/*.csv
+/database/data/CCS_Student_Data.csv
+/database/data/students_import.csv
+
