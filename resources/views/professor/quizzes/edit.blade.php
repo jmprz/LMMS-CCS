@@ -1,6 +1,7 @@
 <x-app-layout>
     <div class="py-12 bg-gray-50/50 min-h-screen" x-data="quizForm()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <fieldset @if($hasAttempts) disabled @endif>
             <form @submit.prevent="submitForm($event.target)" class="space-y-8">
                 @csrf
 
@@ -21,7 +22,7 @@
                             <label
                                 class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Quiz
                                 Title</label>
-                            <input id="title" name="title" type="text"
+                            <input id="title" name="title" type="text" value="{{ old('title', $quiz->title) }}"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none font-bold text-gray-900"
                                 placeholder="e.g. Midterm Examination in Web Development" required />
                         </div>
@@ -31,6 +32,7 @@
                                 class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Time
                                 Limit (Minutes)</label>
                             <input id="time_limit" name="time_limit" type="number"
+                                value="{{ old('time_limit', $quiz->time_limit) }}"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400  outline-none font-bold text-gray-900"
                                 placeholder="60" required />
                         </div>
@@ -41,9 +43,9 @@
                                 Lab Session</label>
                             <div
                                 class="p-4 bg-gray-100 rounded-2xl text-[#383838] font-black text-xs border border-gray-200 uppercase tracking-tight">
-                                {{ $currentSession->session_name ?? $currentSession->subject_name }}
+                                {{ $quiz->labSession->session_name ?? $quiz->labSession->subject_name }}
                             </div>
-                            <input type="hidden" name="lab_session_id" value="{{ $currentSession->id }}">
+                            <input type="hidden" name="lab_session_id" value="{{ $quiz->labSession->id }}">
                         </div>
 
                         <div>
@@ -51,6 +53,7 @@
                                 class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Schedule
                                 Post</label>
                             <input id="published_at" name="published_at" type="datetime-local"
+                                value="{{ $quiz->published_at ? \Carbon\Carbon::parse($quiz->published_at)->format('Y-m-d\TH:i') : '' }}"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400  outline-none font-bold text-xs text-gray-600" />
                         </div>
 
@@ -59,6 +62,7 @@
                                 class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Quiz
                                 Deadline</label>
                             <input id="expires_at" name="expires_at" type="datetime-local"
+                                value="{{ $quiz->expires_at ? \Carbon\Carbon::parse($quiz->expires_at)->format('Y-m-d\TH:i') : '' }}"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none font-bold text-xs text-gray-600" />
                         </div>
                     </div>
@@ -153,7 +157,7 @@
                                         <label
                                             class="flex-1 flex items-center justify-center p-5 bg-gray-50 rounded-2xl border-2 border-transparent cursor-pointer hover:border-black transition-all group-active:scale-95">
                                             <input type="radio" :name="'questions['+qIndex+'][correct_option]'"
-                                                :value="option" required
+                                                :value="option" x-model="question.correct" required
                                                 class="w-5 h-5 text-black focus:ring-2 focus:ring-gray-400 focus:border-gray-400  mr-4">
                                             <span class="font-black text-xs uppercase tracking-widest text-gray-700"
                                                 x-text="option"></span>
@@ -169,7 +173,8 @@
                                     <label
                                         class="text-[10px] font-black text-gray-900 uppercase tracking-widest block mb-2">Expected
                                         Answer (Case Sensitive)</label>
-                                    <input type="text" :name="'questions['+qIndex+'][answer]'" required
+                                    <input type="text" x-model="question.answer" :name="'questions['+qIndex+'][answer]'"
+                                        required
                                         class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400  outline-none font-black text-gray-900 tracking-tight"
                                         placeholder="Type the exact answer students must provide...">
                                 </div>
@@ -183,13 +188,22 @@
                         class="px-8 py-4 bg-white border-2 border-[#383838] text-[#383838] rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-[#383838] hover:text-white transition-all active:scale-95">
                         + Add Question
                     </button>
-
-                    <button type="submit"
-                        class="bg-gray-900 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:shadow-2xl hover:shadow-gray-400 transition-all active:scale-95">
-                        Finalize & Publish Quiz
+                    @if($hasAttempts)
+                        <div
+                            class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 mb-6 text-sm font-bold">
+                            <i class="ri-lock-line mr-2"></i>
+                            This quiz already has student attempts and can no longer be edited, to protect existing
+                            scores.
+                            You can still view its content below.
+                        </div>
+                    @endif
+                    <button type="submit" @if($hasAttempts) disabled @endif
+                        class="bg-gray-900 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:shadow-2xl hover:shadow-gray-400 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+                        {{ $hasAttempts ? 'Locked (Has Attempts)' : 'Save Changes' }}
                     </button>
                 </div>
             </form>
+            </fieldset>
         </div>
     </div>
 
@@ -201,25 +215,24 @@
                     submitBtn.disabled = true;
                     submitBtn.innerText = 'SAVING...';
 
+                    const formData = new FormData(form);
+                    formData.append('_method', 'PUT');   // ← spoof it here instead
+
                     try {
-                        const response = await fetch('{{ route('professor.quizzes.store') }}', {
-                            method: 'POST',
+                        const response = await fetch('{{ route('professor.quizzes.update', $quiz->id) }}', {
+                            method: 'POST',              // ← genuine POST now
                             headers: { 'Accept': 'application/json' },
-                            body: new FormData(form),
+                            body: formData,
                         });
-
                         if (!response.ok) throw new Error('Save failed');
-
                         window.parent.postMessage('quiz-saved', '*');
                     } catch (err) {
-                        alert('Failed to save quiz. Please try again.');
+                        alert('Failed to save changes. Please try again.');
                         submitBtn.disabled = false;
-                        submitBtn.innerText = 'Finalize & Publish Quiz';
+                        submitBtn.innerText = 'Save Changes';
                     }
                 },
-                questions: [
-                    { type: 'multiple', text: '', points: 1, options: ['', '', '', ''], correct: 0 }
-                ],
+                questions: {!! json_encode($initialQuestions) !!},
                 addQuestion() {
                     this.questions.push({ type: 'multiple', text: '', points: 1, options: ['', '', '', ''], correct: 0 });
                 },

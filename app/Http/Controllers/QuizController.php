@@ -55,12 +55,17 @@ class QuizController extends Controller
                 ]);
 
                 // 4. Handle Option Saving based on Type
-                if ($qData['type'] === 'multiple' || $qData['type'] === 'true_false') {
+                if ($qData['type'] === 'true_false') {
                     foreach ($qData['options'] as $index => $oText) {
                         $question->options()->create([
                             'option_text' => $oText,
-                            // For true_false, correct_option is usually a string 'True' or 'False'
-                            // For multiple, it is the index (0, 1, 2...)
+                            'is_correct' => $oText === $qData['correct_option'], // compare text, not index
+                        ]);
+                    }
+                } elseif ($qData['type'] === 'multiple') {
+                    foreach ($qData['options'] as $index => $oText) {
+                        $question->options()->create([
+                            'option_text' => $oText,
                             'is_correct' => $index == $qData['correct_option'],
                         ]);
                     }
@@ -78,7 +83,7 @@ class QuizController extends Controller
                     ]);
                 }
             }
-            
+
             $this->logProfessorActivity(
                 $quiz->subject_id,
                 'Posted a quiz: "' . $quiz->title . '"'
@@ -104,7 +109,7 @@ class QuizController extends Controller
                         'labSession' => $labSession
                     ], function ($message) use ($student, $quiz) {
                         $message->to($student->email)
-                                ->subject('LMMS - New Quiz Assigned: ' . $quiz->title);
+                            ->subject('LMMS - New Quiz Assigned: ' . $quiz->title);
                     });
                 }
             } catch (\Exception $e) {
@@ -149,13 +154,13 @@ class QuizController extends Controller
                 $question->setRelation(
                     'options',
                     $question->options
-                        ->sortBy(fn ($option) => crc32("{$userId}:{$quiz->id}:{$question->id}:{$option->id}"))
+                        ->sortBy(fn($option) => crc32("{$userId}:{$quiz->id}:{$question->id}:{$option->id}"))
                         ->values()
                 );
 
                 return $question;
             })
-            ->sortBy(fn ($question) => crc32("{$userId}:{$quiz->id}:{$question->id}"))
+            ->sortBy(fn($question) => crc32("{$userId}:{$quiz->id}:{$question->id}"))
             ->values();
     }
 
@@ -166,7 +171,8 @@ class QuizController extends Controller
                 $quiz = Quiz::with('questions.options')->findOrFail($quizId);
 
                 $totalQuestions = $quiz->questions->count();
-                $score = 0;
+                $totalPoints = $quiz->questions->sum('points'); // ← denominator now reflects weighted points
+                $score = 0; // will accumulate POINTS earned, not question count
                 $details = [];
 
                 $userAnswers = collect($request->input('answers', []));
@@ -174,6 +180,8 @@ class QuizController extends Controller
                 foreach ($quiz->questions as $question) {
                     $userAnswer = $userAnswers->get($question->id);
                     $isCorrect = false;
+                    $pointsPossible = $question->points;
+                    $pointsEarned = 0;
 
                     // 1. Get ALL correct option texts
                     $correctOptions = $question->options
@@ -183,39 +191,39 @@ class QuizController extends Controller
                         ->toArray();
 
                     // 2. Normalize user input
-                    // If it's a string, make it an array. If array, trim/lower all items.
                     $userAnswerArray = is_array($userAnswer) ? $userAnswer : [$userAnswer];
                     $cleanUser = array_map(fn($ans) => strtolower(trim($ans)), array_filter($userAnswerArray));
 
-                    // 3. Compare (Handles both single radio and multi-select checkbox)
+                    // 3. Compare (handles both single radio and multi-select checkbox)
                     if (count($cleanUser) > 0) {
                         sort($cleanUser);
                         sort($correctOptions);
 
                         if ($cleanUser === $correctOptions) {
                             $isCorrect = true;
-                            $score++;
+                            $pointsEarned = $pointsPossible; // ← award the question's actual point value
+                            $score += $pointsEarned;
                         }
                     }
 
                     $details[] = [
                         'question_id' => $question->id,
-                        'is_correct' => $isCorrect
+                        'is_correct' => $isCorrect,
+                        'points_earned' => $pointsEarned,
+                        'points_possible' => $pointsPossible,
                     ];
                 }
 
                 // 4. Create Attempt & STOPWATCH DURATION CALCULATION
                 $startTime = \Carbon\Carbon::parse($request->input('start_time'));
-
-                // 🟢 FIXED: Convert BOTH times to UNIX raw timestamps (pure total seconds since 1970)
-                // This shields calculations against negative timezone/clock offsets entirely.
                 $timeSpent = abs(now()->getTimestamp() - $startTime->getTimestamp());
 
                 $attempt = \App\Models\QuizAttempt::create([
                     'user_id' => auth()->id(),
                     'quiz_id' => $quiz->id,
-                    'score' => $score,
+                    'score' => $score,                 // now points earned
                     'total_questions' => $totalQuestions,
+                    'total_points' => $totalPoints,    // ← new column
                     'time_spent' => $timeSpent,
                 ]);
 
@@ -225,29 +233,30 @@ class QuizController extends Controller
                         'quiz_attempt_id' => $attempt->id,
                         'question_id' => $detail['question_id'],
                         'is_correct' => $detail['is_correct'],
+                        'points_earned' => $detail['points_earned'],
+                        'points_possible' => $detail['points_possible'],
                     ]);
                 }
 
-                // 6. 🟢 FIXED: Create Timeline Log row with the actual dynamic duration included!
+                // 6. Timeline Log
                 \App\Models\ActivityLog::create([
                     'user_id' => auth()->id(),
                     'log_type' => 'quiz',
                     'content' => "Student completed quiz assessment: \"" . $quiz->title . "\"",
-                    'lab_session_id' => $quiz->subject_id, // Maps to your subject_id column
-                    'duration_seconds' => $timeSpent,        // Reflects real stopwatch metrics
+                    'lab_session_id' => $quiz->subject_id,
+                    'duration_seconds' => $timeSpent,
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'score' => $score,
-                    'total' => $totalQuestions
+                    'score' => $score,           // points earned
+                    'total' => $totalPoints,     // ← points possible, not question count
                 ]);
             });
         } catch (\Exception $e) {
-            // Return error JSON so the frontend doesn't hang on "SUBMITTING..."
             return response()->json([
                 'success' => false,
-                'message' => 'Error processing quiz: ' . $e->getMessage()
+                'message' => 'Error processing quiz: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -307,9 +316,10 @@ class QuizController extends Controller
 
             foreach ($students as $student) {
                 $attempt = $attemptsByUserId->get($student->id);
-                $totalQuestions = $attempt?->total_questions ?? $defaultTotalQuestions;
-                $percentage = ($attempt && $totalQuestions > 0)
-                    ? round(($attempt->score / $totalQuestions) * 100, 1) . '%'
+                $defaultTotalPoints = $quiz->questions()->sum('points');
+                $totalPoints = $attempt?->total_points ?? $defaultTotalPoints;
+                $percentage = ($attempt && $totalPoints > 0)
+                    ? round(($attempt->score / $totalPoints) * 100, 1) . '%'
                     : '';
 
                 fputcsv($handle, [
@@ -318,7 +328,7 @@ class QuizController extends Controller
                     $student->first_name,
                     $student->email,
                     $attempt?->score ?? '',
-                    $attempt ? $totalQuestions : '',
+                    $attempt ? $totalPoints : '',
                     $percentage,
                     $attempt ? $this->formatQuizTimeSpent($attempt->time_spent) : '',
                     $attempt ? 'Submitted' : 'Not Submitted',
@@ -345,11 +355,34 @@ class QuizController extends Controller
 
     public function edit($id)
     {
-        // Eager load questions and options to populate your form fields cleanly
-        $quiz = Quiz::with('questions.options')->findOrFail($id);
+        $quiz = Quiz::with(['questions.options', 'labSession'])->findOrFail($id);
+        $hasAttempts = $quiz->attempts()->exists();
 
-        // Pass the quiz context to your modification view
-        return view('professor.quizzes.edit', compact('quiz'));
+        $initialQuestions = $quiz->questions->map(function ($q) {
+            $base = [
+                'type' => $q->type,
+                'text' => $q->question_text,
+                'points' => $q->points,
+                'options' => $q->options->pluck('option_text')->values()->all(),
+            ];
+
+            if ($q->type === 'multiple') {
+                $base['correct'] = $q->options->search(fn($o) => $o->is_correct) ?: 0;
+            } elseif ($q->type === 'true_false') {
+                $correctOption = $q->options->firstWhere('is_correct', true);
+                $base['correct'] = $correctOption->option_text ?? 'True';
+            } elseif ($q->type === 'select_all') {
+                $base['correct'] = $q->options->values()
+                    ->filter(fn($o) => $o->is_correct)
+                    ->keys()->values()->all();
+            } elseif ($q->type === 'identification') {
+                $base['answer'] = $q->options->first()->option_text ?? '';
+            }
+
+            return $base;
+        });
+
+         return view('professor.quizzes.edit', compact('quiz', 'initialQuestions', 'hasAttempts'));
     }
 
     public function update(Request $request, $id)
@@ -364,6 +397,17 @@ class QuizController extends Controller
             'published_at' => 'nullable|date',
             'expires_at' => 'nullable|date|after_or_equal:published_at',
         ]);
+
+        $quiz = Quiz::findOrFail($id);
+
+        if ($quiz->attempts()->exists()) {
+            $message = 'This quiz already has student attempts and can no longer be edited, to keep past scores intact. Delete the quiz and create a new one if changes are needed.';
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            return redirect()->back()->with('error', $message);
+        }
 
         try {
             return DB::transaction(function () use ($request, $id) {
@@ -391,11 +435,18 @@ class QuizController extends Controller
                         'type' => $qData['type'],
                     ]);
 
-                    if ($qData['type'] === 'multiple' || $qData['type'] === 'true_false') {
+                    if ($qData['type'] === 'true_false') {
                         foreach ($qData['options'] as $index => $oText) {
                             $question->options()->create([
                                 'option_text' => $oText,
-                                'is_correct' => $index == ($qData['correct_option'] ?? null),
+                                'is_correct' => $oText === $qData['correct_option'], // compare text, not index
+                            ]);
+                        }
+                    } elseif ($qData['type'] === 'multiple') {
+                        foreach ($qData['options'] as $index => $oText) {
+                            $question->options()->create([
+                                'option_text' => $oText,
+                                'is_correct' => $index == $qData['correct_option'],
                             ]);
                         }
                     } elseif ($qData['type'] === 'select_all') {
@@ -418,15 +469,24 @@ class QuizController extends Controller
                     'Updated the quiz: "' . $quiz->title . '"'
                 );
 
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => true, 'quiz' => $quiz]);
+                }
+
                 return redirect()->route('professor.classroom.show', $quiz->subject_id)
                     ->with('success', 'Quiz structural updates committed successfully!');
             });
         } catch (\Exception $e) {
+            \Log::error('Quiz Update Failed: ' . $e->getMessage());
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
             return redirect()->back()->with('error', 'Error applying quiz changes: ' . $e->getMessage());
         }
     }
 
-   public function show($id)
+    public function show($id)
     {
         // 1. SECURE LOCK: Check if this user already has a recorded attempt for this quiz
         $alreadyAttempted = \App\Models\QuizAttempt::where('quiz_id', $id)
@@ -443,6 +503,11 @@ class QuizController extends Controller
         return view('student.quizzes.show', compact('quiz'));
     }
 
+    public function listPartial($sessionId)
+{
+    $session = LabSession::with(['quizzes.questions', 'quizzes.attempts'])->findOrFail($sessionId);
+    return view('professor.partials.quiz-list', compact('session'));
+}
     private function logProfessorActivity($labSessionId, $content)
     {
         ActivityLog::create([

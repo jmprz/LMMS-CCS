@@ -9,7 +9,9 @@ class QuizAttemptDetail extends Model
     protected $fillable = [
         'quiz_attempt_id', 
         'question_id', 
-        'is_correct'
+        'is_correct',
+        'points_earned', 
+        'points_possible'
     ];
 
     public function attempt()

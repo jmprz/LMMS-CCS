@@ -218,7 +218,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
         Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
         Route::get('/quizzes/{quiz}/export-scores', [QuizController::class, 'exportScores'])->name('quizzes.export-scores');
-
+        Route::get('/sessions/{id}/quizzes-list', [QuizController::class, 'listPartial'])->name('quizzes.list-partial');
+        
         // Material Routes
         Route::get('/materials/{id}/viewers', [MaterialController::class, 'getViewers'])->name('materials.viewers');
         Route::put('/materials/{id}', [MaterialController::class, 'update'])->name('materials.update');

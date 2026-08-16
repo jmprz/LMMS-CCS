@@ -212,7 +212,8 @@
                                     </div>
 
                                     <h4 class="text-xl font-bold text-gray-900 mb-8 leading-relaxed">
-                                        {{ $question->question_text }}</h4>
+                                        {{ $question->question_text }}
+                                    </h4>
 
                                     <div class="space-y-3 pt-6 border-t border-gray-100">
                                         @php $qType = strtoupper(trim($question->type)); @endphp
@@ -297,7 +298,7 @@
                         Score</span>
                     <div class="flex items-center justify-center gap-3">
                         <span class="text-6xl font-black text-gray-900" x-text="score"></span>
-                        <span class="text-2xl font-bold text-gray-300">/ {{ $quiz->questions->count() }}</span>
+                        <span class="text-2xl font-bold text-gray-300">/ {{ $quiz->questions->sum('points') }}</span>
                     </div>
                 </div>
             </div>
@@ -308,24 +309,33 @@
         let timeLeft = {{ $quiz->time_limit * 60 }};
         let countdown;
         const totalQuestions = {{ $quiz->questions->count() }};
+        let deadline;
 
         function startTimer() {
             const timerDisplay = document.getElementById('timer');
+            deadline = Date.now() + ({{ $quiz->time_limit }} * 60 * 1000);
+
             countdown = setInterval(() => {
-                let minutes = Math.floor(timeLeft / 60);
-                let seconds = timeLeft % 60;
-                timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-                if (timeLeft <= 0) {
+                const remainingMs = deadline - Date.now();
+
+                if (remainingMs <= 0) {
                     clearInterval(countdown);
-                    submitQuiz(document.getElementById('quizForm'));
+                    timerDisplay.textContent = '0:00';
+                    lockQuizInputs();
+                    submitQuiz(document.getElementById('quizForm'), true);
+                    return;
                 }
-                timeLeft--;
+
+                const remainingSec = Math.floor(remainingMs / 1000);
+                const minutes = Math.floor(remainingSec / 60);
+                const seconds = remainingSec % 60;
+                timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
             }, 1000);
         }
 
-        async function submitQuiz(form) {
+        async function submitQuiz(form, isAutoSubmit = false) {
             const finishBtn = document.getElementById('finishBtn');
-            if (!finishBtn || finishBtn.disabled) return;
+            if (!isAutoSubmit && (!finishBtn || finishBtn.disabled)) return;
 
             // UI Feedback
             finishBtn.disabled = true;
@@ -383,6 +393,12 @@
                 finishBtn.disabled = false;
                 finishBtn.innerText = "FINISH ATTEMPT";
             }
+        }
+
+        function lockQuizInputs() {
+            const form = document.getElementById('quizForm');
+            if (!form) return;
+            form.querySelectorAll('input, textarea, select, button').forEach(el => el.disabled = true);
         }
 
         function updateProgress(qId, type) {
