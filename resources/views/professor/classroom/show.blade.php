@@ -276,7 +276,12 @@
                                             <option value="active">🟢 Active Only</option>
                                             <option value="offline">⚪ Offline Only</option>
                                         </select>
-
+                                        <button onclick="refreshStudentConnections()" id="btn-refresh-peers"
+                                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 transition shadow-sm"
+                                            title="Reconnect offline or stuck student streams">
+                                            <i class="ri-refresh-line text-sm" id="refresh-icon"></i>
+                                            <span>Refresh Streams</span>
+                                        </button>
                                         <div class="flex items-center border-l border-gray-200 pl-2 gap-1">
                                             <button @click="gridCols = 'lg:grid-cols-2 md:grid-cols-2 grid-cols-1'"
                                                 :class="gridCols.includes('lg:grid-cols-2') ? 'bg-white shadow-sm text-black border border-gray-200' : 'text-gray-400'"
@@ -359,65 +364,65 @@
                                     </div>
 
                                     <div class="lg:col-span-1" x-data="{
-                                                                                                            logs: [],
-                                                                                                            loading: false,
-                                                                                                            refreshInterval: null,
-                                                                                                            fetchSessionLogs() {
-                                                                                                                this.loading = true;
-                                                                                                                fetch('/professor/classroom/{{ $class->id }}/activity-logs')
-                                                                                                                    .then(res => res.json())
-                                                                                                                    .then(data => { this.logs = data; this.loading = false; })
-                                                                                                                    .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
-                                                                                                            },
-                                                                                                            init() {
-                                                                                                                this.fetchSessionLogs();
-                                                                                                                this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
-                                                                                                            },
-                                                                                                            destroy() {
-                                                                                                                if (this.refreshInterval) clearInterval(this.refreshInterval);
-                                                                                                            },
-                                                                                                            getIcon(type, content = '') {
-                                                                                                                const icons = {
-                                                                                                                    'attendance': 'ri-checkbox-circle-line',
-                                                                                                                    'navigation': 'ri-global-line',
-                                                                                                                    'submission': 'ri-file-upload-line',
-                                                                                                                    'material': 'ri-book-open-line',
-                                                                                                                    'quiz': 'ri-task-line',
-                                                                                                                    'professor_session': 'ri-broadcast-line',
-                                                                                                                    'screen_share': 'ri-projector-2-line'
-                                                                                                                };
+                                                                                                                    logs: [],
+                                                                                                                    loading: false,
+                                                                                                                    refreshInterval: null,
+                                                                                                                    fetchSessionLogs() {
+                                                                                                                        this.loading = true;
+                                                                                                                        fetch('/professor/classroom/{{ $class->id }}/activity-logs')
+                                                                                                                            .then(res => res.json())
+                                                                                                                            .then(data => { this.logs = data; this.loading = false; })
+                                                                                                                            .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
+                                                                                                                    },
+                                                                                                                    init() {
+                                                                                                                        this.fetchSessionLogs();
+                                                                                                                        this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
+                                                                                                                    },
+                                                                                                                    destroy() {
+                                                                                                                        if (this.refreshInterval) clearInterval(this.refreshInterval);
+                                                                                                                    },
+                                                                                                                    getIcon(type, content = '') {
+                                                                                                                        const icons = {
+                                                                                                                            'attendance': 'ri-checkbox-circle-line',
+                                                                                                                            'navigation': 'ri-global-line',
+                                                                                                                            'submission': 'ri-file-upload-line',
+                                                                                                                            'material': 'ri-book-open-line',
+                                                                                                                            'quiz': 'ri-task-line',
+                                                                                                                            'professor_session': 'ri-broadcast-line',
+                                                                                                                            'screen_share': 'ri-projector-2-line'
+                                                                                                                        };
 
-                                                                                                                if (type === 'professor_activity') {
-                                                                                                                    if (content.includes('Posted')) return 'ri-add-circle-line';
-                                                                                                                    if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
-                                                                                                                    if (content.includes('Deleted')) return 'ri-delete-bin-line';
-                                                                                                                    return 'ri-briefcase-line';
-                                                                                                                }
-                                                                                                                return icons[type] || 'ri-cursor-line';
-                                                                                                            },
-                                                                                                            getIconClass(type, content = '') {
-                                                                                                                const classes = {
-                                                                                                                    'attendance': 'bg-green-50 text-green-600 border border-green-200',
-                                                                                                                    'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
-                                                                                                                    'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
-                                                                                                                    'material': 'bg-purple-50 text-purple-600 border border-purple-200',
-                                                                                                                    'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
-                                                                                                                    'professor_session': 'bg-red-50 text-red-600 border border-red-200',
-                                                                                                                    'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
-                                                                                                                };
+                                                                                                                        if (type === 'professor_activity') {
+                                                                                                                            if (content.includes('Posted')) return 'ri-add-circle-line';
+                                                                                                                            if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
+                                                                                                                            if (content.includes('Deleted')) return 'ri-delete-bin-line';
+                                                                                                                            return 'ri-briefcase-line';
+                                                                                                                        }
+                                                                                                                        return icons[type] || 'ri-cursor-line';
+                                                                                                                    },
+                                                                                                                    getIconClass(type, content = '') {
+                                                                                                                        const classes = {
+                                                                                                                            'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                                                                                                                            'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                                                                                                                            'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                                                                                                                            'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                                                                                                                            'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+                                                                                                                            'professor_session': 'bg-red-50 text-red-600 border border-red-200',
+                                                                                                                            'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
+                                                                                                                        };
 
-                                                                                                                if (type === 'professor_activity') {
-                                                                                                                    if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
-                                                                                                                    if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
-                                                                                                                    if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
-                                                                                                                    return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
-                                                                                                                }
-                                                                                                                return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
-                                                                                                            },
-                                                                                                            formatTime(dateStr) {
-                                                                                                                return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                                                                                                            }
-                                                                                                        }">
+                                                                                                                        if (type === 'professor_activity') {
+                                                                                                                            if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
+                                                                                                                            if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+                                                                                                                            if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
+                                                                                                                            return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                                                                                                                        }
+                                                                                                                        return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                                                                                                                    },
+                                                                                                                    formatTime(dateStr) {
+                                                                                                                        return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                                                                                                                    }
+                                                                                                                }">
                                         <div
                                             class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-250px)]">
                                             <div
@@ -1625,10 +1630,7 @@
         isLocked: false,
         open(url) { this.editorUrl = url; this.showEditor = true; this.isLocked = false; },
         close() { this.showEditor = false; this.editorUrl = ''; }
-     }"
-     x-show="showEditor" x-cloak
-     @open-quiz-editor.window="open($event.detail.url)"
-     @message.window="
+     }" x-show="showEditor" x-cloak @open-quiz-editor.window="open($event.detail.url)" @message.window="
         if ($event.data === 'lock-modal') isLocked = true;
         if ($event.data === 'unlock-modal') isLocked = false;
         if ($event.data === 'quiz-saved') { close(); refreshQuizList(); }
@@ -2308,6 +2310,50 @@
             if (receiverPeer) { receiverPeer.disconnect(); receiverPeer.destroy(); }
             if (broadcastPeer) { broadcastPeer.disconnect(); broadcastPeer.destroy(); }
         });
+
+        // Store active PeerJS call instances
+        const activeCalls = {};
+
+        function refreshStudentConnections() {
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('animate-spin');
+
+            // 1. Close dead or unresponsive connections
+            Object.keys(activeCalls).forEach(studentId => {
+                if (activeCalls[studentId]) {
+                    activeCalls[studentId].close();
+                    delete activeCalls[studentId];
+                }
+            });
+
+            // 2. Broadcast socket event / signal to students to request peer call re-initialization
+            if (window.Echo) {
+                window.Echo.join(`classroom.${classId}`)
+                    .whisper('request-reconnect', { timestamp: Date.now() });
+            } else {
+                // Fallback: ping backend endpoint to signal reconnect event
+                fetch(`/professor/classroom/${classId}/request-reconnect`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                if (icon) icon.classList.remove('animate-spin');
+            }, 1500);
+        }
+
+        // Student Listener (Student Client Code)
+        if (window.Echo) {
+            window.Echo.join(`classroom.${classId}`)
+                .listenForWhisper('request-reconnect', () => {
+                    console.log("Re-establishing PeerJS stream to professor...");
+                    startStudentScreenShare(myPeerInstance, professorPeerId);
+                });
+        }
 
         // ================================================================
         // 🖥️ FULLSCREEN MONITORING WALL — shows every connected student

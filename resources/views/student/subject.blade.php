@@ -770,6 +770,41 @@
         debug: 1            // 1 = Errors only, 2 = Warnings, 3 = Everything
     };
 
+    // Student Screen Capture Settings
+async function startStudentScreenShare(peer, professorPeerId) {
+    try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+                width: { max: 1280, ideal: 854 },     // Cap at 720p / 480p
+                height: { max: 720, ideal: 480 },
+                frameRate: { max: 10, ideal: 10 }     // 10 FPS drastically lowers CPU/bandwidth lag
+            },
+            audio: false
+        });
+
+        const call = peer.call(professorPeerId, stream);
+
+        // WebRTC Max Bitrate Cap (300 kbps per student)
+        call.on('open', () => {
+            const videoSender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (videoSender && videoSender.setParameters) {
+                const params = videoSender.getParameters();
+                if (!params.encodings) params.encodings = [{}];
+                params.encodings[0].maxBitrate = 300000; // 300 kbps
+                videoSender.setParameters(params);
+            }
+        });
+
+        // Auto-reconnect if student stream ends unexpectedly
+        stream.getVideoTracks()[0].onended = () => {
+            console.warn("Screen share stopped by user.");
+        };
+
+    } catch (err) {
+        console.error("Failed to share screen:", err);
+    }
+}
+
     function verifySessionStatus() {
         if (isCheckingStatus) return;
         isCheckingStatus = true;
