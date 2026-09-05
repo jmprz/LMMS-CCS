@@ -7,17 +7,48 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 use App\Mail\TwoFactorCodeMail; 
+
 class ActivationController extends Controller
 {
+    /**
+     * Automatically activates and redirects Admin and Professor roles away from activation.
+     */
+    private function bypassForAdminOrProfessor()
+    {
+        $user = auth()->user();
+
+        if ($user && in_array($user->role, ['admin', 'professor'])) {
+            if (!$user->is_activated) {
+                $user->forceFill(['is_activated' => true])->save();
+            }
+
+            return match ($user->role) {
+                'admin'     => redirect()->route('admin.dashboard'),
+                'professor' => redirect()->route('professor.dashboard'),
+                default     => redirect()->route('dashboard'),
+            };
+        }
+
+        return null;
+    }
+
     // Step 1: View email configuration form
     public function index()
     {
+        if ($redirect = $this->bypassForAdminOrProfessor()) {
+            return $redirect;
+        }
+
         return view('auth.activation-email', ['user' => auth()->user()]);
     }
 
     // Step 2: Process email and broadcast OTP token
     public function sendOtp(Request $request)
     {
+        if ($redirect = $this->bypassForAdminOrProfessor()) {
+            return $redirect;
+        }
+
         $request->validate([
             'email' => 'required|email|unique:users,email,' . auth()->id(),
         ]);
@@ -40,12 +71,20 @@ class ActivationController extends Controller
 
     public function otpView()
     {
-       return view('auth.activation-otp', ['user' => auth()->user()]);
+        if ($redirect = $this->bypassForAdminOrProfessor()) {
+            return $redirect;
+        }
+
+        return view('auth.activation-otp', ['user' => auth()->user()]);
     }
 
     // Step 3: Verify OTP Code
     public function verifyOtp(Request $request)
     {
+        if ($redirect = $this->bypassForAdminOrProfessor()) {
+            return $redirect;
+        }
+
         $request->validate([
             'code' => 'required|numeric'
         ]);
@@ -66,12 +105,20 @@ class ActivationController extends Controller
 
     public function passwordView()
     {
+        if ($redirect = $this->bypassForAdminOrProfessor()) {
+            return $redirect;
+        }
+
         return view('auth.activation-password', ['user' => auth()->user()]);
     }
 
     // Step 4: Handle password update and activate the account
     public function updatePassword(Request $request)
     {
+        if ($redirect = $this->bypassForAdminOrProfessor()) {
+            return $redirect;
+        }
+
         // Enforces: 8+ chars, mixed case (upper/lower), and numbers
         $request->validate([
             'password' => [

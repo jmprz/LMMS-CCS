@@ -1,10 +1,19 @@
 <x-app-layout>
     <x-slot name="header"></x-slot>
-    <div class="fixed inset-0 flex bg-gray-100">
+    <div class="fixed inset-0 flex bg-gray-100 overflow-hidden" x-data="{ sidebarOpen: false }">
+
+        <!-- Mobile Sidebar Backdrop Overlay -->
+        <div x-show="sidebarOpen" 
+             x-transition.opacity 
+             @click="sidebarOpen = false"
+             class="fixed inset-0 bg-black/50 z-40 md:hidden" 
+             style="display: none;">
+        </div>
 
         <aside
-            class="w-64 border-r border-gray-300 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] sticky top-[80px]">
-            <nav class="mt-8 px-4 space-y-2">
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-gray-300 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] transform transition-transform duration-300 ease-in-out md:translate-x-0">
+            <nav class="mt-8 px-4 space-y-2 overflow-y-auto flex-1">
                 <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">System Admin</div>
 
                 <a href="{{ route('admin.dashboard') }}"
@@ -28,7 +37,7 @@
                 </a>
             </nav>
 
-            <div class="p-4 border-t border-gray-200 bg-gray-50/50 relative" x-data="{ open: false }"
+            <div class="p-4 border-t border-gray-200 bg-gray-50/50 relative flex-shrink-0" x-data="{ open: false }"
                 @click.away="open = false">
 
                 <div x-show="open" x-transition:enter="transition ease-out duration-100"
@@ -75,32 +84,40 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto h-full">
-            <div class="p-8 mt-[80px]">
-                <h1 class="text-2xl font-bold text-gray-800">User Management</h1>
+        <main class="flex-1 overflow-y-auto h-full flex flex-col min-w-0">
+            <!-- Mobile Header Toggle Bar -->
+            <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
+                <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                    <i class="ri-menu-2-line text-xl"></i>
+                </button>
+                <span class="text-xs font-black uppercase text-gray-700 tracking-wider">User Management</span>
+            </div>
+
+            <div class="p-4 sm:p-8 md:mt-[80px]">
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-800">User Management</h1>
                 <div x-data="{ 
-    showEditModal: false, 
-    editUserData: { 
-        id: '', 
-        first_name: '', 
-        middle_name: '', 
-        last_name: '', 
-        school_id: '',
-        email: '',
-        role: '',
-        program: '',
-        year_level: '',
-        section: '',
-        status: 'enrolled'
-    },
-    openEditModal(user) {
-        this.editUserData = { ...user };
-        this.showEditModal = true;
-    }
-}" x-cloak>
+                    showEditModal: false, 
+                    editUserData: { 
+                        id: '', 
+                        first_name: '', 
+                        middle_name: '', 
+                        last_name: '', 
+                        school_id: '',
+                        email: '',
+                        role: '',
+                        program: '',
+                        year_level: '',
+                        section: '',
+                        status: 'enrolled'
+                    },
+                    openEditModal(user) {
+                        this.editUserData = { ...user };
+                        this.showEditModal = true;
+                    }
+                }" x-cloak>
                     <div class="mt-4" x-data="userManagement({{ $users->toJson() }})">
                         <div
-                            class="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
+                            class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm items-center">
                             <div class="relative">
                                 <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                                 <input type="text" x-model="search" placeholder="Search name..."
@@ -157,103 +174,102 @@
                         </div>
 
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <table class="w-full text-left">
-                                <thead class="bg-gray-50 border-b border-gray-100">
-                                    <tr class="text-gray-400 text-[11px] uppercase tracking-wider">
-                                        <th class="px-6 py-4 font-semibold">User</th>
-                                        <th x-show="filterRole === 'student' || filterRole === ''"
-                                            class="px-6 py-4 font-semibold">Program/Year/Section</th>
-                                        <th class="px-6 py-4 font-semibold">Role</th>
-                                        <th x-show="filterRole === 'student' || filterRole === ''" 
-                                            class="px-6 py-4 font-semibold">Status</th>
-                                        <th class="px-6 py-4 font-semibold text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-50">
-                                    <template x-for="user in filteredUsers" :key="user.id">
-                                        <tr class="hover:bg-gray-50/50 transition">
-                                            <td class="px-6 py-4">
-                                                <span
-                                                    x-text="`${user.last_name}, ${user.first_name} ${user.middle_name ? user.middle_name.charAt(0) + '.' : ''}`"></span>
-                                                <div class="text-[10px] text-gray-400" x-text="user.school_id"></div>
-                                            </td>
-
-                                            <td x-show="filterRole === 'student' || filterRole === ''"
-                                                class="px-6 py-4">
-                                                <div class="text-xs text-gray-600">
-                                                    <span x-text="user.program || 'N/A'"></span> -
-                                                    <span x-text="user.year_level || 'N/A'"></span><span
-                                                        x-text="user.section || ''"></span>
-                                                </div>
-                                            </td>
-
-                                            <td class="px-6 py-4">
-                                                <span
-                                                    class="px-2 py-1 bg-gray-100 font-mono font-bold rounded text-[10px] font-bold uppercase"
-                                                    x-text="user.role"></span>
-                                            </td>
-                                            <td
-                                                x-show="filterRole === 'student' || filterRole === ''"
-                                                class="px-6 py-4">
-                                                <template x-if="user.role === 'student'">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left min-w-[650px]">
+                                    <thead class="bg-gray-50 border-b border-gray-100">
+                                        <tr class="text-gray-400 text-[11px] uppercase tracking-wider">
+                                            <th class="px-6 py-4 font-semibold">User</th>
+                                            <th x-show="filterRole === 'student' || filterRole === ''"
+                                                class="px-6 py-4 font-semibold">Program/Year/Section</th>
+                                            <th class="px-6 py-4 font-semibold">Role</th>
+                                            <th x-show="filterRole === 'student' || filterRole === ''" 
+                                                class="px-6 py-4 font-semibold">Status</th>
+                                            <th class="px-6 py-4 font-semibold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-50">
+                                        <template x-for="user in filteredUsers" :key="user.id">
+                                            <tr class="hover:bg-gray-50/50 transition">
+                                                <td class="px-6 py-4">
                                                     <span
-                                                        class="px-3 py-1 rounded-full text-[10px] font-bold uppercase"
+                                                        x-text="`${user.last_name}, ${user.first_name} ${user.middle_name ? user.middle_name.charAt(0) + '.' : ''}`"></span>
+                                                    <div class="text-[10px] text-gray-400" x-text="user.school_id"></div>
+                                                </td>
 
-                                                        :class="{
-                                                            'bg-green-100 text-green-700': user.status === 'enrolled',
-                                                            'bg-red-100 text-red-700': user.status === 'dropped',
-                                                            'bg-blue-100 text-blue-700': user.status === 'graduated'
-                                                        }"
-                                                        x-text="user.status">
-                                                    </span>
-                                                </template>
-                                            </td>
-                                            <td class="px-6 py-4 text-right">
-                                                <div class="flex justify-end gap-2">
-                                                    <button
-                                                        @click="openStudentDrive(user.id, user.first_name, user.last_name)"
-                                                        class="p-2 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition"
-                                                        title="View Cloud Storage">
-                                                        <i class="ri-cloud-line text-lg"></i>
-                                                    </button>
-                                                    <button @click="viewActivity(user.id, user.name)"
-                                                        class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition">
-                                                        <i class="ri-history-line"></i>
-                                                    </button>
-                                                    <button @click="openEditModal(user)"
-                                                        class="p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition">
-                                                        <i class="ri-edit-line"></i>
-                                                    </button>
-                                                    <form :action="'/admin/users/' + user.id" method="POST"
-                                                        onsubmit="return confirm('Are you sure?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                            class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition"><i
-                                                                class="ri-delete-bin-line"></i></button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                    <template x-if="filteredUsers.length === 0">
-                                        <tr>
-                                            <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic text-sm">
-                                                No
-                                                users found matching your filters.</td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
+                                                <td x-show="filterRole === 'student' || filterRole === ''"
+                                                    class="px-6 py-4">
+                                                    <div class="text-xs text-gray-600">
+                                                        <span x-text="user.program || 'N/A'"></span> -
+                                                        <span x-text="user.year_level || 'N/A'"></span><span
+                                                            x-text="user.section || ''"></span>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-6 py-4">
+                                                    <span
+                                                        class="px-2 py-1 bg-gray-100 font-mono font-bold rounded text-[10px] uppercase"
+                                                        x-text="user.role"></span>
+                                                </td>
+                                                <td
+                                                    x-show="filterRole === 'student' || filterRole === ''"
+                                                    class="px-6 py-4">
+                                                    <template x-if="user.role === 'student'">
+                                                        <span
+                                                            class="px-3 py-1 rounded-full text-[10px] font-bold uppercase"
+                                                            :class="{
+                                                                'bg-green-100 text-green-700': user.status === 'enrolled',
+                                                                'bg-red-100 text-red-700': user.status === 'dropped',
+                                                                'bg-blue-100 text-blue-700': user.status === 'graduated'
+                                                            }"
+                                                            x-text="user.status">
+                                                        </span>
+                                                    </template>
+                                                </td>
+                                                <td class="px-6 py-4 text-right">
+                                                    <div class="flex justify-end gap-2">
+                                                        <button
+                                                            @click="openStudentDrive(user.id, user.first_name, user.last_name)"
+                                                            class="p-2 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition"
+                                                            title="View Cloud Storage">
+                                                            <i class="ri-cloud-line text-lg"></i>
+                                                        </button>
+                                                        <button @click="viewActivity(user.id, user.name)"
+                                                            class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition" title="Activity Timeline">
+                                                            <i class="ri-history-line"></i>
+                                                        </button>
+                                                        <button @click="openEditModal(user)"
+                                                            class="p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition" title="Edit User">
+                                                            <i class="ri-edit-line"></i>
+                                                        </button>
+                                                        <form :action="'/admin/users/' + user.id" method="POST"
+                                                            onsubmit="return confirm('Are you sure?')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit"
+                                                                class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition" title="Delete User"><i
+                                                                    class="ri-delete-bin-line"></i></button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="filteredUsers.length === 0">
+                                            <tr>
+                                                <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic text-sm">
+                                                    No users found matching your filters.</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        <!-- Edit Modal -->
                         <template x-teleport="body">
                             <div x-show="showEditModal" class="fixed inset-0 z-[99999] overflow-y-auto" x-cloak>
-
-                                <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity"
-                                    x-transition.opacity></div>
-
+                                <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" x-transition.opacity></div>
                                 <div class="flex min-h-full items-center justify-center p-4">
-                                    <div class="relative w-full max-w-2xl transform overflow-hidden rounded-[2.5rem] bg-white p-8 shadow-2xl transition-all border border-gray-100"
+                                    <div class="relative w-full max-w-2xl transform overflow-hidden rounded-[2.5rem] bg-white p-6 sm:p-8 shadow-2xl transition-all border border-gray-100"
                                         @click.away="showEditModal = false"
                                         x-transition:enter="transition ease-out duration-300"
                                         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -266,11 +282,9 @@
                                                     <i class="ri-user-settings-line text-xl"></i>
                                                 </div>
                                                 <div>
-                                                    <h3
-                                                        class="text-xl font-black text-gray-900 tracking-tight uppercase">
+                                                    <h3 class="text-xl font-black text-gray-900 tracking-tight uppercase">
                                                         Edit User Account</h3>
-                                                    <p
-                                                        class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
                                                         Update information for ID: <span x-text="editUserData.school_id"
                                                             class="text-[#383838] font-black"></span>
                                                     </p>
@@ -288,44 +302,30 @@
 
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">First
-                                                        Name</label>
-                                                    <input type="text" name="first_name"
-                                                        x-model="editUserData.first_name" required
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">First Name</label>
+                                                    <input type="text" name="first_name" x-model="editUserData.first_name" required
                                                         class="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Middle
-                                                        Name</label>
-                                                    <input type="text" name="middle_name"
-                                                        x-model="editUserData.middle_name"
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Middle Name</label>
+                                                    <input type="text" name="middle_name" x-model="editUserData.middle_name"
                                                         class="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Last
-                                                        Name</label>
-                                                    <input type="text" name="last_name" x-model="editUserData.last_name"
-                                                        required
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Last Name</label>
+                                                    <input type="text" name="last_name" x-model="editUserData.last_name" required
                                                         class="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                             </div>
 
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Email
-                                                        Address</label>
-                                                    <input type="email" name="email" x-model="editUserData.email"
-                                                        required
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">Email Address</label>
+                                                    <input type="email" name="email" x-model="editUserData.email" required
                                                         class="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">System
-                                                        Role</label>
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-1">System Role</label>
                                                     <select name="role" x-model="editUserData.role" required
                                                         class="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none cursor-pointer transition-all">
                                                         <option value="student">STUDENT</option>
@@ -337,33 +337,24 @@
 
                                             <div x-show="editUserData.role === 'student'"
                                                 x-transition:enter="transition ease-out duration-200"
-                                                x-transition:enter-start="opacity-0 transform -translate-y-2"
-                                                class="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-gray-50/80 border border-gray-100 rounded-2xl mb-6">
+                                                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5 bg-gray-50/80 border border-gray-100 rounded-2xl mb-6">
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Program</label>
-                                                    <input type="text" name="program" x-model="editUserData.program"
-                                                        placeholder="e.g. BSCS"
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Program</label>
+                                                    <input type="text" name="program" x-model="editUserData.program" placeholder="e.g. BSCS"
                                                         class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Year
-                                                        Level</label>
-                                                    <input type="number" name="year_level"
-                                                        x-model="editUserData.year_level" placeholder="e.g. 3"
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Year Level</label>
+                                                    <input type="number" name="year_level" x-model="editUserData.year_level" placeholder="e.g. 3"
                                                         class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Section</label>
-                                                    <input type="text" name="section" x-model="editUserData.section"
-                                                        placeholder="e.g. A"
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Section</label>
+                                                    <input type="text" name="section" x-model="editUserData.section" placeholder="e.g. A"
                                                         class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none transition-all">
                                                 </div>
                                                 <div>
-                                                    <label
-                                                        class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Status</label>
+                                                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 px-1">Status</label>
                                                     <select name="status" x-model="editUserData.status"
                                                         class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[#383838] focus:ring-2 focus:ring-[#383838] outline-none cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                                         <option value="enrolled">Enrolled</option>
@@ -372,13 +363,13 @@
                                                     </select>
                                                 </div>
                                             </div>
-                                            <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-50">
+                                            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-8 pt-6 border-t border-gray-50">
                                                 <button type="button" @click="showEditModal = false"
                                                     class="px-6 py-3 rounded-2xl text-[11px] uppercase tracking-widest text-gray-500 font-black hover:bg-gray-100 transition-colors">
                                                     Cancel
                                                 </button>
                                                 <button type="submit"
-                                                    class="px-8 py-3 rounded-2xl bg-[#383838] text-white text-[11px] uppercase tracking-widest font-black hover:bg-black shadow-lg shadow-gray-200 transition-all flex items-center gap-2">
+                                                    class="px-8 py-3 rounded-2xl bg-[#383838] text-white text-[11px] uppercase tracking-widest font-black hover:bg-black shadow-lg shadow-gray-200 transition-all flex items-center justify-center gap-2">
                                                     <i class="ri-save-3-line text-sm"></i> Update Account
                                                 </button>
                                             </div>
@@ -387,18 +378,19 @@
                                 </div>
                             </div>
                         </template>
-                        </template>
+
+                        <!-- Activity Timeline Modal -->
                         <template x-teleport="body">
                             <div x-show="logModalOpen"
-                                class="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm"
+                                class="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4"
                                 x-transition.opacity x-cloak>
 
-                                <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] m-4"
+                                <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh]"
                                     @click.away="closeActivityTimeline()">
                                     <div class="p-6 border-b flex justify-between items-center bg-white rounded-t-2xl">
                                         <div>
-                                            <h3 class="text-xl font-bold text-gray-800">Activity Timeline</h3>
-                                            <p class="text-sm text-gray-500">History for <span
+                                            <h3 class="text-lg sm:text-xl font-bold text-gray-800">Activity Timeline</h3>
+                                            <p class="text-xs sm:text-sm text-gray-500">History for <span
                                                     class="text-black font-bold" x-text="selectedUserName"></span></p>
                                         </div>
                                         <button @click="closeActivityTimeline()"
@@ -407,7 +399,7 @@
                                         </button>
                                     </div>
 
-                                    <div class="p-6 overflow-y-auto bg-gray-50/50 flex-1">
+                                    <div class="p-4 sm:p-6 overflow-y-auto bg-gray-50/50 flex-1">
                                         <template x-if="loading">
                                             <div class="flex flex-col items-center justify-center py-20 gap-3">
                                                 <i class="ri-loader-4-line animate-spin text-4xl text-gray-500"></i>
@@ -416,7 +408,7 @@
                                         </template>
 
                                         <div class="space-y-8 relative">
-                                            <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+                                            <div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gray-200 hidden sm:block"></div>
 
                                             <template x-for="(group, date) in groupedLogs" :key="date">
                                                 <div class="relative">
@@ -426,17 +418,17 @@
                                                             x-text="formatDateHeader(date)"></span>
                                                     </div>
 
-                                                    <div class="space-y-4 ml-4">
+                                                    <div class="space-y-4 sm:ml-4">
                                                         <template x-for="log in group" :key="log.id">
                                                             <div
-                                                                class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-5 hover:border-gray-300 transition-all relative group">
+                                                                class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start gap-4 sm:gap-5 hover:border-gray-300 transition-all relative group">
                                                                 <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm"
                                                                     :class="getIconClass(log.log_type, log.content)">
                                                                     <i :class="getIcon(log.log_type, log.content)"
                                                                         class="text-xl"></i>
                                                                 </div>
 
-                                                                <div class="flex-1 min-w-0 pt-0.5">
+                                                                <div class="flex-1 min-w-0 pt-0.5 w-full">
                                                                     <div
                                                                         class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                                                         <div>
@@ -453,7 +445,7 @@
                                                                             </p>
                                                                         </div>
                                                                         <span
-                                                                            class="text-[10px] font-black text-gray-800 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100"
+                                                                            class="text-[10px] font-black text-gray-800 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 self-start sm:self-auto"
                                                                             x-text="formatTime(log.created_at)"></span>
                                                                     </div>
 
@@ -491,10 +483,8 @@
                                                         class="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
                                                         <i class="ri-history-line text-2xl text-gray-300"></i>
                                                     </div>
-                                                    <h4 class="text-gray-900 font-bold mb-1">No Activity Found
-                                                    </h4>
-                                                    <p
-                                                        class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
+                                                    <h4 class="text-gray-900 font-bold mb-1">No Activity Found</h4>
+                                                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">
                                                         This user has no recorded activity.</p>
                                                 </div>
                                             </template>
@@ -503,17 +493,19 @@
                                 </div>
                             </div>
                         </template>
+
+                        <!-- Student Cloud Storage Explorer Modal -->
                         <template x-teleport="body">
                             <div x-show="driveModalOpen"
-                                class="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm"
+                                class="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4"
                                 x-transition.opacity x-cloak>
 
-                                <div class="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col h-[80vh] m-4 overflow-hidden border border-gray-100"
+                                <div class="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col h-[80vh] overflow-hidden border border-gray-100"
                                     @click.away="closeDrive()">
 
-                                    <div class="p-8 border-b flex justify-between items-center bg-white">
+                                    <div class="p-6 sm:p-8 border-b flex justify-between items-center bg-white">
                                         <div>
-                                            <h3 class="text-xl font-black text-gray-900 tracking-tight uppercase">
+                                            <h3 class="text-lg sm:text-xl font-black text-gray-900 tracking-tight uppercase">
                                                 Student Cloud Storage</h3>
                                             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
                                                 Repository Explorer for: <span class="text-black font-black"
@@ -527,7 +519,7 @@
                                     </div>
 
                                     <div
-                                        class="px-8 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2 overflow-x-auto text-xs font-bold uppercase tracking-wider text-gray-500">
+                                        class="px-6 sm:px-8 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2 overflow-x-auto text-xs font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
                                         <button @click="resetDrivePath()"
                                             class="hover:text-black transition flex items-center gap-1 text-[#383838]">
                                             <i class="ri-home-4-line"></i> Root
@@ -560,14 +552,13 @@
                                         </template>
                                     </div>
 
-                                    <div class="p-8 overflow-y-auto flex-1 bg-white">
+                                    <div class="p-6 sm:p-8 overflow-y-auto flex-1 bg-white">
                                         <template x-if="loadingDrive">
                                             <div class="flex flex-col items-center justify-center py-24 gap-3">
                                                 <div
                                                     class="w-10 h-10 border-4 border-[#383838] border-t-transparent rounded-full animate-spin">
                                                 </div>
-                                                <p
-                                                    class="text-gray-400 text-xs font-black uppercase tracking-widest mt-2">
+                                                <p class="text-gray-400 text-xs font-black uppercase tracking-widest mt-2">
                                                     Mounting storage volumes...</p>
                                             </div>
                                         </template>
@@ -577,13 +568,10 @@
                                                 <template x-if="getFolderContents().length === 0">
                                                     <div
                                                         class="text-center py-20 text-gray-400 border border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
-                                                        <i
-                                                            class="ri-folder-open-line text-5xl text-gray-300 block mb-2"></i>
-                                                        <p
-                                                            class="text-xs font-black uppercase tracking-widest text-gray-400">
+                                                        <i class="ri-folder-open-line text-5xl text-gray-300 block mb-2"></i>
+                                                        <p class="text-xs font-black uppercase tracking-widest text-gray-400">
                                                             Empty Directory</p>
-                                                        <p
-                                                            class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
                                                             No tracked items or submissions exist at this level.</p>
                                                     </div>
                                                 </template>
@@ -591,13 +579,12 @@
                                                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                                     <template x-for="item in getFolderContents()" :key="item.id">
                                                         <div @click="handleItemClick(item)"
-                                                            class="p-5 rounded-2xl border border-gray-100 bg-gray-50/40 hover:bg-white hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between group h-36">
+                                                            class="p-4 sm:p-5 rounded-2xl border border-gray-100 bg-gray-50/40 hover:bg-white hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between group h-36">
 
                                                             <div class="flex justify-between items-start">
-                                                                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                                                                <div class="w-10 sm:w-12 h-10 sm:h-12 rounded-xl flex items-center justify-center text-xl sm:text-2xl"
                                                                     :class="item.is_file ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-[#383838] group-hover:bg-[#383838] group-hover:text-white transition-colors'">
-                                                                    <i
-                                                                        :class="item.is_file ? 'ri-file-text-line' : 'ri-folder-5-fill'"></i>
+                                                                    <i :class="item.is_file ? 'ri-file-text-line' : 'ri-folder-5-fill'"></i>
                                                                 </div>
 
                                                                 <template x-if="item.is_file">
@@ -613,7 +600,7 @@
                                                                 <p class="text-xs font-black text-gray-800 truncate group-hover:text-black"
                                                                     x-text="item.name"></p>
                                                                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-0.5"
-                                                                    x-text="item.is_file ? item.date : 'Directory Directory'">
+                                                                    x-text="item.is_file ? item.date : 'Directory'">
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -649,15 +636,14 @@
                 logs: [],
                 logRefreshInterval: null,
 
-                // NEW: Cloud Storage State Registries
                 driveModalOpen: false,
                 loadingDrive: false,
                 driveStudentName: '',
-                rawDriveFiles: [], // Incoming flat data dump array
+                rawDriveFiles: [],
                 drivePath: {
-                    year: null,      // e.g., '1st Year'
-                    semester: null,  // e.g., 1 or 2
-                    subject: null    // e.g., 'CS311 - Machine Learning'
+                    year: null,
+                    semester: null,
+                    subject: null
                 },
 
                 init() {
@@ -694,7 +680,6 @@
                     });
                 },
 
-                // NEW: Storage Drive Core Methods
                 async openStudentDrive(userId, firstName, lastName) {
                     this.driveStudentName = `${lastName}, ${firstName}`;
                     this.driveModalOpen = true;
@@ -702,16 +687,8 @@
                     this.resetDrivePath();
 
                     try {
-                        // Hits your custom administrative endpoint tracking submissions
                         const response = await fetch(`/admin/users/${userId}/drive-files`);
                         this.rawDriveFiles = await response.json();
-
-                        /** * NOTE: Expecting your server-side JSON model map structurally to look like this:
-                         * [
-                         * { id: 1, year_level: 1, semester: 1, subject_code: 'CS111', file_name: 'Lab1.py', file_url: '/storage/...', created_at: '2026-05-12' },
-                         * { id: 2, year_level: 3, semester: 2, subject_code: 'CS322', file_name: 'Thesis.pdf', file_url: '/storage/...', created_at: '2026-05-30' }
-                         * ]
-                         */
                     } catch (err) {
                         console.error("Cloud Node Mount Failed", err);
                         this.rawDriveFiles = [];
@@ -731,9 +708,7 @@
                     this.rawDriveFiles = [];
                 },
 
-                // This evaluates what items should render inside the current view level
                 getFolderContents() {
-                    // Layer 1: Show Year Level Folders
                     if (!this.drivePath.year) {
                         return ['1st Year', '2nd Year', '3rd Year', '4th Year'].map((year, index) => ({
                             id: 'year-' + (index + 1),
@@ -743,7 +718,6 @@
                         }));
                     }
 
-                    // Layer 2: Show Semester Folders for the selected year
                     if (!this.drivePath.semester) {
                         return [
                             { id: 'sem-1', name: '1st Semester', is_file: false, value: 1 },
@@ -751,17 +725,14 @@
                         ];
                     }
 
-                    // Map standard text equivalents from path string to parse dataset integer safely
                     const yearMapping = { '1st Year': 1, '2nd Year': 2, '3rd Year': 3, '4th Year': 4 };
                     const numericYear = yearMapping[this.drivePath.year];
 
-                    // Filter raw data files up to this current workspace path layer
                     const scopeFiles = this.rawDriveFiles.filter(f =>
                         parseInt(f.year_level) === numericYear &&
                         parseInt(f.semester) === parseInt(this.drivePath.semester)
                     );
 
-                    // Layer 3: Show Unique Subject Code Folders
                     if (!this.drivePath.subject) {
                         const uniqueSubjects = [...new Set(scopeFiles.map(f => f.subject_code))];
                         return uniqueSubjects.map((subCode, index) => ({
@@ -772,7 +743,6 @@
                         }));
                     }
 
-                    // Layer 4: Show actual final submitted files inside that selected subject
                     return scopeFiles
                         .filter(f => f.subject_code === this.drivePath.subject)
                         .map(f => ({
@@ -786,12 +756,10 @@
 
                 handleItemClick(item) {
                     if (item.is_file) {
-                        // Treat this as an explicit trigger to launch file preview inside a browser window
                         window.open(item.file_url, '_blank');
                         return;
                     }
 
-                    // Drill down path properties natively
                     if (!this.drivePath.year) {
                         this.drivePath.year = item.value;
                     } else if (!this.drivePath.semester) {
