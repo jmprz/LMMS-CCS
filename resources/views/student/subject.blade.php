@@ -7,14 +7,14 @@
             'is_screen_blocked' => false,
         ];
     @endphp
-
+ 
     <div id="screen-block-overlay"
-        class="{{ ($violationStatus['is_screen_blocked'] ?? false) ? 'flex' : 'hidden' }} fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-6">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-10 text-center border border-red-100">
-            <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="ri-lock-2-line text-4xl text-red-600"></i>
+        class="{{ ($violationStatus['is_screen_blocked'] ?? false) ? 'flex' : 'hidden' }} fixed inset-0 z-[99999] bg-[#111827] items-center justify-center p-4 sm:p-6">
+        <div class="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-2xl max-w-lg w-full p-6 sm:p-10 text-center border border-red-100">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ri-lock-2-line text-3xl sm:text-4xl text-red-600"></i>
             </div>
-            <h2 class="text-2xl font-black text-gray-900 mb-3">Screen Locked</h2>
+            <h2 class="text-xl sm:text-2xl font-black text-gray-900 mb-3">Screen Locked</h2>
             <p class="text-sm text-gray-500 leading-relaxed mb-4">
                 You reached the maximum number of policy violations for this lab session.
                 Your workspace is locked until your professor unblocks you.
@@ -24,13 +24,13 @@
         </p>
         </div>
     </div>
-
-    <div id="violation-warning-modal" class="hidden fixed inset-0 z-[99998] bg-black/50 backdrop-blur-sm items-center justify-center p-6">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 text-center border border-amber-100">
-            <div class="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-5">
-                <i class="ri-error-warning-line text-3xl text-amber-500"></i>
+ 
+    <div id="violation-warning-modal" class="hidden fixed inset-0 z-[99998] bg-black/50 backdrop-blur-sm items-center justify-center p-4 sm:p-6">
+        <div class="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-2xl max-w-md w-full p-6 sm:p-8 text-center border border-amber-100">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="ri-error-warning-line text-2xl sm:text-3xl text-amber-500"></i>
             </div>
-            <h3 class="text-xl font-black text-gray-900 mb-2">Policy Violation</h3>
+            <h3 class="text-lg sm:text-xl font-black text-gray-900 mb-2">Policy Violation</h3>
             <p id="violation-warning-message" class="text-sm text-gray-600 leading-relaxed mb-6"></p>
             <button type="button" onclick="hideViolationWarning()"
                 class="w-full bg-[#383838] text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition">
@@ -45,7 +45,7 @@
      @screen-shared.window="isSharing = true" 
      @screen-stopped.window="isSharing = false">
         
-      <div :class="!sidebarOpen ? 'w-full' : (isFullWidth ? 'w-0 opacity-0 overflow-hidden pointer-events-none' : 'w-1/2')" 
+      <div :class="!sidebarOpen ? 'w-full' : (isFullWidth ? 'w-0 opacity-0 overflow-hidden pointer-events-none' : 'w-0 opacity-0 overflow-hidden pointer-events-none md:w-1/2 md:opacity-100 md:overflow-visible md:pointer-events-auto')" 
      class="h-full relative transition-all duration-500 ease-in-out flex flex-col border-r border-gray-200">
             
             <div id="lockdown-ui" class="hidden w-full h-full bg-black relative flex-1 flex-col">
@@ -56,18 +56,18 @@
                     </span>
                 </div>
             </div>
-
+ 
             <!-- Removed local isSharing from this scope so it inherits from the root -->
             <div id="normal-view" class="w-full h-full overflow-y-auto flex-col flex-1" x-data="{ activeTab: 'tasks' }">
-                <main class="flex-1 p-8">
-                    <div class="max-w-7xl mx-auto space-y-6">
+                <main class="flex-1 p-4 sm:p-6 lg:p-8">
+                    <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6">
-                                <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">
+                            <div class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-5 py-5 sm:px-8 sm:py-6">
+                                <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 mb-3 tracking-tight break-words">
                                     {{ $class->subject_name }} <span class="text-gray-400 font-light mx-2">|</span>
                                     <span class="text-[#383838] uppercase">{{ $class->program }}-{{ $class->year_level }}{{ $class->section }}</span>
                                 </h1>
-                                <div class="flex gap-2">
+                                <div class="flex flex-wrap gap-2">
                                     <span class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase border border-gray-200">
                                         <i class="ri-calendar-line mr-2"></i> {{ $class->schedule_day }}
                                     </span>
@@ -76,7 +76,7 @@
                                     </span>
                                 </div>
                             </div>
-
+ 
                             <div class="md:col-span-1">
                                 @if(!$class->is_active)
                                     <div></div>
@@ -89,11 +89,11 @@
                                 @endif
                             </div>
                         </div>
-
+ 
                         @if(!$class->is_active)
-                            <div class="bg-amber-50 border border-amber-200 rounded-3xl p-12 text-center shadow-inner">
-                                <i class="ri-error-warning-line text-5xl text-amber-500 mb-4 block"></i>
-                                <p class="font-black text-amber-900 text-xl">Session Offline</p>
+                            <div class="bg-amber-50 border border-amber-200 rounded-3xl p-6 sm:p-12 text-center shadow-inner">
+                                <i class="ri-error-warning-line text-4xl sm:text-5xl text-amber-500 mb-4 block"></i>
+                                <p class="font-black text-amber-900 text-lg sm:text-xl">Session Offline</p>
                                 <p class="text-amber-700 font-medium">The instructor has not initialized the laboratory session yet.</p>
                                  <a href="{{ route('dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 hover:text-gray-800 uppercase tracking-widest transition duration-150 group">
                                         <i class="ri-arrow-left-line mr-2 text-sm transition-transform group-hover:-translate-x-1"></i>
@@ -101,18 +101,18 @@
                                     </a>
                             </div>
                         @else
-                            <div x-show="!isSharing" class="flex flex-col items-center justify-center bg-white p-12 rounded-[40px] border border-gray-200 shadow-sm text-center">
-                                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                                    <i class="ri-macbook-line text-4xl text-[#383838]"></i>
+                            <div x-show="!isSharing" class="flex flex-col items-center justify-center bg-white p-6 sm:p-12 rounded-[24px] sm:rounded-[40px] border border-gray-200 shadow-sm text-center">
+                                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                                    <i class="ri-macbook-line text-3xl sm:text-4xl text-[#383838]"></i>
                                 </div>
-                                <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Security Check Required</h3>
+                                <h3 class="text-xl sm:text-2xl font-black text-gray-900 mb-2 tracking-tight">Security Check Required</h3>
                                 <p class="text-gray-500 mb-8 max-w-md">
                                     To maintain lab integrity, share your 
                                     <span class="font-bold text-gray-800 underline underline-offset-4">Entire Screen</span> 
                                     to unlock the classroom dashboard.
                                 </p>
                                 <div class="flex flex-col items-center space-y-4">
-                                    <button onclick="enterClassroom()" class="bg-[#383838] text-white px-10 py-4 rounded-2xl shadow-xl hover:bg-[#2c2c2c] font-black transition-all hover:scale-105 duration-150">
+                                    <button onclick="enterClassroom()" class="bg-[#383838] text-white px-6 py-3 sm:px-10 sm:py-4 rounded-2xl shadow-xl hover:bg-[#2c2c2c] font-black transition-all hover:scale-105 duration-150 text-sm sm:text-base">
                                         Share Screen & Enter Classroom
                                     </button>
                                     <a href="{{ route('dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 hover:text-gray-800 uppercase tracking-widest transition duration-150 group">
@@ -121,21 +121,21 @@
                                     </a>
                                 </div>
                             </div>
-
+ 
                             <div x-show="isSharing" x-cloak class="animate-fade-in">
-                                <div class="flex border-b border-gray-200 mb-8">
+                                <div class="flex border-b border-gray-200 mb-6 sm:mb-8 overflow-x-auto [&::-webkit-scrollbar]:hidden">
                                     <template x-for="t in ['materials', 'tasks', 'quizzes',]">
                                         <button @click="activeTab = t"
                                             :class="activeTab === t ? 'border-b-2 border-black text-black font-black' : 'text-gray-400 hover:text-gray-600 font-bold'"
-                                            class="px-8 py-4 text-[10px] uppercase tracking-widest transition" x-text="t"></button>
+                                            class="px-4 sm:px-8 py-3 sm:py-4 text-[10px] uppercase tracking-widest transition shrink-0 whitespace-nowrap" x-text="t"></button>
                                     </template>
                                 </div>
-
+ 
                                 <div x-show="activeTab === 'tasks'" x-data="classroomTasks()" class="space-y-6" @task-updated.window="fetchTasks()">
-                                    <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-fit">
-                                        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all">All Tasks</button>
-                                        <button @click="filter = 'submitted'" :class="filter === 'submitted' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"><i class="ri-checkbox-circle-line"></i> Submitted</button>
-                                        <button @click="filter = 'missing'" :class="filter === 'missing' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"><i class="ri-error-warning-line"></i> Missing</button>
+                                    <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden">
+                                        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-3.5 sm:px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all shrink-0 whitespace-nowrap">All Tasks</button>
+                                        <button @click="filter = 'submitted'" :class="filter === 'submitted' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-3.5 sm:px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 whitespace-nowrap"><i class="ri-checkbox-circle-line"></i> Submitted</button>
+                                        <button @click="filter = 'missing'" :class="filter === 'missing' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-3.5 sm:px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 whitespace-nowrap"><i class="ri-error-warning-line"></i> Missing</button>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <template x-for="task in filteredTasks" :key="task.id">
@@ -171,12 +171,12 @@
                                     </div>
                                     <div x-show="filteredTasks.length === 0" class="py-20 text-center"><i class="ri-inbox-line text-4xl text-gray-200"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-4">No tasks found in this category</p></div>
                                 </div>
-
+ 
                                 <div x-show="activeTab === 'quizzes'" x-data="classroomQuizzes()" class="space-y-6">
-    <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-fit">
-        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all">All Quizzes</button>
-        <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all"><i class="ri-checkbox-circle-line"></i> Completed</button>
-        <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all"><i class="ri-error-warning-line"></i> Pending</button>
+    <div class="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-[20px] border border-gray-100 w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-3.5 sm:px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all shrink-0 whitespace-nowrap">All Quizzes</button>
+        <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-3.5 sm:px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all shrink-0 whitespace-nowrap"><i class="ri-checkbox-circle-line"></i> Completed</button>
+        <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'" class="px-3.5 sm:px-5 py-2 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all shrink-0 whitespace-nowrap"><i class="ri-error-warning-line"></i> Pending</button>
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -254,7 +254,7 @@
         </div> 
         
         <div x-show="sidebarOpen" 
-     :class="isFullWidth ? 'w-full' : 'w-1/2'"
+     :class="isFullWidth ? 'w-full' : 'w-full md:w-1/2'"
      x-transition:enter="transition ease-out duration-300"
      x-transition:enter-start="translate-x-full" 
      x-transition:enter-end="translate-x-0"
@@ -263,25 +263,25 @@
      x-transition:leave-end="translate-x-full"
      class="h-full bg-white flex flex-col border-l border-gray-200 z-40 shrink-0 shadow-2xl transition-all duration-500 ease-in-out">
             
-            <div class="border-b border-gray-100 p-4 flex flex-col xl:flex-row justify-between items-center bg-white gap-4 shrink-0">
-                <div class="flex flex-wrap items-center gap-2 bg-gray-50/50 p-1.5 rounded-[18px] border border-gray-100">
+            <div class="border-b border-gray-100 p-3 sm:p-4 flex flex-col xl:flex-row justify-between items-center bg-white gap-3 sm:gap-4 shrink-0">
+                <div class="flex flex-wrap items-center justify-center gap-2 bg-gray-50/50 p-1.5 rounded-[18px] border border-gray-100 w-full xl:w-auto">
                     <button @click="activeToolTab = 'compiler'"
                             :class="activeToolTab === 'compiler' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
-                            class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
-                        <i class="ri-code-s-slash-line text-sm"></i> OneCompiler
+                            class="px-3 sm:px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2">
+                        <i class="ri-code-s-slash-line text-sm"></i> <span class="hidden sm:inline">OneCompiler</span>
                     </button>
                     <button @click="activeToolTab = 'browser'"
                             :class="activeToolTab === 'browser' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
-                            class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                            class="px-3 sm:px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2">
                         <i class="ri-global-line text-sm"></i> Browser
                     </button>
                     <button @click="activeToolTab = 'document'"
                             :class="activeToolTab === 'document' ? 'bg-[#383838] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'"
-                            class="px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                            class="px-3 sm:px-5 py-2 rounded-[12px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2">
                         <i class="ri-file-text-line text-sm"></i> Editor
                     </button>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="hidden md:flex items-center gap-2">
         <button @click="isFullWidth = !isFullWidth" 
                 class="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold border border-gray-200 transition-all flex items-center gap-2"
                 :title="isFullWidth ? 'Split View (50%)' : 'Full Screen View (100%)'">
@@ -290,18 +290,18 @@
         </button>
     </div>
             </div>
-
+ 
             <div class="flex-grow w-full bg-gray-50 relative overflow-hidden flex flex-col">
                 
                 <!-- REMOVED: Live Tasks active content window panel container block -->
-
+ 
                 <div x-show="activeToolTab === 'compiler'" class="w-full h-full">
                     <iframe src="https://onecompiler.com" class="w-full h-full border-none bg-white"></iframe>
                 </div>
-
+ 
                 <div x-show="activeToolTab === 'browser'" class="w-full h-full flex flex-col bg-white" x-data="browserManager()">
-                    <div class="p-4 border-b border-gray-100 bg-white shrink-0">
-    <div class="flex items-center gap-2.5 bg-white p-2 rounded-2xl border border-gray-200/80 shadow-sm">
+                    <div class="p-2 sm:p-4 border-b border-gray-100 bg-white shrink-0">
+    <div class="flex items-center gap-1.5 sm:gap-2.5 bg-white p-1.5 sm:p-2 rounded-2xl border border-gray-200/80 shadow-sm">
     
     <!-- Grouped Navigation Controls -->
     <div class="flex items-center gap-0.5 bg-gray-50/80 p-1 rounded-xl border border-gray-100 shrink-0">
@@ -321,7 +321,7 @@
             <i class="ri-refresh-line text-lg" :class="refreshing ? 'animate-spin text-blue-600' : ''"></i>
         </button>
     </div>
-
+ 
     <!-- Integrated URL / Search Capsule -->
     <div class="flex-1 min-w-0 flex items-center gap-2 bg-gray-50 hover:bg-gray-100/70 focus-within:bg-white border border-gray-200 focus-within:border-gray-400 focus-within:ring-4 focus-within:ring-gray-100 rounded-xl px-3 py-1.5 transition-all">
         
@@ -330,14 +330,14 @@
             <i class="ri-global-line text-base" x-show="!urlInput"></i>
             <i class="ri-search-line text-base text-gray-500" x-show="urlInput" x-cloak></i>
         </div>
-
+ 
         <!-- Input Field -->
         <input type="text" 
                x-model="urlInput" 
                @keyup.enter="navigateTo()" 
                placeholder="Enter website URL or educational search query..." 
                class="flex-1 min-w-0 bg-transparent border-0 focus:ring-0 text-xs font-semibold text-gray-800 placeholder-gray-400 p-0 focus:outline-none w-full">
-
+ 
         <!-- Quick Clear Button -->
         <button x-show="urlInput" 
                 x-cloak 
@@ -345,7 +345,7 @@
                 class="text-gray-300 hover:text-gray-600 shrink-0 transition p-0.5">
             <i class="ri-close-circle-fill text-sm"></i>
         </button>
-
+ 
         <!-- Embedded Action Button -->
         <button @click="navigateTo()" 
                 :disabled="loadingUrl || !urlInput.trim()" 
@@ -363,55 +363,55 @@
             </span>
         </button>
     </div>
-
+ 
 </div>
 </div>
                     <div class="flex-grow w-full bg-white relative">
                         <iframe id="dashboard-browser-frame" :src="browserUrl" class="w-full h-full border-none bg-white absolute inset-0"></iframe>
                     </div>
                 </div>
-
+ 
                 <div x-show="activeToolTab === 'document'" class="w-full h-full flex flex-col bg-white" 
                      x-data="{ docContent: '', get wordCount() { let text = this.docContent.trim(); return text ? text.split(/\s+/).length : 0; } }">
-                    <div class="p-4 border-b border-gray-100 bg-white flex justify-between items-center shrink-0">
+                    <div class="p-3 sm:p-4 border-b border-gray-100 bg-white flex flex-wrap gap-3 justify-between items-center shrink-0">
                         <div class="flex items-center gap-4">
                             <span class="text-xs font-semibold text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
                                 <i class="ri-text-spacing text-gray-400 text-sm"></i> Words: <span x-text="wordCount" class="font-bold text-gray-800">0</span>
                             </span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button @click="navigator.clipboard.writeText(docContent); alert('Content copied to clipboard!')" class="px-4 py-2 text-xs font-semibold bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-black rounded-xl border border-gray-100 transition flex items-center gap-1.5">
+                            <button @click="navigator.clipboard.writeText(docContent); alert('Content copied to clipboard!')" class="px-3 sm:px-4 py-2 text-xs font-semibold bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-black rounded-xl border border-gray-100 transition flex items-center gap-1.5">
                                 <i class="ri-file-copy-line"></i> Copy
                             </button>
-                            <button @click="const blob = new Blob([docContent], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'laboratory-notes.txt'; link.click();" class="px-4 py-2 text-xs font-bold bg-[#383838] text-white hover:bg-black rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                            <button @click="const blob = new Blob([docContent], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'laboratory-notes.txt'; link.click();" class="px-3 sm:px-4 py-2 text-xs font-bold bg-[#383838] text-white hover:bg-black rounded-xl transition flex items-center gap-1.5 shadow-sm">
                                 <i class="ri-download-cloud-line"></i> Save
                             </button>
                         </div>
                     </div>
-                    <div class="flex-grow w-full p-6 bg-gray-50/50">
-                        <textarea x-model="docContent" placeholder="Type or paste your data text structure notes, source snippets, or answers for the assignment here..." class="w-full h-full resize-none bg-white border border-gray-200 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 rounded-3xl p-6 text-sm text-gray-700 focus:outline-none transition-all shadow-sm leading-relaxed font-mono"></textarea>
+                    <div class="flex-grow w-full p-3 sm:p-6 bg-gray-50/50">
+                        <textarea x-model="docContent" placeholder="Type or paste your data text structure notes, source snippets, or answers for the assignment here..." class="w-full h-full resize-none bg-white border border-gray-200 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-sm text-gray-700 focus:outline-none transition-all shadow-sm leading-relaxed font-mono"></textarea>
                     </div>
                 </div>
-
+ 
             </div>
         </div>
-
+ 
         <!-- UPDATED: Added x-show="isSharing" and x-cloak to toggle FAB visibility dynamically -->
         <button @click="sidebarOpen = !sidebarOpen" x-show="isSharing" x-cloak
             class="fixed bottom-6 right-6 z-[60000] bg-[#383838] hover:bg-black text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-200 group border border-gray-700/10">
             <i :class="sidebarOpen ? 'ri-close-line' : 'ri-terminal-box-line'" class="text-2xl transition-transform group-hover:rotate-12"></i>
         </button>
     </div>
-
+ 
    <!-- Modals and script architectures remain below -->
   <!-- UPDATED: Task Submission, Editing, Deletion & Score Modal -->
-<div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" x-data="taskModal()" @open-task.window="openModal($event.detail)" @click.self="closeModal()">
-    <div class="bg-white rounded-[40px] shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-fade-in border border-zinc-100/80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors" @click.stop>
+<div id="task-modal" class="hidden fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4" x-data="taskModal()" @open-task.window="openModal($event.detail)" @click.self="closeModal()">
+    <div class="bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-fade-in border border-zinc-100/80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors" @click.stop>
         
         <!-- Header -->
-        <div class="border-b border-zinc-100 p-8 flex justify-between items-start bg-gradient-to-b from-zinc-50/50 to-white rounded-t-[40px]">
-            <div>
-                <div class="flex items-center gap-2 mb-2">
+        <div class="border-b border-zinc-100 p-5 sm:p-8 flex justify-between items-start gap-3 bg-gradient-to-b from-zinc-50/50 to-white rounded-t-[24px] sm:rounded-t-[40px]">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
                     <template x-if="currentTask?.current_user_submission?.grade !== null && currentTask?.current_user_submission?.grade !== undefined">
                         <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                             <i class="ri-checkbox-circle-fill"></i> Graded
@@ -423,17 +423,17 @@
                         </span>
                     </template>
                 </div>
-                <h2 class="text-3xl font-black text-zinc-900 tracking-tight leading-tight" x-text="currentTask?.title"></h2>
+                <h2 class="text-xl sm:text-3xl font-black text-zinc-900 tracking-tight leading-tight break-words" x-text="currentTask?.title"></h2>
                 <p class="text-sm text-zinc-500 mt-2 font-medium max-w-md leading-relaxed" x-text="currentTask?.description"></p>
             </div>
-            <button @click="closeModal()" class="w-12 h-12 flex items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-all shadow-sm border border-zinc-100">
-                <i class="ri-close-line text-2xl"></i>
+            <button @click="closeModal()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-all shadow-sm border border-zinc-100 shrink-0">
+                <i class="ri-close-line text-xl sm:text-2xl"></i>
             </button>
         </div>
-
-        <div class="p-8 space-y-8">
+ 
+        <div class="p-5 sm:p-8 space-y-6 sm:space-y-8">
             <!-- Metadata Grid -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4">
                 <div class="bg-zinc-50/60 p-5 rounded-[24px] border border-zinc-100/80">
                     <span class="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Max Weight</span>
                     <span class="text-xl font-black text-zinc-900" x-text="(currentTask?.points || 0) + ' PTS'"></span>
@@ -443,7 +443,7 @@
                     <span class="text-sm font-bold text-zinc-600" x-text="formatDeadline(currentTask?.deadline)"></span>
                 </div>
             </div>
-
+ 
             <!-- Existing Submission View -->
             <div x-show="currentTask?.current_user_submission" class="space-y-6 animate-fade-in">
                 <div class="flex items-center justify-between">
@@ -454,7 +454,7 @@
                         </span>
                     </template>
                 </div>
-
+ 
                 <div class="bg-white p-2 rounded-[32px] border border-zinc-100 shadow-sm">
                     <!-- File Badge & Action Links -->
                     <div class="flex items-center justify-between p-4 bg-zinc-50/50 rounded-[24px] border border-zinc-100/40">
@@ -471,7 +471,7 @@
                             <i class="ri-download-2-line"></i>
                         </a>
                     </div>
-
+ 
                     <!-- Submission Management (Edit & Unsubmit/Delete) when Ungraded -->
                     <div x-show="currentTask?.current_user_submission?.grade === null || currentTask?.current_user_submission?.grade === undefined" class="p-3 border-t border-zinc-100/60 mt-2">
                         <template x-if="!isDeadlinePassed()">
@@ -486,7 +486,7 @@
                                         <span x-text="deleting ? 'Deleting...' : 'Unsubmit Work'"></span>
                                     </button>
                                 </div>
-
+ 
                                 <!-- Resubmit / Replace File Form -->
                                 <form x-show="showResubmitForm" @submit.prevent="resubmitTask($event)" class="p-5 bg-zinc-50 rounded-[24px] border border-zinc-200/80 animate-fade-in" enctype="multipart/form-data">
                                     <div class="flex items-center gap-2 text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-wider">
@@ -503,14 +503,14 @@
                                 </form>
                             </div>
                         </template>
-
+ 
                         <template x-if="isDeadlinePassed()">
                             <div class="text-center py-3 bg-zinc-50 rounded-xl text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                                 Submission modifications closed after deadline.
                             </div>
                         </template>
                     </div>
-
+ 
                     <!-- Graded Score Hero Card & Criteria Breakdown -->
                     <div x-show="currentTask?.current_user_submission?.grade !== null && currentTask?.current_user_submission?.grade !== undefined" class="m-2 space-y-6">
                         
@@ -528,7 +528,7 @@
                                     <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/10 text-white border border-white/10" x-text="scorePercentage.toFixed(0) + '% Score'"></span>
                                 </div>
                             </div>
-
+ 
                             <div class="mt-4 overflow-hidden h-2 flex rounded-full bg-white/10">
                                 <div :style="`width: ${scorePercentage}%`"
                                      :class="scorePercentage >= 70 ? 'bg-emerald-400 shadow-emerald-500/20' : (scorePercentage >= 50 ? 'bg-amber-400 shadow-amber-500/20' : 'bg-rose-400 shadow-rose-500/20')"
@@ -536,7 +536,7 @@
                                 </div>
                             </div>
                         </div>
-
+ 
                         <!-- General Teacher Remarks -->
                         <div x-show="currentTask?.current_user_submission?.feedback" class="pt-2 border-t border-zinc-100">
                             <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 ml-1">Instructor Remarks</p>
@@ -544,7 +544,7 @@
                                 <p class="text-sm font-medium leading-relaxed text-zinc-700 whitespace-pre-line" x-text="currentTask?.current_user_submission?.feedback"></p>
                             </div>
                         </div>
-
+ 
                         <!-- Criteria Matrix Breakdown -->
                         <div class="space-y-4">
                             <h4 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Evaluation Breakdown</h4>
@@ -553,7 +553,7 @@
                                 <div class="w-6 h-6 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                                 <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Parsing Rubric Scoring Model Matrix...</p>
                             </div>
-
+ 
                             <div x-show="!loadingFeedback && detailedFeedback" class="space-y-4 max-h-[38vh] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors">
                                 <template x-for="(score, index) in (detailedFeedback?.criterion_scores || detailedFeedback?.criterionScores || [])" :key="score.id || index">
                                     <div class="border-l-4 bg-zinc-50/50 rounded-r-2xl p-4 border border-zinc-100 flex flex-col gap-2.5 transition hover:bg-zinc-50">
@@ -573,7 +573,7 @@
                                                 <div class="text-xs text-zinc-700 whitespace-pre-line leading-relaxed font-medium" x-text="score.feedback"></div>
                                             </div>
                                         </template>
-
+ 
                                         <div class="flex items-center gap-1 mt-1 ml-7 text-[10px] font-black uppercase tracking-tight">
                                             <template x-if="score.points_earned >= score.max_points">
                                                 <span class="text-emerald-600 flex items-center gap-1"><i class="ri-checkbox-circle-fill text-sm"></i> Perfect Score! 🎉</span>
@@ -588,7 +588,7 @@
                                                 <span class="text-rose-600 flex items-center gap-1"><i class="ri-close-circle-line text-sm"></i> Needs Improvement</span>
                                             </template>
                                         </div>
-
+ 
                                     </div>
                                 </template>
                             </div>
@@ -596,11 +596,11 @@
                     </div>
                 </div>
             </div>
-
+ 
             <!-- Initial Upload Zone when No Submission Exists -->
             <div x-show="!currentTask?.current_user_submission" class="space-y-4 animate-fade-in">
                 <h3 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Upload Work</h3>
-                <form @submit.prevent="resubmitTask($event)" enctype="multipart/form-data" x-data="{ fileName: '' }" class="bg-zinc-50/50 border-2 border-dashed border-zinc-200 rounded-[32px] p-10 text-center transition-all hover:border-zinc-900 hover:bg-zinc-50 group relative">
+                <form @submit.prevent="resubmitTask($event)" enctype="multipart/form-data" x-data="{ fileName: '' }" class="bg-zinc-50/50 border-2 border-dashed border-zinc-200 rounded-[24px] sm:rounded-[32px] p-6 sm:p-10 text-center transition-all hover:border-zinc-900 hover:bg-zinc-50 group relative">
                     <label class="block cursor-pointer">
                         <div class="space-y-4">
                             <div class="w-16 h-16 bg-white rounded-2xl shadow-sm border border-zinc-100 flex items-center justify-center mx-auto text-zinc-300 group-hover:text-zinc-900 group-hover:scale-105 transition-all">
@@ -630,35 +630,35 @@
                     </button>
                 </form>
             </div>
-
+ 
         </div>
     </div>
 </div>
     <div x-data="{ showQuizModal: false, quizUrl: '', isLocked: false, open(id) { this.quizUrl = `/student/quizzes/${id}/attempt`; this.showQuizModal = true; this.isLocked = false; } }"
          x-show="showQuizModal" x-cloak @open-quiz.window="open($event.detail.id)"
          @message.window="if ($event.data === 'lock-modal') isLocked = true; if ($event.data === 'unlock-modal') isLocked = false; if ($event.data === 'close-modal') { showQuizModal = false; isLocked = false; }"
-         class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-6xl h-[92vh] rounded-[2rem] overflow-hidden shadow-2xl flex flex-col relative">
-            <div class="flex justify-between items-center p-6 border-b bg-white">
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" x-show="isLocked"></div>
-                    <h3 class="font-black text-gray-900 tracking-tight">QUIZ WORKSPACE</h3>
+         class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white w-full max-w-6xl h-[96vh] sm:h-[92vh] rounded-[1.25rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col relative">
+            <div class="flex justify-between items-center p-3 sm:p-6 border-b bg-white gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" x-show="isLocked"></div>
+                    <h3 class="font-black text-gray-900 tracking-tight text-sm sm:text-base truncate">QUIZ WORKSPACE</h3>
                 </div>
-                <button x-show="!isLocked" @click="showQuizModal = false" class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all uppercase tracking-widest">Close</button>
+                <button x-show="!isLocked" @click="showQuizModal = false" class="px-4 sm:px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all uppercase tracking-widest shrink-0">Close</button>
                 <span x-show="isLocked" class="text-[10px] font-black text-red-500 uppercase tracking-widest"><i class="ri-lock-fill mr-1"></i> Quiz in Progress (Locked)</span>
             </div>
             <div class="flex-grow bg-gray-50"><iframe :src="quizUrl" class="w-full h-full border-none shadow-inner"></iframe></div>
         </div>
     </div>
-
-    <div x-data="materialViewer()" @open-material.window="openMaterial($event.detail)" x-show="showViewer" x-cloak @click.self="closeMaterial()" class="fixed inset-0 z-[20000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-white rounded-[40px] shadow-2xl max-w-5xl w-full h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-gray-100" @click.stop>
-            <div class="border-b border-gray-50 p-6 flex justify-between items-center bg-white shrink-0">
-                <div>
-                    <h2 class="text-xl font-black text-[#383838] tracking-tight leading-tight truncate max-w-[300px] md:max-w-xl" x-text="currentMaterial.title"></h2>
+ 
+    <div x-data="materialViewer()" @open-material.window="openMaterial($event.detail)" x-show="showViewer" x-cloak @click.self="closeMaterial()" class="fixed inset-0 z-[20000] bg-black/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white rounded-[1.25rem] sm:rounded-[40px] shadow-2xl max-w-5xl w-full h-[96vh] sm:h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-gray-100" @click.stop>
+            <div class="border-b border-gray-50 p-3 sm:p-6 flex justify-between items-center bg-white shrink-0 gap-3">
+                <div class="min-w-0">
+                    <h2 class="text-base sm:text-xl font-black text-[#383838] tracking-tight leading-tight truncate max-w-[200px] sm:max-w-[300px] md:max-w-xl" x-text="currentMaterial.title"></h2>
                     <span class="text-[10px] text-gray-400 font-black uppercase tracking-widest block mt-0.5" x-text="currentMaterial.type + ' Reference Material'"></span>
                 </div>
-                <div class="flex items-center gap-3"><button @click="closeMaterial()" class="px-6 py-2.5 bg-[#383838] text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#2c2c2c] transition shadow-md">Finish Reading</button></div>
+                <div class="flex items-center gap-3 shrink-0"><button @click="closeMaterial()" class="px-4 sm:px-6 py-2 sm:py-2.5 bg-[#383838] text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-[#2c2c2c] transition shadow-md whitespace-nowrap">Finish Reading</button></div>
             </div>
             <div class="flex-grow w-full bg-gray-50 relative overflow-hidden">
                 <div class="absolute inset-0 flex items-center justify-center -z-10 bg-gray-100"><div class="flex flex-col items-center gap-4"><div class="w-8 h-8 border-2 border-[#383838] border-t-transparent rounded-full animate-spin"></div></div></div>
@@ -897,11 +897,24 @@ async function startStudentScreenShare(peer, professorPeerId) {
         || window.innerWidth <= 1024;
 
         // Skip PeerJS entirely on mobile/tablet
+    // Mobile/Tablet Handling
     if (isMobile) {
         console.log("📱 Mobile device detected: PeerJS connection bypassed.");
+        
+        // Mark attendance immediately upon opening the classroom on mobile
+        fetch("{{ route('student.mark-present', $class->id) }}", { 
+            method: 'POST', 
+            headers: { 
+                'X-CSRF-TOKEN': csrfToken, 
+                'Content-Type': 'application/json' 
+            } 
+        }).then(res => res.json())
+          .then(data => console.log("✅ Mobile attendance marked successfully"))
+          .catch(err => console.error("❌ Failed to mark mobile attendance:", err));
+
         return;
     }
-    
+
         studentPeer = new Peer('STUDENT_{{ auth()->id() }}', localPeerOptions);
 
         studentPeer.on('open', (id) => {
