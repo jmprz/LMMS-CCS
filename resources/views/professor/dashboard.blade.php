@@ -1,10 +1,20 @@
 <x-app-layout>
     <x-slot name="header"></x-slot>
 
-    <div class="fixed inset-0 flex bg-gray-100" x-data="{ sidebarOpen: false }">
+    <div class="fixed inset-0 flex bg-gray-100 overflow-hidden" x-data="{ sidebarOpen: false }">
 
+        <!-- Mobile Sidebar Backdrop Overlay -->
+        <div x-show="sidebarOpen" 
+             x-transition.opacity 
+             @click="sidebarOpen = false"
+             class="fixed inset-0 bg-black/50 z-40 md:hidden" 
+             style="display: none;">
+        </div>
+
+        <!-- Responsive Sidebar -->
         <aside
-            class="w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)]">
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] transform transition-transform duration-300 ease-in-out md:translate-x-0">
             <div class="flex flex-col flex-grow overflow-y-auto">
                 <nav class="mt-8 px-4 space-y-1">
                     <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Workspace
@@ -45,7 +55,7 @@
                 </nav>
             </div>
 
-            <div class="p-4 border-t border-gray-100 bg-gray-50/50 relative" x-data="{ open: false }"
+            <div class="p-4 border-t border-gray-100 bg-gray-50/50 relative flex-shrink-0" x-data="{ open: false }"
                 @click.away="open = false">
                 <div x-show="open" x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
@@ -85,10 +95,19 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto h-full">
-            <div class="p-8 mt-[80px]">
+        <main class="flex-1 overflow-y-auto h-full flex flex-col min-w-0">
+            <!-- Mobile Header Toggle Bar -->
+            <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
+                <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                    <i class="ri-menu-2-line text-xl"></i>
+                </button>
+                <span class="text-xs font-black uppercase text-gray-700 tracking-wider">Dashboard</span>
+            </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="p-4 sm:p-8 md:mt-[80px]">
+
+                <!-- Stat Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8">
                     <div
                         class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                         <div>
@@ -136,7 +155,8 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    <div class="col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between"
+                    <!-- Schedules Table Panel -->
+                    <div class="col-span-1 lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between"
                         x-data="{ 
                             search: '', 
                             programFilter: '', 
@@ -189,7 +209,7 @@
                             </div>
 
                             <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
+                                <table class="w-full text-left border-collapse min-w-[650px]">
                                     <thead>
                                         <tr
                                             class="text-[11px] font-black text-gray-400 uppercase border-b border-gray-100 tracking-wider">
@@ -250,8 +270,9 @@
                         </div>
                     </div>
 
+                    <!-- Student Monitoring Feed Panel -->
                     <div
-                        class="col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                        class="col-span-1 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                         <div>
                             <div class="mb-4">
                                 <h2 class="font-bold text-lg text-gray-800 uppercase">Student Monitoring Feed</h2>

@@ -7,8 +7,8 @@
                     <x-application-logo class="w-full h-auto max-h-48 object-contain" />
                 </div>
 
-                <div class="w-full border-t border-b border-gray-500/40 py-4">
-                    <h1 class="font-extrabold text-xs sm:text-sm md:text-base tracking-wider leading-relaxed uppercase text-white px-2 break-words">
+                <div class="w-full py-4">
+                    <h1 class="font-extrabold text-2xl sm:text-3xl md:text-lg tracking-wider leading-relaxed uppercase text-white px-2 break-words">
                         Learning and Monitoring Management System
                     </h1>
                 </div>

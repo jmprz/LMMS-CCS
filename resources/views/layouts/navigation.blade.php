@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-300 sticky top-0 z-50">
+<nav x-data="{ open: false }" class="bg-white sticky top-0 z-50">
     <div class="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 md:h-20">
             <!-- Left Side: Logo and Title -->
@@ -8,13 +8,15 @@
                         <div class="p-1 md:p-1.5 rounded-lg shadow-sm">
                             <img src="{{ asset('/img/ccs_logo.png') }}" class="h-10 md:h-14 w-auto" alt="Logo">
                         </div>
-                        <div class="hidden lg:flex flex-col">
-                            <span class="font-black tracking-tighter text-base md:text-lg uppercase leading-tight text-gray-900">
-                                Learning and Monitoring Management System
-                            </span>
-                            <span class="font-bold tracking-tighter text-[10px] md:text-xs uppercase text-gray-500 leading-tight">
-                                College of Computing Studies
-                            </span>
+                        <div class="flex flex-col min-w-0">
+                            <!-- Shortened title for mobile (<640px), Full title for tablet & desktop -->
+                        <span class="font-black tracking-tighter text-xs sm:text-sm md:text-lg uppercase leading-tight text-gray-900 truncate">
+                            <span class="inline sm:hidden">LMMS - CCS</span>
+                            <span class="hidden sm:inline">Learning and Monitoring Management System</span>
+                        </span>
+                        <span class="font-bold tracking-tighter text-[9px] sm:text-[10px] md:text-xs uppercase text-gray-500 leading-tight truncate">
+                            College of Computing Studies
+                        </span>
                         </div>
                     </div>
                 </div>

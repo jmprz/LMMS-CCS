@@ -1,9 +1,21 @@
 <x-app-layout>
+     <x-slot name="header"></x-slot>
     <div class="fixed inset-0 flex bg-gray-100"
-        x-data="{ showModal: false, isActive: {{ $session->is_active ? 'true' : 'false' }} }">
+       x-data="{ showModal: false, sidebarOpen: false, isActive: {{ $session->is_active ? 'true' : 'false' }} }">
+        <div x-show="sidebarOpen" 
+             @click="sidebarOpen = false"
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-30 bg-black/50 lg:hidden"
+             x-cloak>
+        </div>
 
-        <aside
-            class="w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)]">
+       <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+               class="fixed lg:static z-40 w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] transition-transform duration-200 ease-in-out">
 
             <div class="flex flex-col flex-grow overflow-y-auto">
 
@@ -113,13 +125,21 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto h-full">
-            <div class="p-6 mt-[80px]">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+     <main class="flex-1 overflow-y-auto h-full flex flex-col min-w-0">
+              <!-- Mobile Header Toggle Bar -->
+            <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
+                <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                    <i class="ri-menu-2-line text-xl"></i>
+                </button>
+                <span class="text-xs font-black uppercase text-gray-700 tracking-wider">Classroom</span>
+            </div>
+            <div class="p-4 sm:p-8 md:mt-[80px]">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div
                         class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6 flex flex-col justify-between">
                         <div>
-                            <h1 class="text-4xl font-black text-gray-900 mb-3">{{ $session->subject_name }} |
+                           <h1 class="text-xl sm:text-2xl lg:text-4xl font-black text-gray-900 mb-3 leading-tight">
+                            {{ $session->subject_name }} |
                                 {{ $session->program }} - {{ $session->year_level }}{{ $session->section }}
                             </h1>
                         </div>
@@ -199,7 +219,7 @@
 
 
                 <div class="mt-8" x-data="{ activeTab: 'monitoring' }">
-                    <div class="flex space-x-1 border-b border-gray-200">
+                   <div class="flex space-x-1 border-b border-gray-200 overflow-x-auto whitespace-nowrap scrollbar-none pb-1">
                         <button @click="activeTab = 'monitoring'"
                             :class="activeTab === 'monitoring' ? 'border-b-2 border-black font-bold' : 'text-gray-500'"
                             class="px-6 py-3 transition">Monitoring</button>
@@ -936,6 +956,7 @@
                                                 </div>
 
                                                 <div x-show="!loadingViewers">
+                                                    <div class="w-full overflow-x-auto">
                                                     <table
                                                         class="w-full text-left bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
                                                         <thead>
@@ -977,6 +998,7 @@
                                                             </template>
                                                         </tbody>
                                                     </table>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1354,6 +1376,7 @@
                                         </div>
 
                                         <div class="flex-1 overflow-y-auto p-6 bg-white">
+                                            <div class="w-full overflow-x-auto">
                                             <table class="w-full text-left border-separate border-spacing-y-4">
                                                 <thead>
                                                     <tr
@@ -1523,6 +1546,7 @@
                                                     </template>
                                                 </tbody>
                                             </table>
+                                            </div>
 
                                             <template x-if="filteredSubmissions.length === 0">
                                                 <div

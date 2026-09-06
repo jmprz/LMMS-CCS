@@ -1,45 +1,65 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'LMMS') }}</title>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-        <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet"/>
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans antialiased overflow-x-hidden">
-        <div class="min-h-screen bg-gray-100 flex flex-col">
-            @include('layouts.navigation')
+    <title>{{ config('app.name', 'LMMS') }}</title>
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white shadow z-10 relative">
-                    <div class="max-w-9xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
 
-            <!-- Page Content -->
-            <main class="flex-grow w-full max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {{ $slot }}
-            </main>
-        </div>
-        
-        <script>
-            window.addEventListener('beforeunload', function (e) {
-                if (typeof connectedStudents !== 'undefined' && connectedStudents.size > 0) {
-                    e.preventDefault();
-                    e.returnValue = ''; 
-                }
-            });
-        </script>
-    </body>
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#383838">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="{{ asset('img/ccs_logo.png') }}">
+
+    <!-- Scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+
+<body class="font-sans antialiased overflow-x-hidden">
+    <div class="min-h-screen bg-gray-100 flex flex-col">
+        @include('layouts.navigation')
+
+        <!-- Page Heading -->
+        @isset($header)
+            <header class="bg-white shadow z-10 relative">
+                <div class="max-w-9xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
+                    {{ $header }}
+                </div>
+            </header>
+        @endisset
+
+        <!-- Page Content -->
+        <main class="flex-grow w-full max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {{ $slot }}
+        </main>
+    </div>
+
+    <script>
+        window.addEventListener('beforeunload', function (e) {
+            if (typeof connectedStudents !== 'undefined' && connectedStudents.size > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('PWA Service Worker registered:', reg.scope))
+                .catch(err => console.error('PWA Service Worker failed:', err));
+        });
+    }
+</script>
+</body>
+
 </html>

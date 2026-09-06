@@ -1,17 +1,17 @@
-<div class="bg-slate-900/80 p-6 rounded-2xl shadow-xl border border-slate-800 mb-8">
+<div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 mb-8">
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
         <div>
-            <h2 id="dashboardChartTitle" class="font-bold text-sm text-white uppercase tracking-wider"></h2>
-            <p id="dashboardChartDescription" class="text-xs text-slate-400 font-medium mt-1 max-w-2xl"></p>
+            <h2 id="dashboardChartTitle" class="font-bold text-sm text-gray-800 uppercase tracking-wider"></h2>
+            <p id="dashboardChartDescription" class="text-xs text-gray-500 font-medium mt-1 max-w-2xl"></p>
         </div>
         <div class="flex-shrink-0">
-            <label for="dashboardChartSelector" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+            <label for="dashboardChartSelector" class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">
                 Select Insight
             </label>
             <select id="dashboardChartSelector"
-                class="py-2.5 px-4 text-xs bg-slate-800 border border-slate-700 rounded-xl font-bold text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer min-w-[240px]">
+                class="py-2.5 px-4 text-xs bg-gray-100 border border-gray-300 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer min-w-[240px]">
                 @foreach($chartConfigs as $key => $config)
-                    <option value="{{ $key }}" class="bg-slate-900 text-slate-200">{{ $config['title'] }}</option>
+                    <option value="{{ $key }}" class="bg-white text-gray-700">{{ $config['title'] }}</option>
                 @endforeach
             </select>
         </div>

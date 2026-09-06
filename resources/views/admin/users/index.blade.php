@@ -90,7 +90,7 @@
                 <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                     <i class="ri-menu-2-line text-xl"></i>
                 </button>
-                <span class="text-xs font-black uppercase text-gray-700 tracking-wider">User Management</span>
+                <span class="text-xs font-black uppercase text-gray-700 tracking-wider">Navigation</span>
             </div>
 
             <div class="p-4 sm:p-8 md:mt-[80px]">

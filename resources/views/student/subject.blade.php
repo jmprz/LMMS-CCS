@@ -40,7 +40,8 @@
     </div>
 <!-- UPDATED: Added isFullWidth state -->
 <div class="flex h-screen w-full bg-gray-50 overflow-hidden" 
-     x-data="{ sidebarOpen: false, isFullWidth: false, activeToolTab: 'compiler', isSharing: false }" 
+     x-data="{ sidebarOpen: false, isFullWidth: false, activeToolTab: 'compiler',isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 1024, isSharing: false }" 
+     x-init="if (isMobile) { isSharing = true; }"
      @screen-shared.window="isSharing = true" 
      @screen-stopped.window="isSharing = false">
         
@@ -892,6 +893,15 @@ async function startStudentScreenShare(peer, professorPeerId) {
 
 
     document.addEventListener('DOMContentLoaded', () => {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || window.innerWidth <= 1024;
+
+        // Skip PeerJS entirely on mobile/tablet
+    if (isMobile) {
+        console.log("📱 Mobile device detected: PeerJS connection bypassed.");
+        return;
+    }
+    
         studentPeer = new Peer('STUDENT_{{ auth()->id() }}', localPeerOptions);
 
         studentPeer.on('open', (id) => {

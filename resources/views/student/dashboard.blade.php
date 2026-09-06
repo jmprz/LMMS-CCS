@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-slot name="header"></x-slot>
     <div id="lockdown-ui" class="hidden fixed inset-0 z-[9999] bg-white w-full h-screen">
         <div class="flex w-full h-full">
             <div class="w-1/2 h-full bg-black relative">
@@ -24,7 +25,8 @@
     </div>
 
     <div id="dashboard-root" class="fixed inset-x-0 bottom-0 top-20 flex bg-gray-50 overflow-hidden" x-data="{ 
-            classes: @js($joinedClasses->map(fn($item) => [
+    sidebarOpen: false,
+    classes: @js($joinedClasses->map(fn($item) => [
                 'id' => $item->id,
                 'name' => $item->subject_name,
                 'code' => $item->class_code,
@@ -72,16 +74,33 @@
             },
 
             // Directly triggers screen share protocol and navigates seamlessly
-            enterClassroomDirectly(route) {
-                if (typeof enterClassroom === 'function') {
-                    enterClassroom();
-                }
-                window.location.href = route;
+           enterClassroomDirectly(route) {
+        // Only run screen share protocol if NOT on mobile/tablet
+        if (!this.isMobile() && typeof enterClassroom === 'function') {
+        enterClassroom();
+        }
+     window.location.href = route;
+    },
+        isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || (window.innerWidth <= 1024 && navigator.maxTouchPoints > 0);
             }
          }">
 
-        <aside
-            class="w-64 border-r border-gray-200 bg-white flex-shrink-0 flex flex-col justify-between h-full hidden lg:flex">
+         <div x-show="sidebarOpen" 
+             @click="sidebarOpen = false"
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-30 bg-black/50 lg:hidden"
+             x-cloak>
+        </div>
+
+      <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+       class="fixed lg:static z-40 w-64 border-r border-gray-200 bg-white flex-shrink-0 flex flex-col justify-between h-full transition-transform duration-200 ease-in-out">
             <div class="flex flex-col flex-grow overflow-y-auto">
 
                 <nav class="mt-8 px-4 space-y-1">
@@ -185,6 +204,57 @@
         </aside>
 
         <main class="flex-1 overflow-y-auto h-full p-6 md:p-10">
+           <!-- Mobile Header Toggle Bar -->
+<div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 -mt-6 -mx-6 md:-mt-10 md:-mx-10 mb-6 flex-shrink-0">
+    <div class="flex items-center gap-2">
+        <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+            <i class="ri-menu-2-line text-xl"></i>
+        </button>
+        <span class="text-xs font-black uppercase text-gray-700 tracking-wider"></span>
+    </div>
+
+    <!-- Right Side Profile & Sign Out Dropdown -->
+    <div class="relative" x-data="{ userMenuOpen: false }" @click.away="userMenuOpen = false">
+        <button @click="userMenuOpen = !userMenuOpen" class="flex items-center gap-1.5 p-1 rounded-xl hover:bg-gray-100 transition focus:outline-none">
+            @php
+                $nameTokens = explode(' ', Auth::user()->name);
+                $firstInitial = substr($nameTokens[0], 0, 1);
+                $lastInitial = count($nameTokens) > 1 ? substr(end($nameTokens), 0, 1) : '';
+                $profileInitials = strtoupper($firstInitial . $lastInitial);
+            @endphp
+            <div class="h-8 w-8 rounded-xl bg-[#383838] flex items-center justify-center text-white text-[10px] font-black uppercase shadow-sm flex-shrink-0">
+                {{ $profileInitials }}
+            </div>
+            <i class="ri-arrow-down-s-line text-gray-400 text-sm transition" :class="userMenuOpen ? 'transform rotate-180 text-gray-700' : ''"></i>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div x-show="userMenuOpen"
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="transform opacity-0 scale-95 -translate-y-2"
+             x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
+             x-transition:leave-end="transform opacity-0 scale-95 -translate-y-2"
+             class="absolute right-0 mt-2 w-48 bg-white rounded-2xl border border-gray-200 shadow-xl p-1.5 z-50 flex flex-col gap-1"
+             x-cloak
+             style="display: none;">
+            
+            <div class="px-3 py-2 border-b border-gray-100">
+                <p class="text-xs font-black text-gray-800 truncate leading-none">{{ Auth::user()->name }}</p>
+                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-1 leading-none">Student</p>
+            </div>
+
+            <form method="POST" action="{{ route('logout') }}" class="w-full">
+                @csrf
+                <button type="submit"
+                    class="w-full text-left flex items-center px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 rounded-xl transition duration-150 tracking-wide">
+                    <i class="ri-logout-box-r-line mr-2 text-base"></i> Sign Out
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
             <div class="max-w-9xl mx-auto space-y-8 pb-16">
 
                 <div>
