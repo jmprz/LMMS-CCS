@@ -17,15 +17,13 @@
         }
 
 
-        /* 1. FIXED HEADER WRAPPER */
+        /* 1. STICKY HEADER WRAPPER (stays in normal flow — no manual offset needed) */
         .quiz-sticky-header {
-            position: fixed;
-            top: 0 !important;
-            left: 0;
-            right: 0;
+            position: sticky;
+            top: 0;
             z-index: 40;
             background: #f8fafc;
-            padding: 1rem 0;
+            padding: 0.75rem 0;
         }
 
         /* 2. MATCHING YOUR SUBJECT HEADER STYLE */
@@ -34,16 +32,22 @@
             border: 1px solid #e5e7eb;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
             border-radius: 1rem;
-            padding: 1.25rem 2rem;
+            padding: 1rem 1.25rem;
             max-width: 1000px;
             margin: 0 auto;
+        }
+
+        @media (min-width: 640px) {
+            .subject-style-header {
+                padding: 1.25rem 2rem;
+            }
         }
 
         .quiz-container {
             background-color: var(--system-bg);
             min-height: 100vh;
-            padding-top: 100px !important;
-            padding-bottom: 120px;
+            padding-top: 1.5rem;
+            padding-bottom: 100px;
         }
 
         .content-limiter {
@@ -81,7 +85,7 @@
 
         .option-label {
             display: block;
-            padding: 14px 20px;
+            padding: 12px 16px;
             background: #fff;
             border: 1px solid #e5e7eb;
             border-radius: 0.75rem;
@@ -89,6 +93,12 @@
             font-weight: 500;
             color: #374151;
             z-index: 1;
+        }
+
+        @media (min-width: 640px) {
+            .option-label {
+                padding: 14px 20px;
+            }
         }
 
         .option-wrapper input:checked+.option-label {
@@ -126,24 +136,49 @@
     </style>
 
     <div x-data="{ 
-    state: '{{ $completed ? 'results' : 'pre-start' }}', 
+    state: '{{ $completed ? 'results' : ((($notYetAvailable ?? false) || ($deadlinePassed ?? false)) ? 'locked' : 'pre-start') }}', 
     score: {{ $studentScore ?? 0 }} 
 }" x-cloak>
 
-        <div x-show="state === 'pre-start'" class="min-h-screen flex items-center justify-center bg-[#f4f7f9] p-6">
-            <div class="bg-white p-10 rounded-[32px] shadow-xl border border-gray-100 max-w-lg w-full text-center">
+        <div x-show="state === 'locked'" class="min-h-screen flex items-center justify-center bg-[#f4f7f9] p-4 sm:p-6">
+            <div class="bg-white p-6 sm:p-10 rounded-[24px] sm:rounded-[32px] shadow-xl border border-gray-100 max-w-lg w-full text-center">
                 <div
-                    class="w-20 h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-gray-100">
-                    <i class="ri-timer-flash-line text-4xl text-[#383838]"></i>
+                    class="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-5 sm:mb-6 border border-red-100">
+                    <i class="ri-lock-2-line text-3xl sm:text-4xl text-red-500"></i>
                 </div>
-                <h1 class="text-3xl font-black text-gray-900 mb-2 leading-tight">Ready to start?</h1>
-                <p class="text-gray-500 font-medium mb-8 leading-relaxed">
+                @if($notYetAvailable ?? false)
+                    <h1 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">Not Yet Available</h1>
+                    <p class="text-gray-500 font-medium mb-2 leading-relaxed text-sm sm:text-base">
+                        Topic: <span class="text-black font-bold">{{ $quiz->title }}</span><br>
+                        This quiz opens on
+                        <span class="text-black font-bold">{{ \Carbon\Carbon::parse($quiz->published_at)->format('M d, Y g:i A') }}</span>.
+                    </p>
+                @else
+                    <h1 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">Deadline Passed</h1>
+                    <p class="text-gray-500 font-medium mb-2 leading-relaxed text-sm sm:text-base">
+                        Topic: <span class="text-black font-bold">{{ $quiz->title }}</span><br>
+                        The deadline for this quiz was
+                        <span class="text-black font-bold">{{ \Carbon\Carbon::parse($quiz->expires_at)->format('M d, Y g:i A') }}</span>.
+                    </p>
+                @endif
+                <p class="text-gray-400 text-xs mt-5">Contact your professor if you believe this is a mistake.</p>
+            </div>
+        </div>
+
+        <div x-show="state === 'pre-start'" class="min-h-screen flex items-center justify-center bg-[#f4f7f9] p-4 sm:p-6">
+            <div class="bg-white p-6 sm:p-10 rounded-[24px] sm:rounded-[32px] shadow-xl border border-gray-100 max-w-lg w-full text-center">
+                <div
+                    class="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-5 sm:mb-6 border border-gray-100">
+                    <i class="ri-timer-flash-line text-3xl sm:text-4xl text-[#383838]"></i>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">Ready to start?</h1>
+                <p class="text-gray-500 font-medium mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
                     Topic: <span class="text-black font-bold">{{ $quiz->title }}</span><br>
                     Time Limit: <span class="text-black font-bold">{{ $quiz->time_limit }} minutes</span>
                 </p>
 
                 <button @click="state = 'quiz'; startTimer(); window.parent.postMessage('lock-modal', '*')"
-                    class="w-full bg-[#383838] hover:bg-black text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg active:scale-95">
+                    class="w-full bg-[#383838] hover:bg-black text-white px-8 py-3.5 sm:py-4 rounded-2xl font-bold transition-all shadow-lg active:scale-95">
                     START ATTEMPT
                 </button>
             </div>
@@ -151,40 +186,40 @@
 
         <div x-show="state === 'quiz'">
             <div class="quiz-sticky-header">
-                <div class="container mt-6 mx-auto px-4">
+                <div class="container mt-3 sm:mt-6 mx-auto px-3 sm:px-4">
                     <div class="subject-style-header">
-                        <div class="flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <h1 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">
+                        <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+                            <div class="min-w-0">
+                                <h1 class="text-base sm:text-xl md:text-2xl font-black text-gray-900 mb-1.5 sm:mb-2 tracking-tight leading-snug break-words">
                                     {{ $quiz->title }}
-                                    <span class="text-gray-400 font-light mx-2">|</span>
+                                    <span class="text-gray-400 font-light mx-1 sm:mx-2">|</span>
                                     <span class="text-[#383838]">
                                         {{ $quiz->labSession->subject_name ?? 'No Subject' }}
                                         ({{ $quiz->labSession->program ?? 'N/A' }} -
                                         {{ $quiz->labSession->year_level ?? 'N/A' }}{{ $quiz->labSession->section ?? 'N/A' }})
                                     </span>
                                 </h1>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-wrap gap-1.5 sm:gap-2">
                                     <span
-                                        class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-widest border border-gray-200">
-                                        <i class="ri-question-line mr-2"></i> TOTAL QUESTIONS:
+                                        class="inline-flex items-center px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-widest border border-gray-200">
+                                        <i class="ri-question-line mr-1.5 sm:mr-2"></i> TOTAL QUESTIONS:
                                         {{ $quiz->questions->count() }}
                                     </span>
                                     <span
-                                        class="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-widest border border-gray-200">
-                                        <i class="ri-bar-chart-line mr-2"></i> PROGRESS: <span
+                                        class="inline-flex items-center px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-widest border border-gray-200">
+                                        <i class="ri-bar-chart-line mr-1.5 sm:mr-2"></i> PROGRESS: <span
                                             id="progressText">0</span>%
                                     </span>
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-6">
+                            <div class="flex items-center gap-3 sm:gap-6 shrink-0">
                                 <div class="text-right">
                                     <span
-                                        class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Time
+                                        class="block text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Time
                                         Remaining</span>
                                     <h2 id="timer"
-                                        class="text-3xl font-black text-[#383838] tracking-tighter tabular-nums">--:--
+                                        class="text-xl sm:text-2xl md:text-3xl font-black text-[#383838] tracking-tighter tabular-nums">--:--
                                     </h2>
                                 </div>
                             </div>
@@ -201,32 +236,32 @@
                         <input type="hidden" name="start_time" value="{{ now() }}">
 
                         @foreach($questions as $index => $question)
-                            <div class="card question-card mb-6 shadow-sm border-0" id="q_{{ $question->id }}">
-                                <div class="card-body p-8">
-                                    <div class="flex justify-between items-center mb-6">
+                            <div class="card question-card mb-4 sm:mb-6 shadow-sm border-0" id="q_{{ $question->id }}">
+                                <div class="card-body p-4 sm:p-6 md:p-8">
+                                    <div class="flex flex-wrap justify-between items-center gap-2 mb-4 sm:mb-6">
                                         <span
-                                            class="text-[11px] font-black text-gray-400 uppercase tracking-widest">Question
+                                            class="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">Question
                                             {{ $index + 1 }}</span>
                                         <span
-                                            class="text-[11px] px-3 py-1 bg-[#383838] text-white rounded-md border border-gray-100">{{ str_replace('_', ' ', $question->type) }}</span>
+                                            class="text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1 bg-[#383838] text-white rounded-md border border-gray-100">{{ str_replace('_', ' ', $question->type) }}</span>
                                     </div>
 
-                                    <h4 class="text-xl font-bold text-gray-900 mb-8 leading-relaxed">
+                                    <h4 class="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-5 sm:mb-8 leading-relaxed">
                                         {{ $question->question_text }}
                                     </h4>
 
-                                    <div class="space-y-3 pt-6 border-t border-gray-100">
+                                    <div class="space-y-2.5 sm:space-y-3 pt-4 sm:pt-6 border-t border-gray-100">
                                         @php $qType = strtoupper(trim($question->type)); @endphp
 
                                         @if($qType == 'IDENTIFICATION')
                                             <input type="text" name="answers[{{ $question->id }}]"
-                                                class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#383838] focus:border-[#383838] transition-all"
+                                                class="w-full p-3 sm:p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#383838] focus:border-[#383838] transition-all text-sm sm:text-base"
                                                 placeholder="Enter your answer here..."
                                                 oninput="updateProgress('{{ $question->id }}', 'text')">
                                         @elseif($qType == 'SELECT_ALL' || $qType == 'MULTIPLE_CHOICE_MULTIPLE')
                                             @foreach($question->options as $option)
                                                 <div
-                                                    class="option-wrapper flex items-center gap-3 p-3 rounded-lg border border-gray-50 mb-2">
+                                                    class="option-wrapper flex items-center gap-3 p-2.5 sm:p-3 rounded-lg border border-gray-50 mb-2">
                                                     <input type="checkbox" name="answers[{{ $question->id }}][]"
                                                         value="{{ $option->option_text }}"
                                                         onchange="updateProgress('{{ $question->id }}', 'check')">
@@ -236,7 +271,7 @@
                                         @else
                                             @foreach($question->options as $option)
                                                 <div
-                                                    class="option-wrapper flex items-center gap-3 p-3 rounded-lg border border-gray-50 mb-2">
+                                                    class="option-wrapper flex items-center gap-3 p-2.5 sm:p-3 rounded-lg border border-gray-50 mb-2">
                                                     <input type="radio" name="answers[{{ $question->id }}]"
                                                         value="{{ $option->option_text }}"
                                                         onchange="updateProgress('{{ $question->id }}', 'radio')">
@@ -249,15 +284,15 @@
                             </div>
                         @endforeach
 
-                        <div class="mt-12 p-8 bg-white rounded-2xl shadow-sm border border-gray-200 mb-10">
-                            <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                        <div class="mt-8 sm:mt-12 p-5 sm:p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-gray-200 mb-8 sm:mb-10">
+                            <div class="flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-8">
                                 <div class="w-full md:w-2/3">
-                                    <h6 class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-6">
+                                    <h6 class="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4 sm:mb-6">
                                         Question Review</h6>
-                                    <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
+                                    <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 sm:gap-3">
                                         @foreach($questions as $index => $q)
                                             <a href="#q_{{ $q->id }}" id="nav_q_{{ $q->id }}"
-                                                class="nav-dot h-10 w-10 flex items-center justify-center rounded-lg border border-gray-200 font-bold text-gray-500 hover:border-[#383838] transition-all no-underline text-xs">
+                                                class="nav-dot h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-lg border border-gray-200 font-bold text-gray-500 hover:border-[#383838] transition-all no-underline text-xs">
                                                 {{ $index + 1 }}
                                             </a>
                                         @endforeach
@@ -265,11 +300,11 @@
                                 </div>
 
                                 <div
-                                    class="w-full md:w-1/3 text-center md:text-right border-t md:border-t-0 md:border-l border-gray-100 pt-8 md:pt-0 md:pl-8">
+                                    class="w-full md:w-1/3 text-center md:text-right border-t md:border-t-0 md:border-l border-gray-100 pt-6 sm:pt-8 md:pt-0 md:pl-8">
                                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                                         Submission</p>
                                     <button type="submit" id="finishBtn"
-                                        class="btn-disabled w-full bg-[#383838] hover:bg-black text-white px-8 py-4 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95">
+                                        class="btn-disabled w-full bg-[#383838] hover:bg-black text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95">
                                         FINISH ATTEMPT
                                     </button>
                                     <p id="completionWarning"
@@ -284,21 +319,21 @@
         </div>
 
         <div x-show="state === 'results'" id="resultsScreen"
-            class="min-h-screen flex items-center justify-center bg-[#f4f7f9] p-6" x-cloak>
-            <div class="bg-white p-12 rounded-[40px] shadow-2xl border border-gray-100 max-w-lg w-full text-center">
+            class="min-h-screen flex items-center justify-center bg-[#f4f7f9] p-4 sm:p-6" x-cloak>
+            <div class="bg-white p-6 sm:p-12 rounded-[28px] sm:rounded-[40px] shadow-2xl border border-gray-100 max-w-lg w-full text-center">
                 <div
-                    class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-inner">
-                    <i class="ri-checkbox-circle-fill text-5xl text-green-500"></i>
+                    class="w-20 h-20 sm:w-24 sm:h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 border-4 border-white shadow-inner">
+                    <i class="ri-checkbox-circle-fill text-4xl sm:text-5xl text-green-500"></i>
                 </div>
-                <h2 class="text-4xl font-black text-gray-900 mb-2">Quiz Complete!</h2>
-                <p class="text-gray-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-10">Performance Summary</p>
+                <h2 class="text-3xl sm:text-4xl font-black text-gray-900 mb-2">Quiz Complete!</h2>
+                <p class="text-gray-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-8 sm:mb-10">Performance Summary</p>
 
-                <div class="bg-gray-50 rounded-3xl p-8 mb-10 border border-gray-100">
+                <div class="bg-gray-50 rounded-3xl p-6 sm:p-8 mb-8 sm:mb-10 border border-gray-100">
                     <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Your Final
                         Score</span>
                     <div class="flex items-center justify-center gap-3">
-                        <span class="text-6xl font-black text-gray-900" x-text="score"></span>
-                        <span class="text-2xl font-bold text-gray-300">/ {{ $quiz->questions->sum('points') }}</span>
+                        <span class="text-5xl sm:text-6xl font-black text-gray-900" x-text="score"></span>
+                        <span class="text-xl sm:text-2xl font-bold text-gray-300">/ {{ $quiz->questions->sum('points') }}</span>
                     </div>
                 </div>
             </div>

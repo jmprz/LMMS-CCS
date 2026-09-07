@@ -138,11 +138,17 @@ class QuizController extends Controller
         $completed = $attempt ? true : false;
         $studentScore = $attempt ? $attempt->score : 0;
 
+        // 3b. Enforce the publish/deadline window for students who haven't already submitted
+        $notYetAvailable = !$completed && $quiz->published_at && now()->lt($quiz->published_at);
+        $deadlinePassed = !$completed && $quiz->expires_at && now()->gt($quiz->expires_at);
+
         // 4. Randomize question and option order for this student
         $questions = $this->randomizedQuestionsForStudent($quiz);
 
         // 5. Send the scoring context straight down to the view template
-        return view('student.quizzes.attempt', compact('quiz', 'completed', 'studentScore', 'questions'));
+        return view('student.quizzes.attempt', compact(
+            'quiz', 'completed', 'studentScore', 'questions', 'notYetAvailable', 'deadlinePassed'
+        ));
     }
 
     private function randomizedQuestionsForStudent(Quiz $quiz)
@@ -169,6 +175,19 @@ class QuizController extends Controller
         try {
             return \DB::transaction(function () use ($request, $quizId) {
                 $quiz = Quiz::with('questions.options')->findOrFail($quizId);
+
+                // 0. Reject attempts that were *started* after the deadline (defense in depth —
+                // the "attempt" screen already blocks starting a new quiz past expires_at, this
+                // guards the submit endpoint itself against direct calls). A student who started
+                // before the deadline but whose time_limit runs past it is still allowed to finish.
+                $startTime = $request->input('start_time') ? \Carbon\Carbon::parse($request->input('start_time')) : now();
+
+                if ($quiz->expires_at && $startTime->gt($quiz->expires_at)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The deadline for this quiz has passed. Your answers were not submitted.',
+                    ], 422);
+                }
 
                 $totalQuestions = $quiz->questions->count();
                 $totalPoints = $quiz->questions->sum('points'); // ← denominator now reflects weighted points
@@ -215,7 +234,6 @@ class QuizController extends Controller
                 }
 
                 // 4. Create Attempt & STOPWATCH DURATION CALCULATION
-                $startTime = \Carbon\Carbon::parse($request->input('start_time'));
                 $timeSpent = abs(now()->getTimestamp() - $startTime->getTimestamp());
 
                 $attempt = \App\Models\QuizAttempt::create([
@@ -499,6 +517,14 @@ class QuizController extends Controller
 
         // 2. If no attempt exists, load the questions normally
         $quiz = Quiz::with(['labSession', 'questions.options'])->findOrFail($id);
+
+        // 3. Enforce the publish/deadline window here too
+        if ($quiz->published_at && now()->lt($quiz->published_at)) {
+            return redirect()->back()->with('error', 'This quiz is not yet available.');
+        }
+        if ($quiz->expires_at && now()->gt($quiz->expires_at)) {
+            return redirect()->back()->with('error', 'The deadline for this quiz has passed.');
+        }
 
         return view('student.quizzes.show', compact('quiz'));
     }
