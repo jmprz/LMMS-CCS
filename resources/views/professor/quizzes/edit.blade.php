@@ -24,7 +24,7 @@
                                 Title</label>
                             <input id="title" name="title" type="text" value="{{ old('title', $quiz->title) }}"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none font-bold text-gray-900"
-                                placeholder="e.g. Midterm Examination in Web Development" required />
+                                placeholder="e.g. Quiz #1" required />
                         </div>
 
                         <div>
@@ -35,6 +35,14 @@
                                 value="{{ old('time_limit', $quiz->time_limit) }}"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400  outline-none font-bold text-gray-900"
                                 placeholder="60" required />
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label
+                                class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Topic</label>
+                            <input id="topic" name="topic" type="text" value="{{ old('topic', $quiz->topic) }}"
+                                class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none font-bold text-gray-900"
+                                placeholder="e.g. Array Lists" required />
                         </div>
 
                         <div>

@@ -149,14 +149,16 @@
                 @if($notYetAvailable ?? false)
                     <h1 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">Not Yet Available</h1>
                     <p class="text-gray-500 font-medium mb-2 leading-relaxed text-sm sm:text-base">
-                        Topic: <span class="text-black font-bold">{{ $quiz->title }}</span><br>
+                        {{ $quiz->title }}<br>
+                        Topic: <span class="text-black font-bold">{{ $quiz->topic }}</span><br>
                         This quiz opens on
                         <span class="text-black font-bold">{{ \Carbon\Carbon::parse($quiz->published_at)->format('M d, Y g:i A') }}</span>.
                     </p>
                 @else
                     <h1 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">Deadline Passed</h1>
                     <p class="text-gray-500 font-medium mb-2 leading-relaxed text-sm sm:text-base">
-                        Topic: <span class="text-black font-bold">{{ $quiz->title }}</span><br>
+                        {{ $quiz->title }}<br>
+                        Topic: <span class="text-black font-bold">{{ $quiz->topic }}</span><br>
                         The deadline for this quiz was
                         <span class="text-black font-bold">{{ \Carbon\Carbon::parse($quiz->expires_at)->format('M d, Y g:i A') }}</span>.
                     </p>
@@ -173,7 +175,8 @@
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2 leading-tight">Ready to start?</h1>
                 <p class="text-gray-500 font-medium mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
-                    Topic: <span class="text-black font-bold">{{ $quiz->title }}</span><br>
+                    {{ $quiz->title }}<br>
+                    Topic: <span class="text-black font-bold">{{ $quiz->topic }}</span><br>
                     Time Limit: <span class="text-black font-bold">{{ $quiz->time_limit }} minutes</span>
                 </p>
 
@@ -200,6 +203,10 @@
                                     </span>
                                 </h1>
                                 <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                                    <span
+                                        class="inline-flex items-center px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-widest border border-gray-200">
+                                        <i class="ri-price-tag-3-line mr-1.5 sm:mr-2"></i> TOPIC: {{ $quiz->topic }}
+                                    </span>
                                     <span
                                         class="inline-flex items-center px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-widest border border-gray-200">
                                         <i class="ri-question-line mr-1.5 sm:mr-2"></i> TOTAL QUESTIONS:
@@ -326,6 +333,7 @@
                     <i class="ri-checkbox-circle-fill text-4xl sm:text-5xl text-green-500"></i>
                 </div>
                 <h2 class="text-3xl sm:text-4xl font-black text-gray-900 mb-2">Quiz Complete!</h2>
+                <p class="text-gray-500 font-bold text-xs sm:text-sm mb-1">Topic: {{ $quiz->topic }}</p>
                 <p class="text-gray-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-8 sm:mb-10">Performance Summary</p>
 
                 <div class="bg-gray-50 rounded-3xl p-6 sm:p-8 mb-8 sm:mb-10 border border-gray-100">

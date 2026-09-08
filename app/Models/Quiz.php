@@ -11,6 +11,7 @@ class Quiz extends Model
 {
     protected $fillable = [
         'title', 
+        'topic',
         'subject_id', 
         'time_limit', 
         'published_at', 

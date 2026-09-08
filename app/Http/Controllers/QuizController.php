@@ -26,6 +26,7 @@ class QuizController extends Controller
         // 1. Flexible Validation
         $request->validate([
             'title' => 'required|string|max:255',
+            'topic' => 'required|string|max:255',
             'lab_session_id' => 'required|exists:lab_sessions,id',
             'time_limit' => 'required|integer|min:1',
             'questions' => 'required|array|min:1',
@@ -40,6 +41,7 @@ class QuizController extends Controller
             // 2. Create the Quiz
             $quiz = Quiz::create([
                 'title' => $request->title,
+                'topic' => $request->topic,
                 'subject_id' => $request->lab_session_id,
                 'time_limit' => $request->time_limit,
                 'published_at' => $request->published_at ?? now(),
@@ -407,6 +409,7 @@ class QuizController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
+            'topic' => 'required|string|max:255',
             'time_limit' => 'required|integer|min:1',
             'questions' => 'required|array|min:1',
             'questions.*.text' => 'required|string',
@@ -434,6 +437,7 @@ class QuizController extends Controller
                 // 1. Update general configurations
                 $quiz->update([
                     'title' => $request->title,
+                    'topic' => $request->topic,
                     'time_limit' => $request->time_limit,
                     'published_at' => $request->published_at ?? $quiz->published_at,
                     'expires_at' => $request->expires_at,
