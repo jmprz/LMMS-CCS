@@ -599,7 +599,7 @@
  
             <!-- Initial Upload Zone when No Submission Exists -->
             <div x-show="!currentTask?.current_user_submission" class="space-y-4 animate-fade-in">
-                <h3 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Upload Work</h3>
+                <h3 class="font-black text-[10px] text-zinc-400 uppercase tracking-[0.2em] ml-1">Upload Work (Maximum File Size: 25mb)</h3>
                 <form @submit.prevent="resubmitTask($event)" enctype="multipart/form-data" x-data="{ fileName: '' }" class="bg-zinc-50/50 border-2 border-dashed border-zinc-200 rounded-[24px] sm:rounded-[32px] p-6 sm:p-10 text-center transition-all hover:border-zinc-900 hover:bg-zinc-50 group relative">
                     <label class="block cursor-pointer">
                         <div class="space-y-4">
@@ -1254,7 +1254,7 @@ function materialViewer() {
                     alert('❌ Error: ' + (data.message || 'Upload failed')); 
                 }
             } catch (error) { 
-                alert('❌ Network Error during file submission.'); 
+                alert('❌ Error during file submission. Maximum file size is 25mb.'); 
             } finally { 
                 this.resubmitting = false; 
             }
