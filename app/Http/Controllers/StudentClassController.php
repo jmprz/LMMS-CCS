@@ -133,7 +133,7 @@ class StudentClassController extends Controller
         }
 
         $request->validate([
-        'submission' => 'required|file|extensions:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:10240',
+        'submission' => 'required|file|extensions:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:25600',
         ]);
 
         // 3. LIVE SESSION DURATION CALCULATION
