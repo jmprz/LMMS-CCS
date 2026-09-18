@@ -409,27 +409,27 @@
     <div class="bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-fade-in border border-zinc-100/80 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors" @click.stop>
         
         <!-- Header -->
-        <div class="border-b border-zinc-100 p-5 sm:p-8 flex justify-between items-start gap-3 bg-gradient-to-b from-zinc-50/50 to-white rounded-t-[24px] sm:rounded-t-[40px]">
-            <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2 mb-2">
-                    <template x-if="currentTask?.current_user_submission?.grade !== null && currentTask?.current_user_submission?.grade !== undefined">
-                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                            <i class="ri-checkbox-circle-fill"></i> Graded
-                        </span>
-                    </template>
-                    <template x-if="currentTask?.current_user_submission && (currentTask?.current_user_submission?.grade === null || currentTask?.current_user_submission?.grade === undefined)">
-                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                            <i class="ri-time-line"></i> Awaiting Evaluation
-                        </span>
-                    </template>
-                </div>
-                <h2 class="text-xl sm:text-3xl font-black text-zinc-900 tracking-tight leading-tight break-words" x-text="currentTask?.title"></h2>
-                <p class="text-sm text-zinc-500 mt-2 font-medium max-w-md leading-relaxed" x-text="currentTask?.description"></p>
-            </div>
-            <button @click="closeModal()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-all shadow-sm border border-zinc-100 shrink-0">
-                <i class="ri-close-line text-xl sm:text-2xl"></i>
-            </button>
+       <div class="border-b border-zinc-100 p-5 sm:p-8 flex justify-between items-start gap-3 bg-gradient-to-b from-zinc-50/50 to-white rounded-t-[24px] sm:rounded-t-[40px]">
+    <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+            <template x-if="currentTask?.current_user_submission?.grade !== null && currentTask?.current_user_submission?.grade !== undefined">
+                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <i class="ri-checkbox-circle-fill"></i> Graded
+                </span>
+            </template>
+            <template x-if="currentTask?.current_user_submission && (currentTask?.current_user_submission?.grade === null || currentTask?.current_user_submission?.grade === undefined)">
+                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                    <i class="ri-time-line"></i> Awaiting Evaluation
+                </span>
+            </template>
         </div>
+        <h2 class="text-xl sm:text-3xl font-black text-zinc-900 tracking-tight leading-tight break-words" x-text="currentTask?.title"></h2>
+        <p class="text-sm text-zinc-500 mt-2 font-medium leading-relaxed break-words whitespace-pre-line w-full" x-text="currentTask?.description"></p>
+    </div>
+    <button @click="closeModal()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-2xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-all shadow-sm border border-zinc-100 shrink-0">
+        <i class="ri-close-line text-xl sm:text-2xl"></i>
+    </button>
+</div>
  
         <div class="p-5 sm:p-8 space-y-6 sm:space-y-8">
             <!-- Metadata Grid -->

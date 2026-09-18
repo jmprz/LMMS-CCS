@@ -186,7 +186,7 @@ EOT;
             Log::error('GeminiGrading (levels) exception: ' . $e->getMessage());
         }
 
-        return ['points' => 0, 'feedback' => 'Auto-grading failed (API error). Pending manual review.', 'auto_checked' => false];
+        return ['points' => 0, 'feedback' => 'Submission received successfully. Automated evaluation is temporarily unavailable, so your submission has been queued for manual review.', 'auto_checked' => false];
     }
 
     protected function gradeWithAI($criterion, string $content,$task): array
