@@ -76,5 +76,10 @@ class LearningRecommendation extends Model
     {
         return $this->belongsTo(ResearchExperiment::class, 'research_experiment_id');
     }
+
+    public function engagements(): HasMany
+    {
+        return $this->hasMany(RecommendationEngagement::class, 'learning_recommendation_id');
+    }
 }
 

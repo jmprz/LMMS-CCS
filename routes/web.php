@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\LearningResourceController;
 use App\Http\Controllers\Admin\LearningTopicController;
 use App\Http\Controllers\Student\LearningRoadmapController;
 use App\Http\Controllers\Admin\ResearchExperimentController;
+use App\Http\Controllers\Admin\LocalQuizSimulatorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -108,6 +109,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::patch('/learning-roadmap/{recommendation}/complete', [LearningRoadmapController::class, 'complete'])
                 ->name('roadmap.complete');
+
+            Route::post(
+                '/roadmap/{recommendation}/engagement/start',
+                [LearningRoadmapController::class, 'engagementStart']
+            )
+                ->name('roadmap.engagement.start');
+
+            Route::post(
+                '/roadmap/engagement/{engagement}/heartbeat',
+                [LearningRoadmapController::class, 'engagementHeartbeat']
+            )
+                ->name('roadmap.engagement.heartbeat');
+
+            Route::post(
+                '/roadmap/engagement/{engagement}/end',
+                [LearningRoadmapController::class, 'engagementEnd']
+            )
+                ->name('roadmap.engagement.end');
         });
 
         Route::get('/student/classroom/{id}/live-quizzes', function ($id) {
@@ -339,6 +358,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::patch('/{experiment}/participants/{participant}/consent', 'consent')->name('participants.consent');
                 Route::delete('/{experiment}/participants/{participant}', 'removeParticipant')->name('participants.destroy');
             });
+            Route::get('/local-quiz-simulator', [LocalQuizSimulatorController::class, 'index'])
+                ->name('local-quiz-simulator.index');
+            Route::post('/local-quiz-simulator', [LocalQuizSimulatorController::class, 'store'])
+                ->name('local-quiz-simulator.store');
+            Route::post('/local-quiz-simulator/simulate', [LocalQuizSimulatorController::class, 'simulate'])
+                ->name('local-quiz-simulator.simulate');
+            Route::delete('/local-quiz-simulator/reset', [LocalQuizSimulatorController::class, 'reset'])
+                ->name('local-quiz-simulator.reset');
+
         });
 
         // =========================================================================

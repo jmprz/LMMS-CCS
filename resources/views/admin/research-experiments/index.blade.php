@@ -1,6 +1,17 @@
 <x-app-layout>
     <x-slot name="header"></x-slot>
-    <div class="fixed inset-0 flex bg-gray-100 overflow-hidden" x-data="{ sidebarOpen: false }">
+    <div class="fixed inset-0 flex bg-gray-100 overflow-hidden"
+        x-data="{
+            sidebarOpen: false,
+            createOpen: @js($errors->any() && old('_form') === 'create'),
+            settingsOpen: @js($errors->any() && old('_form') === 'settings'),
+            groupOpen: false,
+            assessmentOpen: false,
+            activeSection: 'configuration',
+            consentParticipant: null,
+            consentName: '',
+            consentAction: 'consented'
+        }">
 
         <!-- Mobile Sidebar Backdrop Overlay -->
         <div x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false"
@@ -62,6 +73,13 @@
                                 <i class="ri-flask-line mr-3 text-lg"></i>
                     Research Experiment
                 </a>
+                 @if(app()->environment(['local', 'testing']))
+                    <a href="{{ route('admin.local-quiz-simulator.index') }}"
+                        class="flex items-center rounded-xl px-4 py-2.5 text-xs font-bold {{ request()->routeIs('admin.local-quiz-simulator.*') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 hover:bg-gray-100' }}">
+                        <i class="ri-test-tube-line mr-3 text-lg"></i>
+                        Local Quiz Simulator
+                    </a>
+                @endif
             </nav>
 
             <div class="p-4 border-t border-gray-200 bg-gray-50/50 relative flex-shrink-0" x-data="{ open: false }"
@@ -122,6 +140,31 @@
                     <form method="GET" action="{{ route('admin.research-experiments.index') }}" class="min-w-0 flex-1 sm:max-w-lg"><label for="experiment-picker" class="mb-1 block text-[10px] font-black uppercase tracking-widest text-gray-400">Select Experiment</label><select id="experiment-picker" name="experiment" onchange="this.form.submit()" class="w-full rounded-xl border-gray-200 text-sm font-semibold"><option value="">Most recent experiment</option>@foreach($experiments as $item)<option value="{{ $item->id }}" @selected($experiment && $experiment->id === $item->id)>{{ $item->title }} ({{ ucfirst($item->status) }})</option>@endforeach</select></form>
                     @if($experiment)<span class="rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest {{ $experiment->status === 'active' ? 'bg-green-50 text-green-700' : ($experiment->status === 'paused' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600') }}">{{ $experiment->status }}</span>@endif
                 </div>
+
+                @if($experiment)
+                    <div class="sticky top-[80px] z-20 rounded-2xl border border-gray-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+                        <div class="flex gap-2 overflow-x-auto">
+                            @foreach([
+                                ['key' => 'configuration', 'label' => 'Configuration', 'icon' => 'ri-settings-3-line'],
+                                ['key' => 'groups', 'label' => 'Research Groups', 'icon' => 'ri-group-line'],
+                                ['key' => 'assessments', 'label' => 'Assessments', 'icon' => 'ri-survey-line'],
+                                ['key' => 'engagement', 'label' => 'Engagement', 'icon' => 'ri-eye-line'],
+                                ['key' => 'results', 'label' => 'Results', 'icon' => 'ri-bar-chart-grouped-line'],
+                            ] as $tab)
+                                <button type="button"
+                                    @click="activeSection='{{ $tab['key'] }}'"
+                                    :class="activeSection === '{{ $tab['key'] }}'
+                                        ? 'bg-[#383838] text-white shadow-sm'
+                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'"
+                                    class="flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition">
+                                    <i class="{{ $tab['icon'] }} text-sm"></i>
+                                    {{ $tab['label'] }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 @if(!$experiment)
                     <div class="rounded-3xl border-2 border-dashed border-gray-200 bg-white px-6 py-24 text-center"><i class="ri-flask-line text-5xl text-gray-300"></i><h2 class="mt-4 text-xl font-black text-gray-800">No experiment configured</h2><p class="mt-2 text-sm text-gray-500">Create your experiment to begin mapping the study.</p><button @click="createOpen=true" class="mt-5 rounded-xl bg-[#383838] px-6 py-3 text-xs font-black uppercase text-white">Create Experiment</button></div>
                 @else
@@ -137,7 +180,7 @@
                         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><i class="{{ $stat['icon'] }} text-xl text-gray-400"></i><p class="mt-3 text-2xl font-black text-[#383838]">{{ $stat['value'] }}</p><p class="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400">{{ $stat['label'] }}</p></div>
                         @endforeach
                     </div>
-                    <section class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
+                    <section x-show="activeSection==='configuration'" x-cloak x-transition.opacity class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
                         <div class="flex flex-wrap items-start justify-between gap-4"><div><p class="text-[10px] font-black uppercase tracking-widest text-gray-400">01 / Configuration</p><h2 class="mt-1 text-xl font-black text-[#383838]">{{ $experiment->title }}</h2><p class="mt-2 text-sm text-gray-500">{{ $experiment->description ?: 'No description provided.' }}</p></div>@if($draft)<button @click="settingsOpen=true" class="rounded-xl border border-gray-200 px-4 py-2 text-xs font-black text-gray-700 hover:bg-gray-50"><i class="ri-edit-line mr-1"></i>Edit Settings</button>@endif</div>
                         <div class="mt-5 grid gap-3 border-t border-gray-100 pt-5 text-sm sm:grid-cols-3"><div><p class="text-[10px] font-black uppercase text-gray-400">Weak-topic threshold</p><p class="mt-1 font-black text-gray-800">{{ number_format((float)$experiment->weak_topic_threshold,1) }}%</p></div><div><p class="text-[10px] font-black uppercase text-gray-400">Start</p><p class="mt-1 font-bold text-gray-800">{{ $experiment->intervention_starts_at?->format('M d, Y g:i A') ?? 'Not specified' }}</p></div><div><p class="text-[10px] font-black uppercase text-gray-400">End</p><p class="mt-1 font-bold text-gray-800">{{ $experiment->intervention_ends_at?->format('M d, Y g:i A') ?? 'Not specified' }}</p></div></div>
                         <div class="mt-5 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-5"><span class="mr-2 text-[10px] font-black uppercase tracking-widest text-gray-400">Experiment status</span>
@@ -147,7 +190,7 @@
                             @if(!$draft)<span class="text-[11px] text-amber-700">Configuration is locked after activation. Withdrawal remains available.</span>@endif
                         </div>
                     </section>
-                    <section class="space-y-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-[10px] font-black uppercase tracking-widest text-gray-400">02 / Study allocation</p><h2 class="text-xl font-black text-[#383838]">Research Groups</h2></div>@if($draft)<button @click="groupOpen=true" class="rounded-xl bg-[#383838] px-4 py-2.5 text-xs font-black text-white"><i class="ri-add-line mr-1"></i> Assign Class</button>@endif</div>
+                    <section x-show="activeSection==='groups'" x-cloak x-transition.opacity class="space-y-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-[10px] font-black uppercase tracking-widest text-gray-400">02 / Study allocation</p><h2 class="text-xl font-black text-[#383838]">Research Groups</h2></div>@if($draft)<button @click="groupOpen=true" class="rounded-xl bg-[#383838] px-4 py-2.5 text-xs font-black text-white"><i class="ri-add-line mr-1"></i> Assign Class</button>@endif</div>
                         <div class="grid gap-4 xl:grid-cols-2">
                             @foreach(['experimental'=>$experimental,'control'=>$control] as $type=>$groupCollection)
                                 <div class="space-y-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6"><div class="flex flex-wrap items-center justify-between gap-2"><div><span class="rounded-lg px-2.5 py-1 text-[10px] font-black uppercase {{ $type === 'experimental' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-700' }}">{{ ucfirst($type) }} Group</span><h3 class="mt-2 text-lg font-black text-gray-900">{{ $groupCollection->count() }} class(es)</h3></div><span class="text-[10px] font-black uppercase {{ $type === 'experimental' && $experiment->status === 'active' ? 'text-green-700' : 'text-gray-400' }}">{{ $type === 'control' ? 'Personalized resources off' : ($experiment->status === 'active' ? 'Intervention enabled' : 'Intervention inactive') }}</span></div>
@@ -257,8 +300,238 @@
                             @endforeach
                         </div>
                     </section>
-                    <section class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7"><div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-[10px] font-black uppercase tracking-widest text-gray-400">03 / Existing quizzes</p><h2 class="text-xl font-black text-gray-900">Assessment Mapping</h2><p class="mt-2 text-xs text-gray-500">Use existing, topic-tagged quizzes. Each assigned class requires pretest and posttest mappings.</p></div>@if($draft)<button type="button" @click="assessmentOpen=true" class="rounded-xl bg-[#383838] px-4 py-2.5 text-xs font-black text-white"><i class="ri-add-line mr-1"></i> Map Quiz</button>@endif</div>
+                    <section x-show="activeSection==='assessments'" x-cloak x-transition.opacity class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7"><div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-[10px] font-black uppercase tracking-widest text-gray-400">03 / Existing quizzes</p><h2 class="text-xl font-black text-gray-900">Assessment Mapping</h2><p class="mt-2 text-xs text-gray-500">Use existing, topic-tagged quizzes. Each assigned class requires pretest and posttest mappings.</p></div>@if($draft)<button type="button" @click="assessmentOpen=true" class="rounded-xl bg-[#383838] px-4 py-2.5 text-xs font-black text-white"><i class="ri-add-line mr-1"></i> Map Quiz</button>@endif</div>
                         <div class="mt-5 overflow-x-auto"><table class="w-full min-w-[620px] text-left text-sm"><thead class="border-b border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400"><tr><th class="py-3">Quiz</th><th class="py-3">Class</th><th class="py-3">Purpose</th><th class="py-3">Version</th><th class="py-3 text-right">Action</th></tr></thead><tbody class="divide-y divide-gray-100">@forelse($experiment->assessments as $assessment)<tr><td class="py-4 font-black text-gray-800">{{ $assessment->quiz?->title ?? 'Quiz unavailable' }}</td><td class="py-4 text-xs text-gray-500">{{ $assessment->quiz?->labSession?->class_code }}</td><td class="py-4"><span class="rounded-lg px-2 py-1 text-[10px] font-black uppercase {{ $assessment->assessment_type === 'pretest' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700' }}">{{ $assessment->assessment_type }}</span></td><td class="py-4 text-xs text-gray-500">{{ $assessment->assessment_version ?? '—' }}</td><td class="py-4 text-right">@if($draft)<form method="POST" action="{{ route('admin.research-experiments.assessments.destroy',[$experiment,$assessment]) }}" onsubmit="return confirm('Remove only the study mapping? The quiz and its attempts will be kept.')">@csrf @method('DELETE')<button class="text-xs font-black text-red-600">Unmap</button></form>@else<span class="text-[10px] text-gray-400">Locked</span>@endif</td></tr>@empty<tr><td colspan="5" class="py-12 text-center text-sm text-gray-400">No assessment mappings yet.</td></tr>@endforelse</tbody></table></div>
+                    </section>
+                    <section x-show="activeSection==='engagement'" x-cloak x-transition.opacity class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">04 / Intervention monitoring</p>
+                                <h2 class="text-xl font-black text-gray-900">Recommendation Engagement</h2>
+                                <p class="mt-2 max-w-3xl text-xs text-gray-500">
+                                    Research-facing engagement data for personalized resources. Active time records measurable interaction with the LMMS resource viewer; it should not be interpreted as proof of comprehension.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-gray-100 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-gray-600">
+                                Experimental recommendations
+                            </span>
+                        </div>
+
+                        @php
+                            $formatEngagementDuration = function ($seconds) {
+                                $seconds = (int) $seconds;
+                                if ($seconds <= 0) return '—';
+
+                                $hours = intdiv($seconds, 3600);
+                                $minutes = intdiv($seconds % 3600, 60);
+                                $secs = $seconds % 60;
+
+                                if ($hours > 0) return $hours . 'h ' . $minutes . 'm';
+                                if ($minutes > 0) return $minutes . 'm ' . $secs . 's';
+                                return $secs . 's';
+                            };
+                        @endphp
+
+                        <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
+                            @foreach([
+                                ['label' => 'Recommendations', 'value' => $engagementSummary['recommendations'], 'icon' => 'ri-route-line'],
+                                ['label' => 'Students engaged', 'value' => $engagementSummary['students_engaged'] . ' / ' . $engagementSummary['students_recommended'], 'icon' => 'ri-user-follow-line'],
+                                ['label' => 'Engagement rate', 'value' => number_format((float) $engagementSummary['engagement_rate'], 1) . '%', 'icon' => 'ri-percent-line'],
+                                ['label' => 'Total views', 'value' => $engagementSummary['total_views'], 'icon' => 'ri-eye-line'],
+                                ['label' => 'Active time', 'value' => $formatEngagementDuration($engagementSummary['active_seconds']), 'icon' => 'ri-time-line'],
+                            ] as $metric)
+                                <div class="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                                    <i class="{{ $metric['icon'] }} text-lg text-gray-400"></i>
+                                    <p class="mt-3 text-xl font-black text-gray-900">{{ $metric['value'] }}</p>
+                                    <p class="mt-1 text-[9px] font-black uppercase tracking-widest text-gray-400">{{ $metric['label'] }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="mt-6 overflow-x-auto rounded-2xl border border-gray-100">
+                            <table class="w-full min-w-[900px] text-left">
+                                <thead class="bg-gray-50 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3">Student</th>
+                                        <th class="px-4 py-3">Weak topic(s)</th>
+                                        <th class="px-4 py-3 text-center">Recommended</th>
+                                        <th class="px-4 py-3 text-center">Opened</th>
+                                        <th class="px-4 py-3 text-center">Views</th>
+                                        <th class="px-4 py-3 text-right">Active time</th>
+                                        <th class="px-4 py-3 text-right">Last viewed</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 bg-white text-xs">
+                                    @forelse($engagementRows as $row)
+                                        <tr class="hover:bg-gray-50/70">
+                                            <td class="px-4 py-4">
+                                                <p class="font-black text-gray-900">{{ $row->student_name }}</p>
+                                                <p class="mt-1 text-[10px] font-semibold text-gray-400">{{ $row->school_id ?: 'No school ID' }}</p>
+                                            </td>
+                                            <td class="max-w-xs px-4 py-4 text-gray-600">
+                                                {{ $row->weak_topics ?: '—' }}
+                                            </td>
+                                            <td class="px-4 py-4 text-center font-black text-gray-800">
+                                                {{ (int) $row->recommendations_count }}
+                                            </td>
+                                            <td class="px-4 py-4 text-center">
+                                                <span class="rounded-lg px-2.5 py-1 text-[10px] font-black
+                                                    {{ (int) $row->opened_resources_count > 0 ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                                                    {{ (int) $row->opened_resources_count }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-4 text-center font-bold text-gray-700">
+                                                {{ (int) $row->total_views }}
+                                            </td>
+                                            <td class="px-4 py-4 text-right font-mono font-black text-gray-800">
+                                                {{ $formatEngagementDuration($row->active_seconds) }}
+                                            </td>
+                                            <td class="px-4 py-4 text-right text-[10px] font-semibold text-gray-500">
+                                                {{ $row->last_viewed_at ? \Carbon\Carbon::parse($row->last_viewed_at)->format('M d, Y g:i A') : 'Never' }}
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="px-6 py-14 text-center">
+                                                <i class="ri-eye-off-line text-3xl text-gray-200"></i>
+                                                <p class="mt-3 text-xs font-black uppercase tracking-widest text-gray-400">No recommendation engagement yet</p>
+                                                <p class="mx-auto mt-2 max-w-xl text-xs text-gray-400">
+                                                    Once eligible experimental students receive and open personalized resources, their viewing activity will appear here.
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section x-show="activeSection==='results'" x-cloak x-transition.opacity class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">05 / Simulation results</p>
+                                <h2 class="text-xl font-black text-gray-900">Pretest vs Posttest Results</h2>
+                                <p class="mt-2 max-w-3xl text-xs text-gray-500">
+                                    Displays the latest recorded attempt for each mapped pretest and posttest. Score change is shown in percentage points. These values are suitable for checking the simulation pipeline; synthetic runs must not be treated as thesis respondent results.
+                                </p>
+                            </div>
+                        </div>
+
+                        @php
+                            $formatResultDuration = function ($seconds) {
+                                $seconds = (int) $seconds;
+                                if ($seconds <= 0) return '—';
+                                $hours = intdiv($seconds, 3600);
+                                $minutes = intdiv($seconds % 3600, 60);
+                                $secs = $seconds % 60;
+                                if ($hours > 0) return $hours . 'h ' . $minutes . 'm';
+                                if ($minutes > 0) return $minutes . 'm ' . $secs . 's';
+                                return $secs . 's';
+                            };
+                        @endphp
+
+                        <div class="mt-6 grid gap-4 lg:grid-cols-2">
+                            @foreach(['experimental' => 'Experimental Group', 'control' => 'Control Group'] as $key => $label)
+                                @php $summary = $resultSummary[$key]; @endphp
+                                <div class="rounded-2xl border border-gray-100 bg-gray-50/70 p-5">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p class="text-[10px] font-black uppercase tracking-widest {{ $key === 'experimental' ? 'text-green-700' : 'text-gray-500' }}">{{ $label }}</p>
+                                            <p class="mt-1 text-xs text-gray-400">{{ $summary['students'] }} student(s) with both assessments</p>
+                                        </div>
+                                        <span class="rounded-lg px-2.5 py-1 text-[9px] font-black uppercase {{ $key === 'experimental' ? 'bg-green-50 text-green-700' : 'bg-white text-gray-600 border border-gray-200' }}">
+                                            {{ $key }}
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-5 grid grid-cols-3 gap-3">
+                                        <div class="rounded-xl bg-white p-4">
+                                            <p class="text-lg font-black text-gray-900">{{ $summary['pretest_avg'] !== null ? number_format($summary['pretest_avg'], 1) . '%' : '—' }}</p>
+                                            <p class="mt-1 text-[9px] font-black uppercase tracking-widest text-gray-400">Avg pretest</p>
+                                        </div>
+                                        <div class="rounded-xl bg-white p-4">
+                                            <p class="text-lg font-black text-gray-900">{{ $summary['posttest_avg'] !== null ? number_format($summary['posttest_avg'], 1) . '%' : '—' }}</p>
+                                            <p class="mt-1 text-[9px] font-black uppercase tracking-widest text-gray-400">Avg posttest</p>
+                                        </div>
+                                        <div class="rounded-xl bg-white p-4">
+                                            <p class="text-lg font-black {{ ($summary['avg_change'] ?? 0) > 0 ? 'text-green-700' : (($summary['avg_change'] ?? 0) < 0 ? 'text-red-600' : 'text-gray-900') }}">
+                                                {{ $summary['avg_change'] !== null ? (($summary['avg_change'] > 0 ? '+' : '') . number_format($summary['avg_change'], 1) . ' pp') : '—' }}
+                                            </p>
+                                            <p class="mt-1 text-[9px] font-black uppercase tracking-widest text-gray-400">Avg change</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="mt-6 overflow-x-auto rounded-2xl border border-gray-100">
+                            <table class="w-full min-w-[1100px] text-left">
+                                <thead class="bg-gray-50 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3">Student</th>
+                                        <th class="px-4 py-3">Group</th>
+                                        <th class="px-4 py-3 text-center">Pretest</th>
+                                        <th class="px-4 py-3 text-center">Posttest</th>
+                                        <th class="px-4 py-3 text-center">Change</th>
+                                        <th class="px-4 py-3 text-center">Recommendations</th>
+                                        <th class="px-4 py-3 text-center">Opened</th>
+                                        <th class="px-4 py-3 text-center">Views</th>
+                                        <th class="px-4 py-3 text-right">Active time</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 bg-white text-xs">
+                                    @forelse($resultRows as $row)
+                                        <tr class="hover:bg-gray-50/70">
+                                            <td class="px-4 py-4">
+                                                <p class="font-black text-gray-900">{{ $row->student_name }}</p>
+                                                <p class="mt-1 text-[10px] font-semibold text-gray-400">{{ $row->school_id ?: 'No school ID' }}</p>
+                                            </td>
+                                            <td class="px-4 py-4">
+                                                <span class="rounded-lg px-2.5 py-1 text-[9px] font-black uppercase {{ $row->group_type === 'experimental' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600' }}">
+                                                    {{ $row->group_type }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-4 text-center font-black text-gray-800">
+                                                {{ $row->pretest_percentage !== null ? number_format($row->pretest_percentage, 1) . '%' : '—' }}
+                                            </td>
+                                            <td class="px-4 py-4 text-center font-black text-gray-800">
+                                                {{ $row->posttest_percentage !== null ? number_format($row->posttest_percentage, 1) . '%' : '—' }}
+                                            </td>
+                                            <td class="px-4 py-4 text-center font-black
+                                                {{ ($row->change_percentage_points ?? 0) > 0 ? 'text-green-700' : (($row->change_percentage_points ?? 0) < 0 ? 'text-red-600' : 'text-gray-500') }}">
+                                                @if($row->change_percentage_points !== null)
+                                                    {{ $row->change_percentage_points > 0 ? '+' : '' }}{{ number_format($row->change_percentage_points, 1) }} pp
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+
+                                            @if($row->group_type === 'experimental')
+                                                <td class="px-4 py-4 text-center font-bold text-gray-700">{{ $row->recommendations_count }}</td>
+                                                <td class="px-4 py-4 text-center font-bold text-gray-700">{{ $row->opened_resources_count }}</td>
+                                                <td class="px-4 py-4 text-center font-bold text-gray-700">{{ $row->total_views }}</td>
+                                                <td class="px-4 py-4 text-right font-mono font-black text-gray-800">{{ $formatResultDuration($row->active_seconds) }}</td>
+                                            @else
+                                                <td class="px-4 py-4 text-center text-gray-300">—</td>
+                                                <td class="px-4 py-4 text-center text-gray-300">—</td>
+                                                <td class="px-4 py-4 text-center text-gray-300">—</td>
+                                                <td class="px-4 py-4 text-right text-gray-300">—</td>
+                                            @endif
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="9" class="px-6 py-14 text-center">
+                                                <i class="ri-bar-chart-grouped-line text-3xl text-gray-200"></i>
+                                                <p class="mt-3 text-xs font-black uppercase tracking-widest text-gray-400">No mapped assessment results yet</p>
+                                                <p class="mx-auto mt-2 max-w-xl text-xs text-gray-400">
+                                                    Run the mapped pretest and posttest simulations for consented participants. Results will appear here automatically.
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </section>
                 @endif
             </div>

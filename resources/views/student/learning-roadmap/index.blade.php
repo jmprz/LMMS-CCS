@@ -26,6 +26,140 @@
 
     <div id="dashboard-root" class="fixed inset-x-0 bottom-0 top-20 flex bg-gray-50 overflow-hidden" x-data="{ 
     sidebarOpen: false,
+    search: '',
+    status: 'all',
+    viewerOpen: false,
+    viewerTitle: '',
+    viewerType: '',
+    viewerUrl: '',
+    viewerSource: '',
+    engagementId: null,
+    activeSeconds: 0,
+    secondTimer: null,
+    heartbeatTimer: null,
+
+    init() {
+        window.addEventListener('beforeunload', () => this.flushEngagement());
+    },
+
+    async openRecommendation(recommendationId) {
+        if (this.viewerOpen) {
+            await this.closeRecommendation(false);
+        }
+
+        try {
+            const response = await fetch(`{{ url('/student/roadmap') }}/${recommendationId}/engagement/start`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                }
+            });
+
+            if (!response.ok) throw new Error('Unable to open the recommended resource.');
+
+            const data = await response.json();
+            this.engagementId = data.engagement_id;
+            this.viewerTitle = data.resource.title;
+            this.viewerType = data.resource.type;
+            this.viewerUrl = data.resource.url;
+            this.viewerSource = data.resource.source;
+            this.activeSeconds = 0;
+            this.viewerOpen = true;
+            this.startEngagementTimers();
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Unable to open resource.');
+        }
+    },
+
+    startEngagementTimers() {
+        this.stopEngagementTimers();
+
+        this.secondTimer = setInterval(() => {
+            if (this.viewerOpen && document.visibilityState === 'visible') {
+                this.activeSeconds++;
+            }
+        }, 1000);
+
+        this.heartbeatTimer = setInterval(() => {
+            this.sendHeartbeat();
+        }, 15000);
+    },
+
+    stopEngagementTimers() {
+        if (this.secondTimer) clearInterval(this.secondTimer);
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.secondTimer = null;
+        this.heartbeatTimer = null;
+    },
+
+    async sendHeartbeat() {
+        if (!this.engagementId) return;
+
+        try {
+            await fetch(`{{ url('/student/roadmap/engagement') }}/${this.engagementId}/heartbeat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                },
+                body: JSON.stringify({ duration_seconds: this.activeSeconds }),
+            });
+        } catch (error) {
+            console.warn('Recommendation engagement heartbeat failed.', error);
+        }
+    },
+
+    flushEngagement() {
+        if (!this.engagementId) return;
+        const form = new FormData();
+        form.append('_token', document.querySelector('meta[name=csrf-token]').content);
+        form.append('duration_seconds', this.activeSeconds);
+        navigator.sendBeacon(`{{ url('/student/roadmap/engagement') }}/${this.engagementId}/end`, form);
+    },
+
+    async closeRecommendation(refresh = true) {
+        if (!this.viewerOpen && !this.engagementId) return;
+
+        this.stopEngagementTimers();
+        const id = this.engagementId;
+        const seconds = this.activeSeconds;
+
+        this.viewerOpen = false;
+        this.viewerUrl = '';
+        this.engagementId = null;
+
+        if (id) {
+            try {
+                await fetch(`{{ url('/student/roadmap/engagement') }}/${id}/end`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    },
+                    body: JSON.stringify({ duration_seconds: seconds }),
+                });
+            } catch (error) {
+                console.warn('Recommendation engagement close failed.', error);
+            }
+        }
+
+        if (refresh) window.location.reload();
+    },
+
+    formatEngagement(seconds) {
+        seconds = Number(seconds || 0);
+        if (seconds < 60) return `${seconds}s`;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins < 60) return `${mins}m ${secs}s`;
+        const hrs = Math.floor(mins / 60);
+        return `${hrs}h ${mins % 60}m`;
+    },
+
     classes: @js($joinedClasses->map(fn($item) => [
                 'id' => $item->id,
                 'name' => $item->subject_name,
@@ -296,8 +430,8 @@
                             <p class="mt-2 text-2xl font-black text-amber-600">{{ $stats['pending'] }}</p>
                         </div>
                         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                            <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Completed</p>
-                            <p class="mt-2 text-2xl font-black text-green-600">{{ $stats['completed'] }}</p>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Opened</p>
+                            <p class="mt-2 text-2xl font-black text-green-600">{{ $stats['opened'] }}</p>
                         </div>
                         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                             <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Learning Topics</p>
@@ -314,9 +448,8 @@
                             </div>
                             <select x-model="status" class="rounded-xl border-gray-200 bg-gray-50 text-sm font-bold text-gray-600">
                                 <option value="all">All Status</option>
-                                <option value="recommended">Recommended</option>
+                                <option value="recommended">Not Opened</option>
                                 <option value="opened">Opened</option>
-                                <option value="completed">Completed</option>
                             </select>
                         </div>
                     </div>
@@ -328,6 +461,14 @@
                                 $resourceTitle = $resource?->title ?? 'Unavailable resource';
                                 $resourceType = $resource?->type ?? 'resource';
                                 $sourceLabel = $recommendation->learning_resource_id ? 'Resource Library' : 'Professor Material';
+                                $viewCount = $recommendation->engagements->count();
+                                $totalSeconds = (int) $recommendation->engagements->sum('duration_seconds');
+                                $engagementStatus = $viewCount > 0 ? 'opened' : 'recommended';
+                                $durationMinutes = intdiv($totalSeconds, 60);
+                                $durationRemainder = $totalSeconds % 60;
+                                $durationLabel = $durationMinutes > 0
+                                    ? $durationMinutes . 'm ' . $durationRemainder . 's'
+                                    : $durationRemainder . 's';
                                 $searchText = strtolower(implode(' ', [
                                     $recommendation->topic?->name,
                                     $recommendation->labSession?->subject_name,
@@ -338,7 +479,7 @@
                             @endphp
 
                             <article
-                                x-show="('{{ $searchText }}'.includes(search.toLowerCase())) && (status === 'all' || status === '{{ $recommendation->status }}')"
+                                x-show="('{{ $searchText }}'.includes(search.toLowerCase())) && (status === 'all' || status === '{{ $engagementStatus }}')"
                                 x-transition
                                 class="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm transition hover:border-gray-400 hover:shadow-md">
 
@@ -347,8 +488,8 @@
                                         <i class="{{ $resourceType === 'pdf' ? 'ri-file-pdf-line' : ($resourceType === 'youtube' ? 'ri-youtube-line' : 'ri-links-line') }} text-xl"></i>
                                     </div>
                                     <span class="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-wider
-                                        {{ $recommendation->status === 'completed' ? 'bg-green-50 text-green-700' : ($recommendation->status === 'opened' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700') }}">
-                                        {{ $recommendation->status }}
+                                        {{ $engagementStatus === 'opened' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700' }}">
+                                        {{ $engagementStatus === 'opened' ? 'Opened' : 'Recommended' }}
                                     </span>
                                 </div>
 
@@ -372,21 +513,11 @@
                                 @endif
 
                                 <div class="mt-5 flex gap-2 border-t border-gray-100 pt-4">
-                                    <a href="{{ route('student.roadmap.open', $recommendation) }}" target="_blank" rel="noopener noreferrer"
-                                       class="flex-1 rounded-xl bg-[#383838] px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-white hover:bg-black">
-                                        <i class="ri-external-link-line mr-1"></i> Open Resource
-                                    </a>
-
-                                    @if($recommendation->status !== 'completed')
-                                        <form method="POST" action="{{ route('student.roadmap.complete', $recommendation) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" title="Mark completed"
-                                                    class="h-full rounded-xl border border-gray-200 px-4 text-gray-600 hover:bg-green-50 hover:text-green-700">
-                                                <i class="ri-checkbox-circle-line text-lg"></i>
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <button type="button"
+                                        @click="openRecommendation({{ $recommendation->id }})"
+                                        class="flex-1 rounded-xl bg-[#383838] px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-white hover:bg-black">
+                                        <i class="ri-book-open-line mr-1"></i> Open Resource
+                                    </button>
                                 </div>
                             </article>
                         @empty
@@ -402,5 +533,53 @@
                 @endif
             </div>
         </main>
+
+        {{-- Recommendation viewer: tracks active-visible engagement time automatically. --}}
+        <template x-teleport="body">
+        <div x-show="viewerOpen" x-cloak 
+            @keydown.escape.window="closeRecommendation()"
+            class="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+            <div class="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl"
+                @click.outside="closeRecommendation()">
+                <div class="flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-7">
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-gray-400" x-text="viewerSource"></p>
+                        <h2 class="truncate text-lg font-black text-gray-900" x-text="viewerTitle"></h2>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="rounded-xl bg-green-50 px-3 py-2 text-right">
+                            <p class="text-[8px] font-black uppercase tracking-widest text-green-700">Active viewing</p>
+                            <p class="text-xs font-black text-green-800" x-text="formatEngagement(activeSeconds)"></p>
+                        </div>
+                        <button type="button" @click="closeRecommendation()"
+                            class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-black hover:text-white">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative flex-1 bg-gray-100">
+                    <iframe x-show="viewerUrl" :src="viewerUrl"
+                        class="h-full w-full border-0 bg-white"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+
+                    <div x-show="!viewerUrl" class="flex h-full items-center justify-center text-sm font-bold text-gray-400">
+                        Resource unavailable.
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-white px-5 py-3 sm:px-7">
+                    <p class="text-[10px] font-semibold text-gray-400">
+                        Time is counted while this LMMS viewer is visible. Switching tabs pauses the active timer.
+                    </p>
+                    <a :href="viewerUrl" target="_blank" rel="noopener noreferrer"
+                        class="text-[10px] font-black uppercase tracking-widest text-gray-600 underline hover:text-black">
+                        Open externally
+                    </a>
+                </div>
+            </div>
+        </div>
+        </template>
     </div>
 </x-app-layout>

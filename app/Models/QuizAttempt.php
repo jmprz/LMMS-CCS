@@ -13,7 +13,8 @@ class QuizAttempt extends Model
         'score',
         'total_questions',
         'total_points',
-        'time_spent'
+        'time_spent',
+        'is_simulated'
     ];
 
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo

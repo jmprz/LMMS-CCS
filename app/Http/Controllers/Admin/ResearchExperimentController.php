@@ -30,6 +30,33 @@ class ResearchExperimentController extends Controller
         $quizzes = Quiz::with('labSession')->whereNotNull('learning_topic_id')
             ->orderBy('subject_id')->orderBy('title')->get();
         $studentsByClass = collect();
+
+        $engagementSummary = [
+            'recommendations' => 0,
+            'students_recommended' => 0,
+            'students_engaged' => 0,
+            'total_views' => 0,
+            'active_seconds' => 0,
+            'engagement_rate' => 0,
+        ];
+        $engagementRows = collect();
+
+        $resultSummary = [
+            'experimental' => [
+                'students' => 0,
+                'pretest_avg' => null,
+                'posttest_avg' => null,
+                'avg_change' => null,
+            ],
+            'control' => [
+                'students' => 0,
+                'pretest_avg' => null,
+                'posttest_avg' => null,
+                'avg_change' => null,
+            ],
+        ];
+        $resultRows = collect();
+
         if ($experiment) {
             $classIds = $experiment->groups->pluck('lab_session_id');
             $studentsByClass = DB::table('class_student as cs')
@@ -40,9 +67,167 @@ class ResearchExperimentController extends Controller
                 ->orderBy('u.last_name')->orderBy('u.first_name')->get()
                 ->unique(fn ($item) => $item->lab_session_id . ':' . $item->id)
                 ->groupBy('lab_session_id');
+
+            // Recommendation engagement analytics are research-facing only.
+            // A "view" is one row in recommendation_engagements.
+            // duration_seconds is active viewer time captured by the roadmap tracker.
+            $recommendationBase = DB::table('learning_recommendations as lr')
+                ->where('lr.research_experiment_id', $experiment->id);
+
+            $engagementSummary['recommendations'] = (clone $recommendationBase)->count();
+            $engagementSummary['students_recommended'] = (clone $recommendationBase)
+                ->distinct()
+                ->count('lr.user_id');
+
+            $engagementTotals = DB::table('recommendation_engagements as re')
+                ->join('learning_recommendations as lr', 'lr.id', '=', 're.learning_recommendation_id')
+                ->where('lr.research_experiment_id', $experiment->id)
+                ->selectRaw('COUNT(re.id) as total_views')
+                ->selectRaw('COUNT(DISTINCT re.user_id) as students_engaged')
+                ->selectRaw('COALESCE(SUM(re.duration_seconds), 0) as active_seconds')
+                ->first();
+
+            $engagementSummary['total_views'] = (int) ($engagementTotals->total_views ?? 0);
+            $engagementSummary['students_engaged'] = (int) ($engagementTotals->students_engaged ?? 0);
+            $engagementSummary['active_seconds'] = (int) ($engagementTotals->active_seconds ?? 0);
+
+            if ($engagementSummary['students_recommended'] > 0) {
+                $engagementSummary['engagement_rate'] = round(
+                    ($engagementSummary['students_engaged'] / $engagementSummary['students_recommended']) * 100,
+                    1
+                );
+            }
+
+            $engagementRows = DB::table('learning_recommendations as lr')
+                ->join('users as u', 'u.id', '=', 'lr.user_id')
+                ->leftJoin('learning_topics as lt', 'lt.id', '=', 'lr.learning_topic_id')
+                ->leftJoin('recommendation_engagements as re', 're.learning_recommendation_id', '=', 'lr.id')
+                ->where('lr.research_experiment_id', $experiment->id)
+                ->groupBy('u.id', 'u.name', 'u.school_id')
+                ->select([
+                    'u.id as user_id',
+                    'u.name as student_name',
+                    'u.school_id',
+                ])
+                ->selectRaw('COUNT(DISTINCT lr.id) as recommendations_count')
+                ->selectRaw('COUNT(DISTINCT CASE WHEN re.id IS NOT NULL THEN lr.id END) as opened_resources_count')
+                ->selectRaw('COUNT(re.id) as total_views')
+                ->selectRaw('COALESCE(SUM(re.duration_seconds), 0) as active_seconds')
+                ->selectRaw('MAX(re.opened_at) as last_viewed_at')
+                ->selectRaw("GROUP_CONCAT(DISTINCT lt.name ORDER BY lt.name SEPARATOR ', ') as weak_topics")
+                ->orderByDesc('active_seconds')
+                ->orderBy('u.name')
+                ->get();
+
+            // -------------------------------------------------------------
+            // PRETEST / POSTTEST RESULT VIEW
+            // -------------------------------------------------------------
+            // Use the latest attempt for each student + mapped quiz pair.
+            $latestAttemptIds = DB::table('quiz_attempts')
+                ->select('user_id', 'quiz_id')
+                ->selectRaw('MAX(id) as id')
+                ->groupBy('user_id', 'quiz_id');
+
+            $assessmentAttempts = DB::table('research_assessments as ra')
+                ->join('quizzes as q', 'q.id', '=', 'ra.quiz_id')
+                ->join('research_groups as rg', function ($join) use ($experiment) {
+                    $join->on('rg.lab_session_id', '=', 'q.subject_id')
+                        ->where('rg.research_experiment_id', '=', $experiment->id);
+                })
+                ->join('research_participants as rp', function ($join) {
+                    $join->on('rp.research_group_id', '=', 'rg.id')
+                        ->where('rp.consent_status', '=', 'consented');
+                })
+                ->join('users as u', 'u.id', '=', 'rp.user_id')
+                ->leftJoinSub($latestAttemptIds, 'latest_attempts', function ($join) {
+                    $join->on('latest_attempts.user_id', '=', 'u.id')
+                        ->on('latest_attempts.quiz_id', '=', 'q.id');
+                })
+                ->leftJoin('quiz_attempts as qa', 'qa.id', '=', 'latest_attempts.id')
+                ->where('ra.research_experiment_id', $experiment->id)
+                ->select([
+                    'u.id as user_id',
+                    'u.name as student_name',
+                    'u.school_id',
+                    'rg.group_type',
+                    'rg.lab_session_id',
+                    'ra.assessment_type',
+                    'q.id as quiz_id',
+                    'q.title as quiz_title',
+                    'qa.score',
+                    'qa.total_points',
+                    'qa.created_at as attempted_at',
+                ])
+                ->orderBy('u.name')
+                ->get();
+
+            $engagementByUser = $engagementRows->keyBy('user_id');
+
+            $resultRows = $assessmentAttempts
+                ->groupBy(fn ($row) => $row->user_id . ':' . $row->group_type . ':' . $row->lab_session_id)
+                ->map(function ($items) use ($engagementByUser) {
+                    $first = $items->first();
+                    $pre = $items->firstWhere('assessment_type', 'pretest');
+                    $post = $items->firstWhere('assessment_type', 'posttest');
+
+                    $prePct = ($pre && $pre->score !== null && (float) $pre->total_points > 0)
+                        ? round(((float) $pre->score / (float) $pre->total_points) * 100, 1)
+                        : null;
+
+                    $postPct = ($post && $post->score !== null && (float) $post->total_points > 0)
+                        ? round(((float) $post->score / (float) $post->total_points) * 100, 1)
+                        : null;
+
+                    $engagement = $engagementByUser->get($first->user_id);
+
+                    return (object) [
+                        'user_id' => $first->user_id,
+                        'student_name' => $first->student_name,
+                        'school_id' => $first->school_id,
+                        'group_type' => $first->group_type,
+                        'lab_session_id' => $first->lab_session_id,
+                        'pretest_percentage' => $prePct,
+                        'posttest_percentage' => $postPct,
+                        'change_percentage_points' => ($prePct !== null && $postPct !== null)
+                            ? round($postPct - $prePct, 1)
+                            : null,
+                        'pretest_quiz' => $pre->quiz_title ?? null,
+                        'posttest_quiz' => $post->quiz_title ?? null,
+                        'pretest_attempted_at' => $pre->attempted_at ?? null,
+                        'posttest_attempted_at' => $post->attempted_at ?? null,
+                        'recommendations_count' => (int) ($engagement->recommendations_count ?? 0),
+                        'opened_resources_count' => (int) ($engagement->opened_resources_count ?? 0),
+                        'total_views' => (int) ($engagement->total_views ?? 0),
+                        'active_seconds' => (int) ($engagement->active_seconds ?? 0),
+                    ];
+                })
+                ->values();
+
+            foreach (['experimental', 'control'] as $groupType) {
+                $completed = $resultRows
+                    ->where('group_type', $groupType)
+                    ->filter(fn ($row) => $row->pretest_percentage !== null && $row->posttest_percentage !== null);
+
+                $resultSummary[$groupType]['students'] = $completed->count();
+
+                if ($completed->isNotEmpty()) {
+                    $resultSummary[$groupType]['pretest_avg'] = round($completed->avg('pretest_percentage'), 1);
+                    $resultSummary[$groupType]['posttest_avg'] = round($completed->avg('posttest_percentage'), 1);
+                    $resultSummary[$groupType]['avg_change'] = round($completed->avg('change_percentage_points'), 1);
+                }
+            }
         }
+
         return view('admin.research-experiments.index', compact(
-            'experiments', 'experiment', 'sessions', 'quizzes', 'studentsByClass'
+            'experiments',
+            'experiment',
+            'sessions',
+            'quizzes',
+            'studentsByClass',
+            'engagementSummary',
+            'engagementRows',
+            'resultSummary',
+            'resultRows'
         ));
     }
 

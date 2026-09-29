@@ -62,6 +62,13 @@
                                 <i class="ri-flask-line mr-3 text-lg"></i>
                     Research Experiment
                 </a>
+                 @if(app()->environment(['local', 'testing']))
+                    <a href="{{ route('admin.local-quiz-simulator.index') }}"
+                        class="flex items-center rounded-xl px-4 py-2.5 text-xs font-bold {{ request()->routeIs('admin.local-quiz-simulator.*') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 hover:bg-gray-100' }}">
+                        <i class="ri-test-tube-line mr-3 text-lg"></i>
+                        Local Quiz Simulator
+                    </a>
+                @endif
             </nav>
 
             <div class="p-4 border-t border-gray-200 bg-gray-50/50 relative flex-shrink-0" x-data="{ open: false }"
