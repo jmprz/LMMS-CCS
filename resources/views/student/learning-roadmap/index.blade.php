@@ -66,7 +66,13 @@
             this.viewerSource = data.resource.source;
             this.activeSeconds = 0;
             this.viewerOpen = true;
-            this.startEngagementTimers();
+
+            // PDF/YouTube can be viewed inside LMMS and timed.
+            // Normal external URLs may block iframe embedding (X-Frame-Options/CSP),
+            // so they are opened manually in a new tab and are not timed.
+            if (this.viewerType !== 'url') {
+                this.startEngagementTimers();
+            }
         } catch (error) {
             console.error(error);
             alert(error.message || 'Unable to open resource.');
@@ -148,6 +154,53 @@
         }
 
         if (refresh) window.location.reload();
+    },
+
+    async openExternalResource() {
+        if (!this.viewerUrl) return;
+
+        window.open(this.viewerUrl, '_blank', 'noopener,noreferrer');
+
+        // Record this as an opened recommendation, but do not claim
+        // active time once the student leaves LMMS.
+        await this.closeRecommendation();
+    },
+
+    embeddedViewerUrl() {
+        if (!this.viewerUrl) return '';
+
+        if (this.viewerType !== 'youtube') {
+            return this.viewerUrl;
+        }
+
+        try {
+            const url = new URL(this.viewerUrl);
+
+            if (url.hostname.includes('youtu.be')) {
+                const videoId = url.pathname.replace(/^\//, '').split('/')[0];
+                return videoId ? `https://www.youtube.com/embed/${videoId}` : this.viewerUrl;
+            }
+
+            if (url.hostname.includes('youtube.com')) {
+                if (url.pathname.startsWith('/embed/')) {
+                    return this.viewerUrl;
+                }
+
+                const videoId = url.searchParams.get('v');
+                if (videoId) {
+                    return `https://www.youtube.com/embed/${videoId}`;
+                }
+
+                const shortsMatch = url.pathname.match(/^\/shorts\/([^/?]+)/);
+                if (shortsMatch) {
+                    return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+                }
+            }
+        } catch (error) {
+            console.warn('Unable to normalize YouTube URL.', error);
+        }
+
+        return this.viewerUrl;
     },
 
     formatEngagement(seconds) {
@@ -547,7 +600,7 @@
                         <h2 class="truncate text-lg font-black text-gray-900" x-text="viewerTitle"></h2>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="rounded-xl bg-green-50 px-3 py-2 text-right">
+                        <div x-show="viewerType !== 'url'" class="rounded-xl bg-green-50 px-3 py-2 text-right">
                             <p class="text-[8px] font-black uppercase tracking-widest text-green-700">Active viewing</p>
                             <p class="text-xs font-black text-green-800" x-text="formatEngagement(activeSeconds)"></p>
                         </div>
@@ -559,10 +612,36 @@
                 </div>
 
                 <div class="relative flex-1 bg-gray-100">
-                    <iframe x-show="viewerUrl" :src="viewerUrl"
+                    {{-- PDF and YouTube resources stay inside the LMMS viewer. --}}
+                    <iframe
+                        x-show="viewerUrl && viewerType !== 'url'"
+                        :src="embeddedViewerUrl()"
                         class="h-full w-full border-0 bg-white"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen></iframe>
+
+                    {{-- Normal websites often refuse iframe embedding. --}}
+                    <div x-show="viewerUrl && viewerType === 'url'"
+                        class="flex h-full items-center justify-center p-6 sm:p-10">
+                        <div class="w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-7 text-center shadow-sm sm:p-10">
+                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-700">
+                                <i class="ri-external-link-line text-2xl"></i>
+                            </div>
+                            <h3 class="mt-5 text-lg font-black text-gray-900">External Resource</h3>
+                            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                                This website cannot be displayed safely inside LMMS. Open it in a new browser tab to continue.
+                            </p>
+                            <button type="button"
+                                @click="openExternalResource()"
+                                class="mt-6 inline-flex items-center justify-center rounded-xl bg-[#383838] px-6 py-3 text-[10px] font-black uppercase tracking-wider text-white hover:bg-black">
+                                <i class="ri-external-link-line mr-2 text-sm"></i>
+                                Open External Resource
+                            </button>
+                            <p class="mt-4 text-[10px] font-semibold text-gray-400">
+                                LMMS records that the resource was opened, but does not measure time spent on an external website.
+                            </p>
+                        </div>
+                    </div>
 
                     <div x-show="!viewerUrl" class="flex h-full items-center justify-center text-sm font-bold text-gray-400">
                         Resource unavailable.
@@ -570,10 +649,14 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-white px-5 py-3 sm:px-7">
-                    <p class="text-[10px] font-semibold text-gray-400">
+                    <p x-show="viewerType !== 'url'" class="text-[10px] font-semibold text-gray-400">
                         Time is counted while this LMMS viewer is visible. Switching tabs pauses the active timer.
                     </p>
-                    <a :href="viewerUrl" target="_blank" rel="noopener noreferrer"
+                    <p x-show="viewerType === 'url'" class="text-[10px] font-semibold text-gray-400">
+                        External websites open in a separate tab. LMMS records the open event only.
+                    </p>
+
+                    <a x-show="viewerType !== 'url'" :href="embeddedViewerUrl()" target="_blank" rel="noopener noreferrer"
                         class="text-[10px] font-black uppercase tracking-widest text-gray-600 underline hover:text-black">
                         Open externally
                     </a>
@@ -583,3 +666,4 @@
         </template>
     </div>
 </x-app-layout>
+ 
