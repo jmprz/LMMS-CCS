@@ -3,16 +3,12 @@
     <div class="fixed inset-0 flex bg-gray-100 overflow-hidden" x-data="{ sidebarOpen: false }">
 
         <!-- Mobile Sidebar Backdrop Overlay -->
-        <div x-show="sidebarOpen" 
-             x-transition.opacity 
-             @click="sidebarOpen = false"
-             class="fixed inset-0 bg-black/50 z-40 md:hidden" 
-             style="display: none;">
+        <div x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false"
+            class="fixed inset-0 bg-black/50 z-40 md:hidden" style="display: none;">
         </div>
 
         <!-- Fixed Sidebar -->
-        <aside
-            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
             class="fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-gray-300 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] transform transition-transform duration-300 ease-in-out md:translate-x-0">
             <nav class="mt-8 px-4 space-y-2 overflow-y-auto flex-1">
                 <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">System Admin</div>
@@ -35,6 +31,36 @@
                 <a href="{{ route('profile.edit') }}"
                     class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('profile.edit') ? 'bg-black text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
                     <i class="ri-settings-5-line mr-3 text-lg"></i> Settings
+                </a>
+
+                <div class="mx-4 my-4 border-t border-gray-100"></div>
+
+               <div class="px-4 text-[10px] font-black text-gray-400
+            uppercase tracking-widest mb-2">
+                    Learning Management
+                </div>
+
+                <a href="{{ route('admin.learning-topics.index') }}" class="flex items-center py-2.5 px-4 rounded-xl text-xs transition
+                {{ request()->routeIs('admin.learning-topics.*')
+                    ? 'bg-[#383838] text-white font-black'
+                    : 'text-gray-600 font-bold hover:bg-gray-100' }}">
+                                    <i class="ri-price-tag-3-line mr-3 text-lg"></i>
+                    Learning Topics
+                </a>
+
+                <a href="{{ route('admin.learning-resources.index') }}" class="flex items-center py-2.5 px-4 rounded-xl text-xs transition
+                {{ request()->routeIs('admin.learning-resources.*')
+                    ? 'bg-[#383838] text-white font-black'
+                    : 'text-gray-600 font-bold hover:bg-gray-100' }}">
+                                    <i class="ri-book-open-line mr-3 text-lg"></i>
+                    Resource Library
+                </a>
+                <a href="{{ route('admin.research-experiments.index') }}" class="flex items-center py-2.5 px-4 rounded-xl text-xs transition
+                {{ request()->routeIs('admin.research-experiments.*')
+                    ? 'bg-[#383838] text-white font-black'
+                    : 'text-gray-600 font-bold hover:bg-gray-100' }}">
+                                <i class="ri-flask-line mr-3 text-lg"></i>
+                    Research Experiment
                 </a>
             </nav>
 
@@ -82,7 +108,8 @@
 
         <main class="flex-1 overflow-y-auto h-full flex flex-col min-w-0">
             <!-- Mobile Header Toggle Bar -->
-            <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
+            <div
+                class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
                 <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                     <i class="ri-menu-2-line text-xl"></i>
                 </button>
@@ -151,9 +178,9 @@
                 @include('partials.dashboard-chart-panel', ['chartConfigs' => $chartConfigs])
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    <div class="col-span-1 lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between overflow-hidden" 
-                         x-data="{ 
+
+                    <div class="col-span-1 lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between overflow-hidden"
+                        x-data="{ 
                             search: '', 
                             programFilter: '', 
                             yearFilter: '',
@@ -168,26 +195,33 @@
                             <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                                 <div>
                                     <h2 class="font-bold text-lg text-gray-800 uppercase">Upcoming Class Schedule</h2>
-                                    <p class="text-xs text-gray-400 font-medium">Chronological roadmap of incoming lab periods</p>
+                                    <p class="text-xs text-gray-400 font-medium">Chronological roadmap of incoming lab
+                                        periods</p>
                                 </div>
-                                <span class="self-start text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wider">Pending Pipeline</span>
+                                <span
+                                    class="self-start text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wider">Pending
+                                    Pipeline</span>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                            <div
+                                class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                                 <div class="relative">
-                                    <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                                    <input type="text" x-model="search" placeholder="Search subject or code..." 
-                                           class="w-full pl-9 pr-4 py-1.5 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 font-medium placeholder-gray-400" />
+                                    <i
+                                        class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input type="text" x-model="search" placeholder="Search subject or code..."
+                                        class="w-full pl-9 pr-4 py-1.5 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 font-medium placeholder-gray-400" />
                                 </div>
                                 <div>
-                                    <select x-model="programFilter" class="w-full py-1.5 px-3 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 font-bold text-gray-600">
+                                    <select x-model="programFilter"
+                                        class="w-full py-1.5 px-3 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 font-bold text-gray-600">
                                         <option value="">All Programs / Courses</option>
                                         <option value="BSCS">BSCS (Computer Science)</option>
                                         <option value="BSIT">BSIT (Information Technology)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <select x-model="yearFilter" class="w-full py-1.5 px-3 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 font-bold text-gray-600">
+                                    <select x-model="yearFilter"
+                                        class="w-full py-1.5 px-3 text-xs bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 font-bold text-gray-600">
                                         <option value="">All Year Levels</option>
                                         <option value="1">1st Year</option>
                                         <option value="2">2nd Year</option>
@@ -200,7 +234,8 @@
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse min-w-[500px]">
                                     <thead>
-                                        <tr class="text-[11px] font-black text-gray-400 uppercase border-b border-gray-100 tracking-wider">
+                                        <tr
+                                            class="text-[11px] font-black text-gray-400 uppercase border-b border-gray-100 tracking-wider">
                                             <th class="pb-3 pl-1 w-1/3">Subject Name</th>
                                             <th class="pb-3 w-1/6">Class Code</th>
                                             <th class="pb-3 w-1/3">Day & Time</th>
@@ -217,25 +252,32 @@
                                                 <td class="py-3.5 pl-1 font-bold text-xs text-gray-800 leading-snug">
                                                     {{ $upcoming->subject_name }}
                                                 </td>
-                                                <td class="py-3.5 text-xs font-mono font-bold text-gray-500 uppercase tracking-tight">
+                                                <td
+                                                    class="py-3.5 text-xs font-mono font-bold text-gray-500 uppercase tracking-tight">
                                                     {{ $upcoming->class_code }}
                                                 </td>
                                                 <td class="py-3.5 text-xs text-gray-600 font-medium">
-                                                    <span class="inline-flex items-center gap-1.5 bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-bold text-[10px] uppercase">
-                                                        <i class="ri-calendar-event-line text-gray-400"></i>{{ $upcoming->schedule_day }}
+                                                    <span
+                                                        class="inline-flex items-center gap-1.5 bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-bold text-[10px] uppercase">
+                                                        <i
+                                                            class="ri-calendar-event-line text-gray-400"></i>{{ $upcoming->schedule_day }}
                                                     </span>
                                                     <span class="text-gray-400 mx-1">•</span>
-                                                    <span class="font-semibold text-gray-600">{{ $upcoming->schedule_time }}</span>
+                                                    <span
+                                                        class="font-semibold text-gray-600">{{ $upcoming->schedule_time }}</span>
                                                 </td>
                                                 <td class="py-3.5 pr-1 text-right text-xs font-black text-gray-700">
-                                                    <span class="bg-dark text-gray-800 border border-gray-200 px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-wider">
-                                                        {{ $upcoming->program }} - {{ $upcoming->year_level }}{{ $upcoming->section }}
+                                                    <span
+                                                        class="bg-dark text-gray-800 border border-gray-200 px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-wider">
+                                                        {{ $upcoming->program }} -
+                                                        {{ $upcoming->year_level }}{{ $upcoming->section }}
                                                     </span>
                                                 </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="4" class="text-center py-12 text-gray-400 italic text-xs font-medium bg-gray-50/30 rounded-xl">
+                                                <td colspan="4"
+                                                    class="text-center py-12 text-gray-400 italic text-xs font-medium bg-gray-50/30 rounded-xl">
                                                     <i class="ri-calendar-todo-line text-2xl text-gray-300 block mb-2"></i>
                                                     No upcoming classes found on database roster.
                                                 </td>
@@ -243,8 +285,11 @@
                                         @endforelse
 
                                         @if($hasUpcoming)
-                                            <tr x-cloak x-show="document.querySelectorAll('tbody tr[style*=\'display: none\']').length === {{ count($upcomingClasses) }}" class="border-none">
-                                                <td colspan="4" class="text-center py-12 text-gray-400 italic text-xs font-medium bg-gray-50/30 rounded-xl">
+                                            <tr x-cloak
+                                                x-show="document.querySelectorAll('tbody tr[style*=\'display: none\']').length === {{ count($upcomingClasses) }}"
+                                                class="border-none">
+                                                <td colspan="4"
+                                                    class="text-center py-12 text-gray-400 italic text-xs font-medium bg-gray-50/30 rounded-xl">
                                                     <i class="ri-filter-off-line text-2xl text-gray-300 block mb-2"></i>
                                                     No upcoming classes match your selected filter criteria.
                                                 </td>
@@ -257,7 +302,7 @@
                     </div>
 
                     <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between"
-                         x-data="{ 
+                        x-data="{ 
                             timeframe: 'all',
                             serverNow: {{ time() }},
                             checkLogTimeframe(logTimestamp) {
@@ -272,9 +317,11 @@
                             <div class="flex justify-between items-start gap-2 mb-4">
                                 <div>
                                     <h2 class="font-bold text-lg text-gray-800 uppercase">Student Monitoring Feed</h2>
-                                    <p class="text-xs text-gray-400 font-medium">Real-time behavior tracking telemetry</p>
+                                    <p class="text-xs text-gray-400 font-medium">Real-time behavior tracking telemetry
+                                    </p>
                                 </div>
-                                <select x-model="timeframe" class="py-1 px-2 text-[10px] font-black bg-gray-50 border border-gray-200 rounded-md uppercase tracking-wider text-gray-500 focus:outline-none">
+                                <select x-model="timeframe"
+                                    class="py-1 px-2 text-[10px] font-black bg-gray-50 border border-gray-200 rounded-md uppercase tracking-wider text-gray-500 focus:outline-none">
                                     <option value="all">All Logs</option>
                                     <option value="hour">Last 1 Hour</option>
                                     <option value="today">Today (24h)</option>
@@ -287,13 +334,15 @@
                                         $logTimestamp = $log->created_at ? $log->created_at->timestamp : time(); 
                                     @endphp
                                     <div x-show="checkLogTimeframe({{ $logTimestamp }})"
-                                         x-transition:enter="transition ease-out duration-150"
-                                         class="group p-3 rounded-xl bg-gray-50/40 hover:bg-gray-50 border border-gray-100 flex gap-3 transition">
-                                        
+                                        x-transition:enter="transition ease-out duration-150"
+                                        class="group p-3 rounded-xl bg-gray-50/40 hover:bg-gray-50 border border-gray-100 flex gap-3 transition">
+
                                         <div class="flex flex-col items-center flex-shrink-0">
-                                            <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm
-                                                {{ ($log->log_type ?? '') == 'alert' || ($log->log_type ?? '') == 'violation' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100 text-gray-600 border border-gray-200' }}">
-                                                <i class="{{ ($log->log_type ?? '') == 'alert' || ($log->log_type ?? '') == 'violation' ? 'ri-error-warning-line' : 'ri-compass-3-line' }} text-sm"></i>
+                                            <div
+                                                class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm
+                                                    {{ ($log->log_type ?? '') == 'alert' || ($log->log_type ?? '') == 'violation' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100 text-gray-600 border border-gray-200' }}">
+                                                <i
+                                                    class="{{ ($log->log_type ?? '') == 'alert' || ($log->log_type ?? '') == 'violation' ? 'ri-error-warning-line' : 'ri-compass-3-line' }} text-sm"></i>
                                             </div>
                                         </div>
 
@@ -301,12 +350,14 @@
                                             <div class="flex items-center justify-between gap-2 mb-0.5">
                                                 <p class="text-xs font-black text-gray-800 truncate">
                                                     @if($log->user && $log->user->last_name)
-                                                        {{ $log->user->last_name }}, {{ $log->user->first_name }} {{ $log->user->middle_name ? substr($log->user->middle_name, 0, 1) . '.' : '' }}
+                                                        {{ $log->user->last_name }}, {{ $log->user->first_name }}
+                                                        {{ $log->user->middle_name ? substr($log->user->middle_name, 0, 1) . '.' : '' }}
                                                     @else
                                                         {{ $log->user->name ?? $log->user_name ?? 'Anonymous Student' }}
                                                     @endif
                                                 </p>
-                                                <span class="text-[9px] font-bold text-gray-400 whitespace-nowrap uppercase tracking-tight">
+                                                <span
+                                                    class="text-[9px] font-bold text-gray-400 whitespace-nowrap uppercase tracking-tight">
                                                     {{ $log->created_at ? $log->created_at->diffForHumans() : 'Just now' }}
                                                 </span>
                                             </div>
@@ -315,11 +366,14 @@
                                                 {{ $log->content ?? $log->description ?? 'Interacted with digital ecosystem' }}
                                             </p>
 
-                                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 pt-1.5 border-t border-gray-100 text-[10px] font-bold text-gray-400">
-                                                <span class="inline-flex items-center gap-1 text-gray-500 bg-white border border-gray-200 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide truncate max-w-[190px]">
+                                            <div
+                                                class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 pt-1.5 border-t border-gray-100 text-[10px] font-bold text-gray-400">
+                                                <span
+                                                    class="inline-flex items-center gap-1 text-gray-500 bg-white border border-gray-200 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide truncate max-w-[190px]">
                                                     <i class="ri-door-lock-line text-gray-400 flex-shrink-0"></i>
                                                     @if($log->labSession)
-                                                        {{ $log->labSession->class_code }} ({{ $log->labSession->program }} - {{ $log->labSession->year_level }}{{ $log->labSession->section }})
+                                                        {{ $log->labSession->class_code }} ({{ $log->labSession->program }} -
+                                                        {{ $log->labSession->year_level }}{{ $log->labSession->section }})
                                                     @else
                                                         General Workspace
                                                     @endif

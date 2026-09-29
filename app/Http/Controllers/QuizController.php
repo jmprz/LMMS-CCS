@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Quiz;
 use App\Models\LabSession;
+use App\Models\LearningTopic;
 use App\Models\QuizAttempt;
 use App\Models\ActivityLog;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,10 @@ class QuizController extends Controller
         $sessionId = $request->query('session_id');
         $currentSession = LabSession::findOrFail($sessionId);
 
-        return view('professor.quizzes.create', compact('currentSession'));
+        abort_unless((int) $currentSession->faculty_id === (int) auth()->id(), 403);
+
+        $learningTopics = LearningTopic::orderBy('name')->get();
+        return view('professor.quizzes.create', compact('currentSession', 'learningTopics'));
     }
 
     public function store(Request $request)
@@ -26,7 +30,7 @@ class QuizController extends Controller
         // 1. Flexible Validation
         $request->validate([
             'title' => 'required|string|max:255',
-            'topic' => 'required|string|max:255',
+            'learning_topic_id' => 'required|integer|exists:learning_topics,id',
             'lab_session_id' => 'required|exists:lab_sessions,id',
             'time_limit' => 'required|integer|min:1',
             'questions' => 'required|array|min:1',
@@ -37,16 +41,24 @@ class QuizController extends Controller
             'expires_at' => 'nullable|date|after_or_equal:published_at',
         ]);
 
-        return DB::transaction(function () use ($request) {
+        $session = LabSession::findOrFail($request->lab_session_id);
+        abort_unless((int) $session->faculty_id === (int) auth()->id(), 403);
+        $learningTopic = LearningTopic::findOrFail($request->learning_topic_id);
+
+        return DB::transaction(function () use ($request, $learningTopic) {
             // 2. Create the Quiz
             $quiz = Quiz::create([
                 'title' => $request->title,
-                'topic' => $request->topic,
+                'topic' => $learningTopic->name,
                 'subject_id' => $request->lab_session_id,
                 'time_limit' => $request->time_limit,
                 'published_at' => $request->published_at ?? now(),
                 'expires_at' => $request->expires_at,
             ]);
+
+            // Save the standardized topic while preserving the legacy topic text.
+            // forceFill avoids requiring an immediate Quiz::$fillable change.
+            $quiz->forceFill(['learning_topic_id' => $learningTopic->id])->save();
 
             // 3. Single loop through questions
             foreach ($request->questions as $qData) {
@@ -149,7 +161,12 @@ class QuizController extends Controller
 
         // 5. Send the scoring context straight down to the view template
         return view('student.quizzes.attempt', compact(
-            'quiz', 'completed', 'studentScore', 'questions', 'notYetAvailable', 'deadlinePassed'
+            'quiz',
+            'completed',
+            'studentScore',
+            'questions',
+            'notYetAvailable',
+            'deadlinePassed'
         ));
     }
 
@@ -267,6 +284,17 @@ class QuizController extends Controller
                     'duration_seconds' => $timeSpent,
                 ]);
 
+                try {
+                    app(\App\Services\LearningRecommendationService::class)
+                        ->generateFromQuizAttempt($attempt);
+                } catch (\Throwable $e) {
+                    \Log::error('Recommendation generation failed', [
+                        'quiz_attempt_id' => $attempt->id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+
                 return response()->json([
                     'success' => true,
                     'score' => $score,           // points earned
@@ -376,7 +404,9 @@ class QuizController extends Controller
     public function edit($id)
     {
         $quiz = Quiz::with(['questions.options', 'labSession'])->findOrFail($id);
+        abort_unless((int) $quiz->labSession->faculty_id === (int) auth()->id(), 403);
         $hasAttempts = $quiz->attempts()->exists();
+        $learningTopics = LearningTopic::orderBy('name')->get();
 
         $initialQuestions = $quiz->questions->map(function ($q) {
             $base = [
@@ -402,14 +432,14 @@ class QuizController extends Controller
             return $base;
         });
 
-         return view('professor.quizzes.edit', compact('quiz', 'initialQuestions', 'hasAttempts'));
+        return view('professor.quizzes.edit', compact('quiz', 'initialQuestions', 'hasAttempts', 'learningTopics'));
     }
 
     public function update(Request $request, $id)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'topic' => 'required|string|max:255',
+            'learning_topic_id' => 'required|integer|exists:learning_topics,id',
             'time_limit' => 'required|integer|min:1',
             'questions' => 'required|array|min:1',
             'questions.*.text' => 'required|string',
@@ -419,7 +449,9 @@ class QuizController extends Controller
             'expires_at' => 'nullable|date|after_or_equal:published_at',
         ]);
 
-        $quiz = Quiz::findOrFail($id);
+        $quiz = Quiz::with('labSession')->findOrFail($id);
+        abort_unless((int) $quiz->labSession->faculty_id === (int) auth()->id(), 403);
+        $learningTopic = LearningTopic::findOrFail($request->learning_topic_id);
 
         if ($quiz->attempts()->exists()) {
             $message = 'This quiz already has student attempts and can no longer be edited, to keep past scores intact. Delete the quiz and create a new one if changes are needed.';
@@ -431,17 +463,22 @@ class QuizController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($request, $id) {
-                $quiz = Quiz::findOrFail($id);
+            return DB::transaction(function () use ($request, $id, $learningTopic) {
+                $quiz = Quiz::lockForUpdate()->findOrFail($id);
+                if ($quiz->attempts()->exists()) {
+                    abort(422, 'This quiz now has student attempts and its questions are locked.');
+                }
 
                 // 1. Update general configurations
                 $quiz->update([
                     'title' => $request->title,
-                    'topic' => $request->topic,
+                    'topic' => $learningTopic->name,
                     'time_limit' => $request->time_limit,
                     'published_at' => $request->published_at ?? $quiz->published_at,
                     'expires_at' => $request->expires_at,
                 ]);
+
+                $quiz->forceFill(['learning_topic_id' => $learningTopic->id])->save();
 
                 // 2. Clear old relational records to update with new structures cleanly
                 foreach ($quiz->questions as $oldQuestion) {
@@ -508,6 +545,36 @@ class QuizController extends Controller
         }
     }
 
+    /**
+     * Assign/correct a standardized topic without modifying quiz questions,
+     * answers, scores, attempts, or the original historical topic text.
+     * This is safe to use for older quizzes that already have attempts.
+     */
+    public function updateLearningTopic(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'learning_topic_id' => 'required|integer|exists:learning_topics,id',
+        ]);
+
+        $quiz = Quiz::with('labSession')->findOrFail($id);
+        abort_unless((int) $quiz->labSession->faculty_id === (int) auth()->id(), 403);
+
+        $quiz->forceFill([
+            'learning_topic_id' => $validated['learning_topic_id'],
+        ])->save();
+
+        $this->logProfessorActivity(
+            $quiz->subject_id,
+            'Assigned a standardized learning topic to quiz: "' . $quiz->title . '"'
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'learning_topic_id' => $quiz->learning_topic_id]);
+        }
+
+        return redirect()->back()->with('success', 'Quiz topic updated without changing attempts or scores.');
+    }
+
     public function show($id)
     {
         // 1. SECURE LOCK: Check if this user already has a recorded attempt for this quiz
@@ -534,10 +601,10 @@ class QuizController extends Controller
     }
 
     public function listPartial($sessionId)
-{
-    $session = LabSession::with(['quizzes.questions', 'quizzes.attempts'])->findOrFail($sessionId);
-    return view('professor.partials.quiz-list', compact('session'));
-}
+    {
+        $session = LabSession::with(['quizzes.questions', 'quizzes.attempts'])->findOrFail($sessionId);
+        return view('professor.partials.quiz-list', compact('session'));
+    }
     private function logProfessorActivity($labSessionId, $content)
     {
         ActivityLog::create([

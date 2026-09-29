@@ -14,9 +14,18 @@ class User extends Authenticatable
      * Role Helper Methods
      * These make your Blade and Controller logic much cleaner.
      */
-    public function isAdmin() { return $this->role === 'admin'; }
-    public function isProfessor() { return $this->role === 'professor'; }
-    public function isStudent() { return $this->role === 'student'; }
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+    public function isProfessor()
+    {
+        return $this->role === 'professor';
+    }
+    public function isStudent()
+    {
+        return $this->role === 'student';
+    }
 
     /**
      * Relationship for PROFESSORS
@@ -34,8 +43,8 @@ class User extends Authenticatable
     public function joinedClasses()
     {
         return $this->belongsToMany(LabSession::class, 'class_student', 'user_id', 'lab_session_id')
-                    ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at'])
-                    ->withTimestamps();
+            ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at'])
+            ->withTimestamps();
     }
 
     protected $fillable = [
@@ -68,9 +77,26 @@ class User extends Authenticatable
 
     // app/Models/User.php
 
-public function attendances()
-{
-    // A user can have many attendance records
-    return $this->hasMany(\App\Models\Attendance::class);
-}
+    public function attendances()
+    {
+        // A user can have many attendance records
+        return $this->hasMany(\App\Models\Attendance::class);
+    }
+
+    public function learningRecommendations()
+    {
+        return $this->hasMany(LearningRecommendation::class, 'user_id');
+    }
+    public function featureSnapshots()
+    {
+        return $this->hasMany(StudentFeatureSnapshot::class, 'user_id');
+    }
+    public function researchParticipations()
+    {
+        return $this->hasMany(ResearchParticipant::class, 'user_id');
+    }
+    public function subjectGrades()
+    {
+        return $this->hasMany(SubjectGrade::class, 'user_id');
+    }
 }

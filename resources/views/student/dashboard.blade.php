@@ -107,10 +107,14 @@
                     <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Workspace
                     </div>
 
-                    <a href="#"
-                        class="flex items-center py-2.5 px-4 rounded-xl text-xs bg-[#383838] text-white font-black shadow-sm transition duration-150">
-                        <i class="ri-dashboard-line mr-3 text-lg"></i> Dashboard
-                    </a>
+                      <a href="{{ route('student.dashboard') }}"
+                    class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('student.dashboard') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                    <i class="ri-dashboard-line mr-3 text-lg"></i> Dashboard
+                </a>
+                 <a href="{{ route('student.roadmap.index') }}"
+                    class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('student.roadmap.index') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
+                   <i class="ri-route-line mr-3 text-lg"></i> My Learning Roadmap
+                </a>
                 </nav>
 
                 <nav class="mt-6 px-4 space-y-1">

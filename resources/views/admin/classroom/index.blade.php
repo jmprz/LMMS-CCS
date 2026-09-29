@@ -36,6 +36,35 @@
                     class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('profile.edit') ? 'bg-[#383838] text-white font-black' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition">
                     <i class="ri-settings-5-line mr-3 text-lg"></i> Settings
                 </a>
+               <div class="mx-4 my-4 border-t border-gray-100"></div>
+
+               <div class="px-4 text-[10px] font-black text-gray-400
+            uppercase tracking-widest mb-2">
+                    Learning Management
+                </div>
+
+                <a href="{{ route('admin.learning-topics.index') }}" class="flex items-center py-2.5 px-4 rounded-xl text-xs transition
+                {{ request()->routeIs('admin.learning-topics.*')
+                    ? 'bg-[#383838] text-white font-black'
+                    : 'text-gray-600 font-bold hover:bg-gray-100' }}">
+                                    <i class="ri-price-tag-3-line mr-3 text-lg"></i>
+                    Learning Topics
+                </a>
+
+                <a href="{{ route('admin.learning-resources.index') }}" class="flex items-center py-2.5 px-4 rounded-xl text-xs transition
+                {{ request()->routeIs('admin.learning-resources.*')
+                    ? 'bg-[#383838] text-white font-black'
+                    : 'text-gray-600 font-bold hover:bg-gray-100' }}">
+                                    <i class="ri-book-open-line mr-3 text-lg"></i>
+                    Resource Library
+                </a>
+                <a href="{{ route('admin.research-experiments.index') }}" class="flex items-center py-2.5 px-4 rounded-xl text-xs transition
+                {{ request()->routeIs('admin.research-experiments.*')
+                    ? 'bg-[#383838] text-white font-black'
+                    : 'text-gray-600 font-bold hover:bg-gray-100' }}">
+                                <i class="ri-flask-line mr-3 text-lg"></i>
+                    Research Experiment
+                </a>
             </nav>
 
             <div class="p-4 border-t border-gray-200 bg-gray-50/50 relative flex-shrink-0" x-data="{ open: false }"

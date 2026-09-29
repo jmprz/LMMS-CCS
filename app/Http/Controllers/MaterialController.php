@@ -8,44 +8,44 @@ use Illuminate\Http\Request;
 
 class MaterialController extends Controller
 {
-   public function store(Request $request, $labSessionId)
-{
-    $request->validate([
-        'title' => 'required|string|max:255',
-        'type' => 'required|in:pdf,pptx,youtube',
-        'content_file' => 'required_if:type,pdf,pptx|file|mimes:pdf,ppt,pptx|max:20480',
-        'content_url' => 'required_if:type,youtube|nullable|url',
-    ]);
+    public function store(Request $request, $labSessionId)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:pdf,pptx,youtube',
+            'content_file' => 'required_if:type,pdf,pptx|file|mimes:pdf,ppt,pptx|max:20480',
+            'content_url' => 'required_if:type,youtube|nullable|url',
+        ]);
 
-    $contentPath = '';
+        $contentPath = '';
 
-    if ($request->type === 'youtube') {
-        $contentPath = $request->content_url;
-    } else {
-        $file = $request->file('content_file');
-        // Create a unique filename
-        $filename = time() . '_' . $file->getClientOriginalName();
-        
-        // Move it directly to public/materials
-        $file->move(public_path('materials'), $filename);
-        
-        // Save only the relative path for the database
-        $contentPath = 'materials/' . $filename;
-    }
+        if ($request->type === 'youtube') {
+            $contentPath = $request->content_url;
+        } else {
+            $file = $request->file('content_file');
+            // Create a unique filename
+            $filename = time() . '_' . $file->getClientOriginalName();
 
-    $material = \App\Models\Material::create([
+            // Move it directly to public/materials
+            $file->move(public_path('materials'), $filename);
+
+            // Save only the relative path for the database
+            $contentPath = 'materials/' . $filename;
+        }
+
+        $material = \App\Models\Material::create([
             'lab_session_id' => $labSessionId,
             'title' => $request->title,
             'type' => $request->type,
             'content' => $contentPath,
-    ]);
+        ]);
 
-    $this->logProfessorActivity(
-        $labSessionId,
-        'Posted a learning material: "' . $material->title . '"'
-    );
+        $this->logProfessorActivity(
+            $labSessionId,
+            'Posted a learning material: "' . $material->title . '"'
+        );
 
-    // =========================================================================
+        // =========================================================================
         // LIVE PRODUCTION EMAIL ALERTS FOR MATERIALS (SYNCHRONOUS TRANSMISSION)
         // =========================================================================
         try {
@@ -60,12 +60,12 @@ class MaterialController extends Controller
             // Fire the direct inline mailer distribution loop
             foreach ($students as $student) {
                 \Illuminate\Support\Facades\Mail::send('emails.new_material_notification', [
-                    'student' => $student, 
+                    'student' => $student,
                     'material' => $material,
                     'labSession' => $labSession
                 ], function ($message) use ($student, $material) {
                     $message->to($student->email)
-                            ->subject('LMMS - New Learning Material Posted: ' . $material->title);
+                        ->subject('LMMS - New Learning Material Posted: ' . $material->title);
                 });
             }
         } catch (\Exception $e) {
@@ -74,60 +74,60 @@ class MaterialController extends Controller
         }
         // =========================================================================
 
-    if ($request->ajax() || $request->wantsJson()) {
-        return response()->json([
-            'success' => true,
-            'message' => 'Material posted successfully!'
-        ]);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Material posted successfully!'
+            ]);
+        }
+
+        return back()->with('success', 'Material posted successfully!');
     }
 
-    return back()->with('success', 'Material posted successfully!');
-}
-
-public function logStart(\App\Models\Material $material)
-{
-    // 1. Keep this: Tracks precise structural analytics session windows
-    \DB::table('material_logs')->insert([
-        'user_id'     => auth()->id(),
-        'material_id' => $material->id,
-        'opened_at'   => now(),
-        'created_at'  => now(),
-        'updated_at'  => now(),
-    ]);
-
-    return response()->json(['message' => 'Log started']);
-}
-
-public function logEnd(Request $request, \App\Models\Material $material)
-{
-    $userId = auth()->id();
-    $duration = $request->duration ?? 0;
-
-    // 1. Core update to structural material session logs
-    \DB::table('material_logs')
-        ->where('user_id', $userId)
-        ->where('material_id', $material->id)
-        ->whereNull('closed_at')
-        ->latest()
-        ->update([
-            'closed_at' => now(),
-            'duration_seconds' => $duration,
+    public function logStart(\App\Models\Material $material)
+    {
+        // 1. Keep this: Tracks precise structural analytics session windows
+        \DB::table('material_logs')->insert([
+            'user_id' => auth()->id(),
+            'material_id' => $material->id,
+            'opened_at' => now(),
+            'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-    // 2. ALTERNATIVE: Write to timeline modal ONLY when they finish reading
-    \App\Models\ActivityLog::create([
-        'user_id'          => $userId,
-        'log_type'         => 'material',
-        'content'          => "Student finished reading material: \"" . $material->title . "\"",
-        'lab_session_id'   => $material->lab_session_id, // Match with your session foreign key column
-        'duration_seconds' => $duration,
-    ]);
+        return response()->json(['message' => 'Log started']);
+    }
 
-    return response()->json(['message' => 'Log ended', 'duration' => $duration]);
-}
+    public function logEnd(Request $request, \App\Models\Material $material)
+    {
+        $userId = auth()->id();
+        $duration = $request->duration ?? 0;
 
-/**
+        // 1. Core update to structural material session logs
+        \DB::table('material_logs')
+            ->where('user_id', $userId)
+            ->where('material_id', $material->id)
+            ->whereNull('closed_at')
+            ->latest()
+            ->update([
+                'closed_at' => now(),
+                'duration_seconds' => $duration,
+                'updated_at' => now(),
+            ]);
+
+        // 2. ALTERNATIVE: Write to timeline modal ONLY when they finish reading
+        \App\Models\ActivityLog::create([
+            'user_id' => $userId,
+            'log_type' => 'material',
+            'content' => "Student finished reading material: \"" . $material->title . "\"",
+            'lab_session_id' => $material->lab_session_id, // Match with your session foreign key column
+            'duration_seconds' => $duration,
+        ]);
+
+        return response()->json(['message' => 'Log ended', 'duration' => $duration]);
+    }
+
+    /**
      * Update the specified learning material.
      */
     public function update(Request $request, $id)
@@ -157,7 +157,7 @@ public function logEnd(Request $request, \App\Models\Material $material)
                 $file = $request->file('content_file');
                 $filename = time() . '_' . $file->getClientOriginalName();
                 $file->move(public_path('materials'), $filename);
-                
+
                 $material->content = 'materials/' . $filename;
             }
         }
@@ -192,7 +192,7 @@ public function logEnd(Request $request, \App\Models\Material $material)
 
         // Wipe associated tracking histories from table to avoid broken record dependencies
         \DB::table('material_logs')->where('material_id', $id)->delete();
-        
+
         $materialTitle = $material->title;
         $labSessionId = $material->lab_session_id;
 
@@ -227,7 +227,7 @@ public function logEnd(Request $request, \App\Models\Material $material)
             )
             ->orderBy('material_logs.opened_at', 'desc')
             ->get()
-            ->map(function($log) {
+            ->map(function ($log) {
                 return [
                     'id' => $log->id,
                     'student_name' => $log->student_name,
@@ -249,5 +249,59 @@ public function logEnd(Request $request, \App\Models\Material $material)
             'content' => $content,
         ]);
     }
+
+
+    public function updateTopics(Request $request, Material $material)
+    {
+        $session = \App\Models\LabSession::findOrFail(
+            $material->lab_session_id
+        );
+
+        abort_unless(
+            (int) $session->faculty_id === (int) auth()->id(),
+            403
+        );
+
+        $validated = $request->validate([
+            'learning_topic_ids' => ['nullable', 'array'],
+            'learning_topic_ids.*' => [
+                'integer',
+                'distinct',
+                'exists:learning_topics,id',
+            ],
+        ]);
+
+        $topicMappings = collect(
+            $validated['learning_topic_ids'] ?? []
+        )->mapWithKeys(fn($id) => [
+                $id => ['tagged_by' => auth()->id()],
+            ])->all();
+
+        $material->learningTopics()->sync($topicMappings);
+
+        // Reload the saved topics from the database.
+        $material->load('learningTopics');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Topics saved successfully.',
+                'topics' => $material->learningTopics
+                    ->map(fn($topic) => [
+                        'id' => $topic->id,
+                        'name' => $topic->name,
+                    ])
+                    ->values(),
+            ]);
+        }
+
+        return redirect()
+            ->route('professor.classroom.show', [
+                'id' => $session->id,
+                'tab' => 'materials',
+            ])
+            ->with('success', 'Topics saved successfully.');
+    }
+
 
 }

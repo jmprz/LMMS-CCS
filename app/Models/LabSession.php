@@ -13,14 +13,14 @@ class LabSession extends Model
     use HasFactory;
 
     protected $fillable = [
-        'class_code', 
-        'subject_name', 
-        'schedule_day',  
-        'schedule_time',  
+        'class_code',
+        'subject_name',
+        'schedule_day',
+        'schedule_time',
         'program',
         'year_level',
         'section',
-        'faculty_id', 
+        'faculty_id',
         'semester',
         'school_year',
         'is_active',
@@ -41,20 +41,20 @@ class LabSession extends Model
     public function students(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'class_student', 'lab_session_id', 'user_id')
-                    ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at']);
+            ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at']);
     }
 
     /**
      * Accessor for currently active/present students.
      */
     public function getActiveStudentsAttribute()
-{
-    return $this->students()
-        ->wherePivot('is_present', true)
-        // Check the pivot table's timestamp instead of the user's
-        ->wherePivot('updated_at', '>=', now()->subMinutes(1)) 
-        ->get();
-}
+    {
+        return $this->students()
+            ->wherePivot('is_present', true)
+            // Check the pivot table's timestamp instead of the user's
+            ->wherePivot('updated_at', '>=', now()->subMinutes(1))
+            ->get();
+    }
 
     /**
      * Tasks associated with this session.
@@ -76,42 +76,59 @@ class LabSession extends Model
 
     // App\Models\LabSession.php (or Classroom.php)
 
-public function materials()
-{
-    return $this->hasMany(Material::class);
-}
-
-public function isCurrentlyScheduled()
-{
-    // 1. Manual Override: If the Professor explicitly started the session, it's LIVE.
-    if ($this->is_active) {
-        return true;
+    public function materials()
+    {
+        return $this->hasMany(Material::class, 'lab_session_id');
     }
 
-    $now = now(); 
+    public function isCurrentlyScheduled()
+    {
+        // 1. Manual Override: If the Professor explicitly started the session, it's LIVE.
+        if ($this->is_active) {
+            return true;
+        }
 
-    // 2. Day Check (e.g., "Monday")
-    // Ensure the database value matches the case (e.g., 'Monday' vs 'monday')
-    if (strcasecmp($now->format('l'), $this->schedule_day) !== 0) {
+        $now = now();
+
+        // 2. Day Check (e.g., "Monday")
+        // Ensure the database value matches the case (e.g., 'Monday' vs 'monday')
+        if (strcasecmp($now->format('l'), $this->schedule_day) !== 0) {
+            return false;
+        }
+
+        // 3. Time Range Check
+        if (str_contains($this->schedule_time, '-')) {
+            try {
+                [$startStr, $endStr] = explode('-', $this->schedule_time);
+
+                // Set the Carbon objects to today so 'between' works correctly
+                $startTime = \Carbon\Carbon::createFromFormat('g:i A', trim($startStr), $now->timezone);
+                $endTime = \Carbon\Carbon::createFromFormat('g:i A', trim($endStr), $now->timezone);
+
+                return $now->between($startTime, $endTime);
+            } catch (\Exception $e) {
+                // If the time format in DB is messy, fail gracefully
+                return false;
+            }
+        }
+
         return false;
     }
 
-    // 3. Time Range Check
-    if (str_contains($this->schedule_time, '-')) {
-        try {
-            [$startStr, $endStr] = explode('-', $this->schedule_time);
-            
-            // Set the Carbon objects to today so 'between' works correctly
-            $startTime = \Carbon\Carbon::createFromFormat('g:i A', trim($startStr), $now->timezone);
-            $endTime = \Carbon\Carbon::createFromFormat('g:i A', trim($endStr), $now->timezone);
-
-            return $now->between($startTime, $endTime);
-        } catch (\Exception $e) {
-            // If the time format in DB is messy, fail gracefully
-            return false;
-        }
+    public function learningRecommendations()
+    {
+        return $this->hasMany(LearningRecommendation::class, 'lab_session_id');
     }
-
-    return false;
-}
+    public function researchGroups()
+    {
+        return $this->hasMany(ResearchGroup::class, 'lab_session_id');
+    }
+    public function featureSnapshots()
+    {
+        return $this->hasMany(StudentFeatureSnapshot::class, 'lab_session_id');
+    }
+    public function subjectGrades()
+    {
+        return $this->hasMany(SubjectGrade::class, 'lab_session_id');
+    }
 }

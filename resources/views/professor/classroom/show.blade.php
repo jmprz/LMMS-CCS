@@ -1,21 +1,16 @@
 <x-app-layout>
-     <x-slot name="header"></x-slot>
+    <x-slot name="header"></x-slot>
     <div class="fixed inset-0 flex bg-gray-100"
-       x-data="{ showModal: false, sidebarOpen: false, isActive: {{ $session->is_active ? 'true' : 'false' }} }">
-        <div x-show="sidebarOpen" 
-             @click="sidebarOpen = false"
-             x-transition:enter="transition-opacity ease-linear duration-200"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition-opacity ease-linear duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-30 bg-black/50 lg:hidden"
-             x-cloak>
+        x-data="{ showModal: false, sidebarOpen: false, isActive: {{ $session->is_active ? 'true' : 'false' }} }">
+        <div x-show="sidebarOpen" @click="sidebarOpen = false"
+            x-transition:enter="transition-opacity ease-linear duration-200" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-30 bg-black/50 lg:hidden" x-cloak>
         </div>
 
-       <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-               class="fixed lg:static z-40 w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] transition-transform duration-200 ease-in-out">
+        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+            class="fixed lg:static z-40 w-64 border-r border-gray-200 bg-white mt-[80px] flex-shrink-0 flex flex-col justify-between h-[calc(100vh-80px)] transition-transform duration-200 ease-in-out">
 
             <div class="flex flex-col flex-grow overflow-y-auto">
 
@@ -125,21 +120,22 @@
             </div>
         </aside>
 
-     <main class="flex-1 overflow-y-auto h-full flex flex-col min-w-0">
-              <!-- Mobile Header Toggle Bar -->
-            <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
+        <main class="flex-1 overflow-y-auto h-full flex flex-col min-w-0">
+            <!-- Mobile Header Toggle Bar -->
+            <div
+                class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 mt-[80px] flex-shrink-0">
                 <button @click="sidebarOpen = !sidebarOpen" class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                     <i class="ri-menu-2-line text-xl"></i>
                 </button>
                 <span class="text-xs font-black uppercase text-gray-700 tracking-wider">Classroom</span>
             </div>
             <div class="p-4 sm:p-8 md:mt-[80px]">
-                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div
                         class="md:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl px-8 py-6 flex flex-col justify-between">
                         <div>
-                           <h1 class="text-xl sm:text-2xl lg:text-4xl font-black text-gray-900 mb-3 leading-tight">
-                            {{ $session->subject_name }} |
+                            <h1 class="text-xl sm:text-2xl lg:text-4xl font-black text-gray-900 mb-3 leading-tight">
+                                {{ $session->subject_name }} |
                                 {{ $session->program }} - {{ $session->year_level }}{{ $session->section }}
                             </h1>
                         </div>
@@ -218,8 +214,11 @@
                 </div>
 
 
-                <div class="mt-8" x-data="{ activeTab: 'monitoring' }">
-                   <div class="flex space-x-1 border-b border-gray-200 overflow-x-auto whitespace-nowrap scrollbar-none pb-1">
+                <div class="mt-8" x-data="{ activeTab: @js(
+                    request('tab') === 'materials' ? 'materials' : 'monitoring'
+                ) }">
+                    <div
+                        class="flex space-x-1 border-b border-gray-200 overflow-x-auto whitespace-nowrap scrollbar-none pb-1">
                         <button @click="activeTab = 'monitoring'"
                             :class="activeTab === 'monitoring' ? 'border-b-2 border-black font-bold' : 'text-gray-500'"
                             class="px-6 py-3 transition">Monitoring</button>
@@ -384,65 +383,65 @@
                                     </div>
 
                                     <div class="lg:col-span-1" x-data="{
-                                                                                                                    logs: [],
-                                                                                                                    loading: false,
-                                                                                                                    refreshInterval: null,
-                                                                                                                    fetchSessionLogs() {
-                                                                                                                        this.loading = true;
-                                                                                                                        fetch('/professor/classroom/{{ $class->id }}/activity-logs')
-                                                                                                                            .then(res => res.json())
-                                                                                                                            .then(data => { this.logs = data; this.loading = false; })
-                                                                                                                            .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
-                                                                                                                    },
-                                                                                                                    init() {
-                                                                                                                        this.fetchSessionLogs();
-                                                                                                                        this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
-                                                                                                                    },
-                                                                                                                    destroy() {
-                                                                                                                        if (this.refreshInterval) clearInterval(this.refreshInterval);
-                                                                                                                    },
-                                                                                                                    getIcon(type, content = '') {
-                                                                                                                        const icons = {
-                                                                                                                            'attendance': 'ri-checkbox-circle-line',
-                                                                                                                            'navigation': 'ri-global-line',
-                                                                                                                            'submission': 'ri-file-upload-line',
-                                                                                                                            'material': 'ri-book-open-line',
-                                                                                                                            'quiz': 'ri-task-line',
-                                                                                                                            'professor_session': 'ri-broadcast-line',
-                                                                                                                            'screen_share': 'ri-projector-2-line'
-                                                                                                                        };
+                                                                                                                        logs: [],
+                                                                                                                        loading: false,
+                                                                                                                        refreshInterval: null,
+                                                                                                                        fetchSessionLogs() {
+                                                                                                                            this.loading = true;
+                                                                                                                            fetch('/professor/classroom/{{ $class->id }}/activity-logs')
+                                                                                                                                .then(res => res.json())
+                                                                                                                                .then(data => { this.logs = data; this.loading = false; })
+                                                                                                                                .catch(err => { console.error('Failed to sync live logs:', err); this.loading = false; });
+                                                                                                                        },
+                                                                                                                        init() {
+                                                                                                                            this.fetchSessionLogs();
+                                                                                                                            this.refreshInterval = setInterval(() => this.fetchSessionLogs(), 3000);
+                                                                                                                        },
+                                                                                                                        destroy() {
+                                                                                                                            if (this.refreshInterval) clearInterval(this.refreshInterval);
+                                                                                                                        },
+                                                                                                                        getIcon(type, content = '') {
+                                                                                                                            const icons = {
+                                                                                                                                'attendance': 'ri-checkbox-circle-line',
+                                                                                                                                'navigation': 'ri-global-line',
+                                                                                                                                'submission': 'ri-file-upload-line',
+                                                                                                                                'material': 'ri-book-open-line',
+                                                                                                                                'quiz': 'ri-task-line',
+                                                                                                                                'professor_session': 'ri-broadcast-line',
+                                                                                                                                'screen_share': 'ri-projector-2-line'
+                                                                                                                            };
 
-                                                                                                                        if (type === 'professor_activity') {
-                                                                                                                            if (content.includes('Posted')) return 'ri-add-circle-line';
-                                                                                                                            if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
-                                                                                                                            if (content.includes('Deleted')) return 'ri-delete-bin-line';
-                                                                                                                            return 'ri-briefcase-line';
-                                                                                                                        }
-                                                                                                                        return icons[type] || 'ri-cursor-line';
-                                                                                                                    },
-                                                                                                                    getIconClass(type, content = '') {
-                                                                                                                        const classes = {
-                                                                                                                            'attendance': 'bg-green-50 text-green-600 border border-green-200',
-                                                                                                                            'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
-                                                                                                                            'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
-                                                                                                                            'material': 'bg-purple-50 text-purple-600 border border-purple-200',
-                                                                                                                            'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
-                                                                                                                            'professor_session': 'bg-red-50 text-red-600 border border-red-200',
-                                                                                                                            'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
-                                                                                                                        };
+                                                                                                                            if (type === 'professor_activity') {
+                                                                                                                                if (content.includes('Posted')) return 'ri-add-circle-line';
+                                                                                                                                if (content.includes('Updated') || content.includes('Edited')) return 'ri-edit-circle-line';
+                                                                                                                                if (content.includes('Deleted')) return 'ri-delete-bin-line';
+                                                                                                                                return 'ri-briefcase-line';
+                                                                                                                            }
+                                                                                                                            return icons[type] || 'ri-cursor-line';
+                                                                                                                        },
+                                                                                                                        getIconClass(type, content = '') {
+                                                                                                                            const classes = {
+                                                                                                                                'attendance': 'bg-green-50 text-green-600 border border-green-200',
+                                                                                                                                'navigation': 'bg-amber-50 text-amber-600 border border-amber-200',
+                                                                                                                                'submission': 'bg-blue-50 text-blue-600 border border-blue-200',
+                                                                                                                                'material': 'bg-purple-50 text-purple-600 border border-purple-200',
+                                                                                                                                'quiz': 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+                                                                                                                                'professor_session': 'bg-red-50 text-red-600 border border-red-200',
+                                                                                                                                'screen_share': 'bg-orange-50 text-orange-600 border border-orange-200'
+                                                                                                                            };
 
-                                                                                                                        if (type === 'professor_activity') {
-                                                                                                                            if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
-                                                                                                                            if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
-                                                                                                                            if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
-                                                                                                                            return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                                                                                                                            if (type === 'professor_activity') {
+                                                                                                                                if (content.includes('Posted')) return 'bg-green-50 text-green-600 border border-green-200';
+                                                                                                                                if (content.includes('Updated') || content.includes('Edited')) return 'bg-blue-50 text-blue-600 border border-blue-200';
+                                                                                                                                if (content.includes('Deleted')) return 'bg-red-50 text-red-600 border border-red-200';
+                                                                                                                                return 'bg-cyan-50 text-cyan-600 border border-cyan-200';
+                                                                                                                            }
+                                                                                                                            return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                                                                                                                        },
+                                                                                                                        formatTime(dateStr) {
+                                                                                                                            return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
                                                                                                                         }
-                                                                                                                        return classes[type] || 'bg-gray-100 text-gray-600 border-gray-200';
-                                                                                                                    },
-                                                                                                                    formatTime(dateStr) {
-                                                                                                                        return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                                                                                                                    }
-                                                                                                                }">
+                                                                                                                    }">
                                         <div
                                             class="bg-white border border-gray-200 shadow-sm rounded-[24px] p-5 flex flex-col h-[calc(100vh-250px)]">
                                             <div
@@ -644,70 +643,216 @@
                             <div id="materials-list-container"
                                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 @forelse($class->materials as $material)
-                                    @php
-                                        // Build dynamic web asset resolution matching controller's upload locations
-                                        $cleanUrl = $material->type === 'youtube' ? $material->content : url('/' . $material->content);
-                                    @endphp
-                                    <div
-                                        class="bg-white p-6 rounded-[32px] border border-gray-100 flex flex-col justify-between group hover:border-black transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-gray-100">
-                                        <div>
-                                            <div class="flex items-center justify-between mb-4">
+                                                @php
+                                                    // Build dynamic web asset resolution matching controller's upload locations
+                                                    $cleanUrl = $material->type === 'youtube' ? $material->content : url('/' . $material->content);
+                                                @endphp
                                                 <div
-                                                    class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors duration-300">
-                                                    @if($material->type == 'pdf')
-                                                        <i class="ri-file-pdf-line text-xl"></i>
-                                                    @elseif($material->type == 'youtube')
-                                                        <i class="ri-youtube-line text-xl"></i>
-                                                    @else
-                                                        <i class="ri-presentation-line text-xl"></i>
-                                                    @endif
-                                                </div>
-                                                <span
-                                                    class="text-[9px] font-black text-gray-300 uppercase tracking-widest group-hover:text-gray-400 transition-colors">
-                                                    {{ $material->type }}
-                                                </span>
-                                            </div>
+                                                    class="bg-white p-6 rounded-[32px] border border-gray-100 flex flex-col justify-between group hover:border-black transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-gray-100">
+                                                    <div>
+                                                        <div class="flex items-center justify-between mb-4">
+                                                            <div
+                                                                class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-black group-hover:text-white transition-colors duration-300">
+                                                                @if($material->type == 'pdf')
+                                                                    <i class="ri-file-pdf-line text-xl"></i>
+                                                                @elseif($material->type == 'youtube')
+                                                                    <i class="ri-youtube-line text-xl"></i>
+                                                                @else
+                                                                    <i class="ri-presentation-line text-xl"></i>
+                                                                @endif
+                                                            </div>
+                                                            <span
+                                                                class="text-[9px] font-black text-gray-300 uppercase tracking-widest group-hover:text-gray-400 transition-colors">
+                                                                {{ $material->type }}
+                                                            </span>
+                                                        </div>
 
-                                            <h4
-                                                class="font-black text-[#383838] text-lg leading-tight tracking-tight mb-2 group-hover:text-black">
-                                                {{ $material->title }}
-                                            </h4>
-                                        </div>
+                                                        <h4
+                                                            class="font-black text-[#383838] text-lg leading-tight tracking-tight mb-2 group-hover:text-black">
+                                                            {{ $material->title }}
+                                                        </h4>
+                                                    </div>
+                                                    
+<div
+    class="mt-3"
+    x-data="{
+        topics: @js(
+            $material->learningTopics
+                ->map(fn ($topic) => [
+                    'id' => $topic->id,
+                    'name' => $topic->name
+                ])->values()
+        ),
+        selectedIds: @js(
+            $material->learningTopics
+                ->pluck('id')
+                ->values()
+        ),
+        saving: false,
+        message: '',
+        error: '',
 
-                                        <div class="mt-6 pt-4 border-t border-gray-50 flex flex-col space-y-3">
-                                            <button
-                                                @click="fetchViewers({{ $material->id }}, '{{ addslashes($material->title) }}')"
-                                                class="w-full bg-gray-50 hover:bg-black hover:text-white text-[#383838] py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center transition-all duration-200">
-                                                <i class="ri-group-line mr-2 text-sm"></i> View Logs & Duration
-                                            </button>
+        async saveTopics() {
+            if (this.saving) return;
 
-                                            <div class="flex justify-between items-center">
-                                                <button
-                                                    @click="previewOpen = true; previewTitle = '{{ addslashes($material->title) }}'; previewType = '{{ $material->type }}'; previewUrl = '{{ $cleanUrl }}'"
-                                                    class="text-[10px] font-black uppercase text-gray-400 hover:text-black tracking-widest transition-colors flex items-center">
-                                                    <i class="ri-eye-line mr-1 text-sm"></i> Preview Content
-                                                </button>
+            this.saving = true;
+            this.message = '';
+            this.error = '';
 
-                                                <div class="flex items-center space-x-3">
-                                                    <button
-                                                        @click="editOpen = true; editId = '{{ $material->id }}'; editTitle = '{{ addslashes($material->title) }}'; editType = '{{ $material->type }}'; editContentUrl = '{{ $material->type === 'youtube' ? $material->content : '' }}'; editActionUrl = '/professor/materials/' + {{ $material->id }}"
-                                                        class="text-gray-300 hover:text-blue-500 transition-colors">
-                                                        <i class="ri-edit-line text-base"></i>
-                                                    </button>
+            try {
+                const response = await fetch(
+                    @js(route('professor.materials.topics.update', $material->id)),
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': @js(csrf_token())
+                        },
+                        body: JSON.stringify({
+                            learning_topic_ids: this.selectedIds
+                        })
+                    }
+                );
 
-                                                    <form action="/professor/materials/{{ $material->id }}" method="POST"
-                                                        @submit.prevent="if(confirm('Are you sure you want to completely erase this file?')) submitAjaxForm($event)">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                            class="text-gray-300 hover:text-red-500 transition-colors pt-1">
-                                                            <i class="ri-delete-bin-line text-base"></i>
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message || 'Failed to save topics.'
+                    );
+                }
+
+                // Update the displayed badges immediately.
+                this.topics = data.topics;
+
+                // Keep checkboxes synchronized with the saved data.
+                this.selectedIds = data.topics.map(topic => topic.id);
+
+                this.message = data.message;
+
+            } catch (err) {
+                this.error = err.message;
+            } finally {
+                this.saving = false;
+            }
+        }
+    }"
+>
+    {{-- Live topic badges --}}
+    <div class="flex flex-wrap gap-1.5">
+        <template x-for="topic in topics" :key="topic.id">
+            <span
+                class="rounded-lg bg-green-50 px-2.5 py-1
+                       text-[10px] font-bold text-green-700"
+                x-text="topic.name"
+            ></span>
+        </template>
+
+        <p
+            x-show="topics.length === 0"
+            class="text-xs text-gray-400"
+        >
+            No topics assigned
+        </p>
+    </div>
+
+    {{-- Topic management --}}
+    <details class="mt-4 rounded-xl border border-gray-100 p-3">
+        <summary
+            class="cursor-pointer text-xs font-bold text-gray-700"
+        >
+            <i class="ri-price-tag-3-line mr-1"></i>
+            Manage Topics
+        </summary>
+
+        <form
+            @submit.prevent="saveTopics()"
+            class="mt-4 space-y-3"
+        >
+            <div class="max-h-48 space-y-2 overflow-y-auto">
+                @forelse($learningTopics as $topic)
+                    <label class="flex items-center gap-2 text-xs">
+                        <input
+                            type="checkbox"
+                            value="{{ $topic->id }}"
+                            x-model.number="selectedIds"
+                            :disabled="saving"
+                            class="rounded border-gray-300"
+                        >
+
+                        <span>{{ $topic->name }}</span>
+                    </label>
+                @empty
+                    <p class="text-xs text-gray-400">
+                        No learning topics are available yet.
+                    </p>
+                @endforelse
+            </div>
+
+            <p
+                x-show="message"
+                x-text="message"
+                class="text-xs font-bold text-green-600"
+                role="status"
+            ></p>
+
+            <p
+                x-show="error"
+                x-text="error"
+                class="text-xs font-bold text-red-600"
+                role="alert"
+            ></p>
+
+            <button
+                type="submit"
+                :disabled="saving"
+                class="w-full rounded-xl bg-[#383838]
+                       px-4 py-2.5 text-[10px] font-black
+                       uppercase tracking-widest text-white
+                       hover:bg-black disabled:opacity-50"
+            >
+                <span
+                    x-text="saving ? 'Saving...' : 'Save Topics'"
+                ></span>
+            </button>
+        </form>
+    </details>
+</div>
+                                                    <div class="mt-6 pt-4 border-t border-gray-50 flex flex-col space-y-3">
+                                                        <button
+                                                            @click="fetchViewers({{ $material->id }}, '{{ addslashes($material->title) }}')"
+                                                            class="w-full bg-gray-50 hover:bg-black hover:text-white text-[#383838] py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center transition-all duration-200">
+                                                            <i class="ri-group-line mr-2 text-sm"></i> View Logs & Duration
                                                         </button>
-                                                    </form>
+
+                                                        <div class="flex justify-between items-center">
+                                                            <button
+                                                                @click="previewOpen = true; previewTitle = '{{ addslashes($material->title) }}'; previewType = '{{ $material->type }}'; previewUrl = '{{ $cleanUrl }}'"
+                                                                class="text-[10px] font-black uppercase text-gray-400 hover:text-black tracking-widest transition-colors flex items-center">
+                                                                <i class="ri-eye-line mr-1 text-sm"></i> Preview Content
+                                                            </button>
+
+                                                            <div class="flex items-center space-x-3">
+                                                                <button
+                                                                    @click="editOpen = true; editId = '{{ $material->id }}'; editTitle = '{{ addslashes($material->title) }}'; editType = '{{ $material->type }}'; editContentUrl = '{{ $material->type === 'youtube' ? $material->content : '' }}'; editActionUrl = '/professor/materials/' + {{ $material->id }}"
+                                                                    class="text-gray-300 hover:text-blue-500 transition-colors">
+                                                                    <i class="ri-edit-line text-base"></i>
+                                                                </button>
+
+                                                                <form action="/professor/materials/{{ $material->id }}" method="POST"
+                                                                    @submit.prevent="if(confirm('Are you sure you want to completely erase this file?')) submitAjaxForm($event)">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit"
+                                                                        class="text-gray-300 hover:text-red-500 transition-colors pt-1">
+                                                                        <i class="ri-delete-bin-line text-base"></i>
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 @empty
                                     <div
                                         class="col-span-full py-20 bg-white border-2 border-dashed border-gray-100 rounded-[32px] text-center">
@@ -957,47 +1102,47 @@
 
                                                 <div x-show="!loadingViewers">
                                                     <div class="w-full overflow-x-auto">
-                                                    <table
-                                                        class="w-full text-left bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                                                        <thead>
-                                                            <tr
-                                                                class="bg-gray-50 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                                                                <th class="py-4 px-6">Student Name</th>
-                                                                <th class="py-4 px-4">Opened Date/Time</th>
-                                                                <th class="py-4 px-6 text-right">View Duration</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody
-                                                            class="divide-y divide-gray-50 text-xs font-semibold text-gray-700">
-                                                            <template x-for="log in viewersList" :key="log.id">
-                                                                <tr class="hover:bg-gray-50/80 transition-colors">
-                                                                    <td class="py-4 px-6">
-                                                                        <div class="font-bold text-gray-900"
-                                                                            x-text="log.student_name.trim().includes(' ') ? log.student_name.trim().split(' ').pop() + ', ' + log.student_name.trim().split(' ').slice(0, -1).join(' ') : log.student_name">
-                                                                        </div>
-                                                                    </td>
-                                                                    <td class="py-4 px-4 text-gray-500"
-                                                                        x-text="log.viewed_at"></td>
-                                                                    <td
-                                                                        class="py-4 px-6 text-right font-mono text-black font-bold">
-                                                                        <span
-                                                                            class="inline-block px-2.5 py-1 bg-gray-100 rounded-md"
-                                                                            :class="log.seconds_spent > 60 ? 'bg-green-50 text-green-700' : 'text-gray-700'"
-                                                                            x-text="formatDuration(log.seconds_spent)"></span>
-                                                                    </td>
+                                                        <table
+                                                            class="w-full text-left bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                                            <thead>
+                                                                <tr
+                                                                    class="bg-gray-50 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                                                                    <th class="py-4 px-6">Student Name</th>
+                                                                    <th class="py-4 px-4">Opened Date/Time</th>
+                                                                    <th class="py-4 px-6 text-right">View Duration</th>
                                                                 </tr>
-                                                            </template>
-                                                            <template x-if="viewersList.length === 0">
-                                                                <tr>
-                                                                    <td colspan="3"
-                                                                        class="py-12 text-center text-gray-400 font-bold uppercase text-[11px] tracking-wider">
-                                                                        No tracking logs generated for this material
-                                                                        entry.
-                                                                    </td>
-                                                                </tr>
-                                                            </template>
-                                                        </tbody>
-                                                    </table>
+                                                            </thead>
+                                                            <tbody
+                                                                class="divide-y divide-gray-50 text-xs font-semibold text-gray-700">
+                                                                <template x-for="log in viewersList" :key="log.id">
+                                                                    <tr class="hover:bg-gray-50/80 transition-colors">
+                                                                        <td class="py-4 px-6">
+                                                                            <div class="font-bold text-gray-900"
+                                                                                x-text="log.student_name.trim().includes(' ') ? log.student_name.trim().split(' ').pop() + ', ' + log.student_name.trim().split(' ').slice(0, -1).join(' ') : log.student_name">
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="py-4 px-4 text-gray-500"
+                                                                            x-text="log.viewed_at"></td>
+                                                                        <td
+                                                                            class="py-4 px-6 text-right font-mono text-black font-bold">
+                                                                            <span
+                                                                                class="inline-block px-2.5 py-1 bg-gray-100 rounded-md"
+                                                                                :class="log.seconds_spent > 60 ? 'bg-green-50 text-green-700' : 'text-gray-700'"
+                                                                                x-text="formatDuration(log.seconds_spent)"></span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </template>
+                                                                <template x-if="viewersList.length === 0">
+                                                                    <tr>
+                                                                        <td colspan="3"
+                                                                            class="py-12 text-center text-gray-400 font-bold uppercase text-[11px] tracking-wider">
+                                                                            No tracking logs generated for this material
+                                                                            entry.
+                                                                        </td>
+                                                                    </tr>
+                                                                </template>
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1377,175 +1522,178 @@
 
                                         <div class="flex-1 overflow-y-auto p-6 bg-white">
                                             <div class="w-full overflow-x-auto">
-                                            <table class="w-full text-left border-separate border-spacing-y-4">
-                                                <thead>
-                                                    <tr
-                                                        class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                        <th class="px-6 pb-2">Student</th>
-                                                        <th class="px-6 pb-2">Submitted</th>
-                                                        <th class="px-6 pb-2">Duration</th>
-                                                        <th class="px-6 pb-2">File</th>
-                                                        <th class="px-6 pb-2 text-right">Grading & Feedback</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <template x-for="sub in filteredSubmissions" :key="sub.id">
+                                                <table class="w-full text-left border-separate border-spacing-y-4">
+                                                    <thead>
                                                         <tr
-                                                            class="bg-gray-50/50 hover:bg-gray-50 transition-all rounded-3xl group border border-gray-100">
-                                                            <td
-                                                                class="px-6 py-6 font-bold text-gray-900 rounded-l-3xl border-y border-l border-gray-100 align-top">
-                                                                <span class="block text-sm text-[#383838]"
-                                                                    x-text="sub.user ? `${sub.user.last_name}, ${sub.user.first_name}` : 'N/A'"></span>
-                                                            </td>
-                                                            <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
-                                                                x-text="formatDate(sub.created_at)"></td>
-                                                            <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
-                                                                x-text="formatDuration(sub.duration_seconds ?? sub.duration ?? sub.time_taken) || '--'">
-                                                            </td>
-                                                            <td class="px-6 py-6 border-y border-gray-100 align-top">
-                                                                <a :href="'{{ url('/') }}/' + sub.file_path"
-                                                                    target="_blank"
-                                                                    class="inline-flex items-center text-[10px] font-black text-gray-700 bg-white px-4 py-2.5 rounded-xl hover:bg-[#383838] hover:text-white transition-all uppercase tracking-widest border border-gray-200 shadow-sm">
-                                                                    <i class="ri-download-2-line mr-2 text-sm"></i>
-                                                                    Download
-                                                                </a>
-                                                            </td>
-                                                            <td
-                                                                class="px-6 py-6 rounded-r-3xl border-y border-r border-gray-100 align-top">
-                                                                <div
-                                                                    class="mb-5 flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                                                                    <div class="flex items-center gap-4">
-                                                                        <div>
+                                                            class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                            <th class="px-6 pb-2">Student</th>
+                                                            <th class="px-6 pb-2">Submitted</th>
+                                                            <th class="px-6 pb-2">Duration</th>
+                                                            <th class="px-6 pb-2">File</th>
+                                                            <th class="px-6 pb-2 text-right">Grading & Feedback</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="sub in filteredSubmissions" :key="sub.id">
+                                                            <tr
+                                                                class="bg-gray-50/50 hover:bg-gray-50 transition-all rounded-3xl group border border-gray-100">
+                                                                <td
+                                                                    class="px-6 py-6 font-bold text-gray-900 rounded-l-3xl border-y border-l border-gray-100 align-top">
+                                                                    <span class="block text-sm text-[#383838]"
+                                                                        x-text="sub.user ? `${sub.user.last_name}, ${sub.user.first_name}` : 'N/A'"></span>
+                                                                </td>
+                                                                <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
+                                                                    x-text="formatDate(sub.created_at)"></td>
+                                                                <td class="px-6 py-6 text-xs font-bold text-gray-600 border-y border-gray-100 align-top"
+                                                                    x-text="formatDuration(sub.duration_seconds ?? sub.duration ?? sub.time_taken) || '--'">
+                                                                </td>
+                                                                <td
+                                                                    class="px-6 py-6 border-y border-gray-100 align-top">
+                                                                    <a :href="'{{ url('/') }}/' + sub.file_path"
+                                                                        target="_blank"
+                                                                        class="inline-flex items-center text-[10px] font-black text-gray-700 bg-white px-4 py-2.5 rounded-xl hover:bg-[#383838] hover:text-white transition-all uppercase tracking-widest border border-gray-200 shadow-sm">
+                                                                        <i class="ri-download-2-line mr-2 text-sm"></i>
+                                                                        Download
+                                                                    </a>
+                                                                </td>
+                                                                <td
+                                                                    class="px-6 py-6 rounded-r-3xl border-y border-r border-gray-100 align-top">
+                                                                    <div
+                                                                        class="mb-5 flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                                                        <div class="flex items-center gap-4">
+                                                                            <div>
+                                                                                <span
+                                                                                    class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Grading
+                                                                                    Status</span>
+                                                                                <p class="text-xs font-black mt-1 text-[#383838]"
+                                                                                    x-text="(sub.auto_graded && aiGradingEnabled) ? 'Auto Evaluated' : (sub.grade !== null ? 'Manual Entry' : 'Pending')">
+                                                                                </p>
+                                                                            </div>
+                                                                            <button x-show="aiGradingEnabled"
+                                                                                @click="regradeSubmission(sub, $event)"
+                                                                                class="ml-2 bg-gray-100 hover:bg-gray-200 text-[#383838] text-[9px] font-black px-3 py-2 rounded-xl transition flex items-center gap-1.5 uppercase tracking-widest border border-gray-200">
+                                                                                <i class="ri-magic-line text-sm"></i>
+                                                                                Auto
+                                                                                Grade
+                                                                            </button>
+                                                                        </div>
+                                                                        <div class="text-right">
                                                                             <span
-                                                                                class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Grading
-                                                                                Status</span>
-                                                                            <p class="text-xs font-black mt-1 text-[#383838]"
-                                                                                x-text="(sub.auto_graded && aiGradingEnabled) ? 'Auto Evaluated' : (sub.grade !== null ? 'Manual Entry' : 'Pending')">
+                                                                                class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Achieved
+                                                                                Score</span>
+                                                                            <p
+                                                                                class="text-lg font-black text-[#383838]">
+                                                                                <span x-text="sub.grade ?? '0'"></span>
+                                                                                <span
+                                                                                    class="text-xs text-gray-400 font-bold tracking-widest"
+                                                                                    x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
                                                                             </p>
                                                                         </div>
-                                                                        <button x-show="aiGradingEnabled"
-                                                                            @click="regradeSubmission(sub, $event)"
-                                                                            class="ml-2 bg-gray-100 hover:bg-gray-200 text-[#383838] text-[9px] font-black px-3 py-2 rounded-xl transition flex items-center gap-1.5 uppercase tracking-widest border border-gray-200">
-                                                                            <i class="ri-magic-line text-sm"></i> Auto
-                                                                            Grade
-                                                                        </button>
                                                                     </div>
-                                                                    <div class="text-right">
-                                                                        <span
-                                                                            class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Achieved
-                                                                            Score</span>
-                                                                        <p class="text-lg font-black text-[#383838]">
-                                                                            <span x-text="sub.grade ?? '0'"></span>
-                                                                            <span
-                                                                                class="text-xs text-gray-400 font-bold tracking-widest"
-                                                                                x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
 
-                                                                {{-- AI Feedback Breakdown --}}
-                                                                <template
-                                                                    x-if="sub.submission_grade && sub.submission_grade.criterion_scores">
-                                                                    <div class="mb-5 space-y-3">
-                                                                        <h4
-                                                                            class="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                                                                            Rubric Feedback & Breakdown</h4>
-                                                                        <template
-                                                                            x-for="score in sub.submission_grade.criterion_scores"
-                                                                            :key="score.id">
-                                                                            <div
-                                                                                class="p-4 border border-gray-200 bg-white rounded-2xl shadow-sm">
-                                                                                <p class="text-[11px] text-gray-700 leading-relaxed font-semibold"
-                                                                                    x-text="score.feedback"></p>
-                                                                            </div>
-                                                                        </template>
-                                                                    </div>
-                                                                </template>
-
-                                                                {{-- Interactive Rubric Level Selector --}}
-                                                                <template x-if="getTaskCriteria().length > 0">
-                                                                    <div
-                                                                        class="mb-5 space-y-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                                                                        <h4
-                                                                            class="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                                                                            Select Criteria Levels</h4>
-
-                                                                        <template
-                                                                            x-for="(criterion, cIdx) in getTaskCriteria()"
-                                                                            :key="cIdx">
-                                                                            <div
-                                                                                class="space-y-2 border-b border-gray-100 pb-3 last:border-none last:pb-0">
+                                                                    {{-- AI Feedback Breakdown --}}
+                                                                    <template
+                                                                        x-if="sub.submission_grade && sub.submission_grade.criterion_scores">
+                                                                        <div class="mb-5 space-y-3">
+                                                                            <h4
+                                                                                class="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                                                Rubric Feedback & Breakdown</h4>
+                                                                            <template
+                                                                                x-for="score in sub.submission_grade.criterion_scores"
+                                                                                :key="score.id">
                                                                                 <div
-                                                                                    class="flex justify-between items-center">
-                                                                                    <span
-                                                                                        class="text-xs font-black text-gray-800"
-                                                                                        x-text="criterion.name"></span>
-                                                                                    <span
-                                                                                        class="text-[9px] font-black text-gray-400 uppercase"
-                                                                                        x-text="'Max: ' + getMaxPoints(criterion) + ' PTS'"></span>
+                                                                                    class="p-4 border border-gray-200 bg-white rounded-2xl shadow-sm">
+                                                                                    <p class="text-[11px] text-gray-700 leading-relaxed font-semibold"
+                                                                                        x-text="score.feedback"></p>
                                                                                 </div>
+                                                                            </template>
+                                                                        </div>
+                                                                    </template>
 
-                                                                                <div class="flex flex-wrap gap-2">
-                                                                                    <template
-                                                                                        x-for="level in criterion.levels"
-                                                                                        :key="level.label || level.uid">
-                                                                                        <button type="button"
-                                                                                            @click="selectCriterionLevel(sub, cIdx, level.points)"
-                                                                                            :class="isCriterionLevelSelected(sub, cIdx, level.points) 
+                                                                    {{-- Interactive Rubric Level Selector --}}
+                                                                    <template x-if="getTaskCriteria().length > 0">
+                                                                        <div
+                                                                            class="mb-5 space-y-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                                                            <h4
+                                                                                class="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                                                Select Criteria Levels</h4>
+
+                                                                            <template
+                                                                                x-for="(criterion, cIdx) in getTaskCriteria()"
+                                                                                :key="cIdx">
+                                                                                <div
+                                                                                    class="space-y-2 border-b border-gray-100 pb-3 last:border-none last:pb-0">
+                                                                                    <div
+                                                                                        class="flex justify-between items-center">
+                                                                                        <span
+                                                                                            class="text-xs font-black text-gray-800"
+                                                                                            x-text="criterion.name"></span>
+                                                                                        <span
+                                                                                            class="text-[9px] font-black text-gray-400 uppercase"
+                                                                                            x-text="'Max: ' + getMaxPoints(criterion) + ' PTS'"></span>
+                                                                                    </div>
+
+                                                                                    <div class="flex flex-wrap gap-2">
+                                                                                        <template
+                                                                                            x-for="level in criterion.levels"
+                                                                                            :key="level.label || level.uid">
+                                                                                            <button type="button"
+                                                                                                @click="selectCriterionLevel(sub, cIdx, level.points)"
+                                                                                                :class="isCriterionLevelSelected(sub, cIdx, level.points) 
                                                                         ? 'bg-[#383838] text-white border-[#383838] shadow-sm' 
                                                                         : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'"
-                                                                                            class="px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-2">
-                                                                                            <span
-                                                                                                x-text="level.label"></span>
-                                                                                            <span
-                                                                                                class="text-[10px] opacity-75"
-                                                                                                x-text="'(' + level.points + 'p)'"></span>
-                                                                                        </button>
-                                                                                    </template>
+                                                                                                class="px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-2">
+                                                                                                <span
+                                                                                                    x-text="level.label"></span>
+                                                                                                <span
+                                                                                                    class="text-[10px] opacity-75"
+                                                                                                    x-text="'(' + level.points + 'p)'"></span>
+                                                                                            </button>
+                                                                                        </template>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        </template>
-                                                                    </div>
-                                                                </template>
-
-                                                                {{-- Final Manual Override Grade Form --}}
-                                                                <form :action="'/professor/grade/' + sub.id"
-                                                                    method="POST"
-                                                                    class="flex flex-col gap-3 mt-2 border-t border-gray-200 pt-5"
-                                                                    @submit.prevent="submitGrade(sub, $event)">
-                                                                    @csrf
-                                                                    <div class="flex items-center justify-between">
-                                                                        <span
-                                                                            class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Final
-                                                                            Score Override</span>
-                                                                        <div
-                                                                            class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-[#383838] transition">
-                                                                            <input type="number" name="grade"
-                                                                                :value="sub.grade"
-                                                                                @input="sub.grade = $event.target.value"
-                                                                                class="w-14 bg-transparent border-none p-0 text-sm font-black text-center focus:ring-0 text-[#383838]"
-                                                                                placeholder="0">
-                                                                            <span
-                                                                                class="text-[10px] font-black text-gray-400 ml-1"
-                                                                                x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
+                                                                            </template>
                                                                         </div>
-                                                                    </div>
-                                                                    <div class="flex items-stretch gap-2 h-12">
-                                                                        <input type="text" name="feedback"
-                                                                            :value="sub.feedback"
-                                                                            class="w-full border-gray-200 rounded-xl text-xs px-4 focus:ring-2 focus:ring-[#383838] transition-all bg-white"
-                                                                            placeholder="Enter manual comments...">
-                                                                        <button type="submit"
-                                                                            class="bg-[#383838] text-white px-5 rounded-xl hover:bg-black transition shadow-sm h-full flex items-center justify-center w-16 shrink-0">
-                                                                            <i class="ri-check-line text-lg"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                </form>
-                                                            </td>
-                                                        </tr>
-                                                    </template>
-                                                </tbody>
-                                            </table>
+                                                                    </template>
+
+                                                                    {{-- Final Manual Override Grade Form --}}
+                                                                    <form :action="'/professor/grade/' + sub.id"
+                                                                        method="POST"
+                                                                        class="flex flex-col gap-3 mt-2 border-t border-gray-200 pt-5"
+                                                                        @submit.prevent="submitGrade(sub, $event)">
+                                                                        @csrf
+                                                                        <div class="flex items-center justify-between">
+                                                                            <span
+                                                                                class="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Final
+                                                                                Score Override</span>
+                                                                            <div
+                                                                                class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-[#383838] transition">
+                                                                                <input type="number" name="grade"
+                                                                                    :value="sub.grade"
+                                                                                    @input="sub.grade = $event.target.value"
+                                                                                    class="w-14 bg-transparent border-none p-0 text-sm font-black text-center focus:ring-0 text-[#383838]"
+                                                                                    placeholder="0">
+                                                                                <span
+                                                                                    class="text-[10px] font-black text-gray-400 ml-1"
+                                                                                    x-text="'/ ' + (gradingTask ? gradingTask.points : 0)"></span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="flex items-stretch gap-2 h-12">
+                                                                            <input type="text" name="feedback"
+                                                                                :value="sub.feedback"
+                                                                                class="w-full border-gray-200 rounded-xl text-xs px-4 focus:ring-2 focus:ring-[#383838] transition-all bg-white"
+                                                                                placeholder="Enter manual comments...">
+                                                                            <button type="submit"
+                                                                                class="bg-[#383838] text-white px-5 rounded-xl hover:bg-black transition shadow-sm h-full flex items-center justify-center w-16 shrink-0">
+                                                                                <i class="ri-check-line text-lg"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
                                             </div>
 
                                             <template x-if="filteredSubmissions.length === 0">
@@ -2815,8 +2963,11 @@
                 };
 
                 updateContainer('tasks-list-container');
-                updateContainer('quizzes-list-container');
-                updateContainer('materials-list-container'); // Add this if needed
+updateContainer('quizzes-list-container');
+
+// Do not replace the Materials tab while the user is editing topics.
+// The AJAX saveTopics() method already updates the topic badges.
+// updateContainer('materials-list-container');
 
             } catch (err) {
                 console.error("Silent refresh failed:", err);

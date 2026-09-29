@@ -3,18 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany; 
-use Illuminate\Database\Eloquent\Relations\BelongsTo; 
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 class Quiz extends Model
 {
     protected $fillable = [
-        'title', 
+        'title',
         'topic',
-        'subject_id', 
-        'time_limit', 
-        'published_at', 
+        'subject_id',
+        'time_limit',
+        'published_at',
+        'learning_topic_id',
         'expires_at'
     ];
 
@@ -23,8 +24,8 @@ class Quiz extends Model
      * This is what makes quiz.has_attempt work in your Alpine.js code.
      */
     protected $appends = [
-        'has_attempt', 
-        'user_score', 
+        'has_attempt',
+        'user_score',
         'total_points'
     ];
 
@@ -52,15 +53,25 @@ class Quiz extends Model
     // Accessor for Has Attempt (Scoped to logged in user)
     public function getHasAttemptAttribute()
     {
-        if (!Auth::check()) return false;
+        if (!Auth::check())
+            return false;
         return $this->attempts()->where('user_id', Auth::id())->exists();
     }
 
     // Accessor for User Score (Scoped to logged in user)
     public function getUserScoreAttribute()
     {
-        if (!Auth::check()) return null;
+        if (!Auth::check())
+            return null;
         $attempt = $this->attempts()->where('user_id', Auth::id())->first();
         return $attempt ? $attempt->score : null;
+    }
+    public function learningTopic()
+    {
+        return $this->belongsTo(LearningTopic::class, 'learning_topic_id');
+    }
+    public function researchAssessments()
+    {
+        return $this->hasMany(ResearchAssessment::class, 'quiz_id');
     }
 }

@@ -104,40 +104,50 @@ class ClassroomController extends Controller
         return response()->json(['message' => 'Unenrolled successfully']);
     }
     // app/Http/Controllers/ClassroomController.php
+
     public function show($id)
     {
-        // 1. Fetch the lab session and sort students by last_name alphabetically
+        // Load the classroom and its related records.
         $session = LabSession::with([
             'students' => function ($query) {
-                $query->orderBy('last_name', 'asc'); // This handles the alphabetical sorting
+                $query->orderBy('last_name', 'asc');
             },
             'tasks.submissions.user',
             'quizzes.attempts.user',
-            'materials',
-            'faculty'
+            'materials.learningTopics',
+            'faculty',
         ])->findOrFail($id);
 
-        // 2. SECURITY CHECK
-        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+        // Only the assigned professor or an admin can open this class.
+        if (
+            (int) $session->faculty_id !== (int) Auth::id()
+            && Auth::user()->role !== 'admin'
+        ) {
             abort(403, 'Unauthorized access to this classroom.');
         }
 
-        // 3. Get the sorted students
         $activeStudents = $session->students;
-
         $tasks = $session->tasks;
 
-        // 4. Determine view
-        $view = Auth::user()->role === 'admin' ? 'admin.classroom.show' : 'professor.classroom.show';
+        // Populate the topic selector in the Materials tab.
+        $learningTopics = \App\Models\LearningTopic::query()
+            ->orderBy('name')
+            ->get();
+
+        $view = Auth::user()->role === 'admin'
+            ? 'admin.classroom.show'
+            : 'professor.classroom.show';
 
         return view($view, [
             'session' => $session,
             'class' => $session,
             'activeStudents' => $activeStudents,
             'tasks' => $tasks,
-            'quizzes' => $session->quizzes ?? collect()
+            'quizzes' => $session->quizzes,
+            'learningTopics' => $learningTopics,
         ]);
     }
+
 
     // Edit - Show the form
     public function update(Request $request, $id)
@@ -213,7 +223,7 @@ class ClassroomController extends Controller
             $class->is_broadcasting = false;
         }
 
-       $class->save();
+        $class->save();
 
         if ($class->is_active) {
 
@@ -298,26 +308,26 @@ class ClassroomController extends Controller
         ]);
     }
     public function getStudentsStatus($id)
-{
-    $session = LabSession::with('students')->findOrFail($id);
+    {
+        $session = LabSession::with('students')->findOrFail($id);
 
-    if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
-        abort(403);
+        if ($session->faculty_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403);
+        }
+
+        // Access the loaded collection directly to avoid redundant DB queries
+        $students = $session->students->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->last_name . ', ' . $student->first_name,
+                'is_present' => (bool) ($student->pivot->is_present ?? false),
+                'is_screen_blocked' => (bool) ($student->pivot->is_screen_blocked ?? false),
+                'violation_count' => (int) ($student->pivot->violation_count ?? 0),
+            ];
+        });
+
+        return response()->json($students);
     }
-
-    // Access the loaded collection directly to avoid redundant DB queries
-    $students = $session->students->map(function ($student) {
-        return [
-            'id' => $student->id,
-            'name' => $student->last_name . ', ' . $student->first_name,
-            'is_present' => (bool) ($student->pivot->is_present ?? false),
-            'is_screen_blocked' => (bool) ($student->pivot->is_screen_blocked ?? false),
-            'violation_count' => (int) ($student->pivot->violation_count ?? 0),
-        ];
-    });
-
-    return response()->json($students);
-}
 
     // 🟢 2. Handles the "Share My Screen / Stop Broadcasting" Button
     public function broadcast(Request $request, $id)

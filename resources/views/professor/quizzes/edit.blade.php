@@ -8,7 +8,7 @@
                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-200">
                     <div class="flex justify-between items-center mb-8">
                         <div>
-                            <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Create New Quiz</h2>
+                            <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Edit Quiz</h2>
                             <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Configure
                                 general exam settings</p>
                         </div>
@@ -37,13 +37,42 @@
                                 placeholder="60" required />
                         </div>
 
-                        <div class="md:col-span-2">
-                            <label
-                                class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Topic</label>
-                            <input id="topic" name="topic" type="text" value="{{ old('topic', $quiz->topic) }}"
-                                class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none font-bold text-gray-900"
-                                placeholder="e.g. Array Lists" required />
-                        </div>
+                        
+<div class="md:col-span-2">
+    <label for="learning_topic_id"
+        class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+        Learning Topic
+    </label>
+
+    @if(!$quiz->learning_topic_id && $quiz->topic)
+        <p class="mb-2 text-xs text-amber-700">
+            Existing topic: {{ $quiz->topic }}
+            — select its standardized learning topic.
+        </p>
+    @endif
+
+    <select
+        id="learning_topic_id"
+        name="learning_topic_id"
+        @if(!$hasAttempts) required @endif
+        class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4
+               focus:ring-2 focus:ring-gray-400 outline-none
+               font-bold text-gray-900"
+    >
+        <option value="">Select a learning topic</option>
+
+        @foreach($learningTopics as $topic)
+            <option value="{{ $topic->id }}"
+                @selected(
+                    old('learning_topic_id', $quiz->learning_topic_id)
+                    == $topic->id
+                )>
+                {{ $topic->name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
 
                         <div>
                             <label
@@ -212,12 +241,78 @@
                 </div>
             </form>
             </fieldset>
+            
+@if($hasAttempts)
+    <div class="mt-6 rounded-3xl border border-gray-200 bg-white p-6">
+        <h3 class="text-sm font-black uppercase text-gray-900">
+            Assign Learning Topic
+        </h3>
+
+        <p class="mt-2 text-xs text-gray-500">
+            You can update this quiz's learning topic without
+            changing its questions or existing student scores.
+        </p>
+
+        <form method="POST" action="{{ route('professor.quizzes.learning-topic.update', $quiz->id) }}" class="mt-5 space-y-4"
+        @submit.prevent="submitTopicForm($event.target)">
+
+            @csrf
+            @method('PATCH')
+
+            <select name="learning_topic_id" required
+                class="w-full rounded-xl border-gray-200 bg-gray-50 p-4 text-sm">
+
+                <option value="">Select a learning topic</option>
+
+                @foreach($learningTopics as $topic)
+                    <option value="{{ $topic->id }}"
+                        @selected($quiz->learning_topic_id == $topic->id)>
+                        {{ $topic->name }}
+                    </option>
+                @endforeach
+            </select>
+
+            <button type="submit"
+                class="rounded-xl bg-[#383838] px-6 py-3 text-xs font-black uppercase text-white">
+                Save Learning Topic
+            </button>
+        </form>
+    </div>
+@endif
         </div>
     </div>
 
     <script>
         function quizForm() {
             return {
+            async submitTopicForm(form) {
+                const button = form.querySelector('button[type="submit"]');
+                button.disabled = true;
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new FormData(form)
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to save topic.');
+                    }
+
+                    window.parent.postMessage('quiz-saved', window.location.origin);
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    button.disabled = false;
+                }
+            },
+
                 async submitForm(form) {
                     const submitBtn = form.querySelector('button[type="submit"]');
                     submitBtn.disabled = true;

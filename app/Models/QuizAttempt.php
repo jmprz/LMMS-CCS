@@ -8,25 +8,29 @@ class QuizAttempt extends Model
 {
     // These must match your database column names EXACTLY
     protected $fillable = [
-        'user_id', 
-        'quiz_id', 
-        'score', 
+        'user_id',
+        'quiz_id',
+        'score',
         'total_questions',
-        'total_points', 
+        'total_points',
         'time_spent'
     ];
 
- public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-{
-    return $this->belongsTo(User::class);
-}
-    public function quiz() {
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+    public function quiz()
+    {
         return $this->belongsTo(Quiz::class);
     }
 
-public function details()
-{
-    return $this->hasMany(QuizAttemptDetail::class);
-}
-    
+    public function details()
+    {
+        return $this->hasMany(QuizAttemptDetail::class);
+    }
+    public function learningRecommendations()
+    {
+        return $this->hasMany(LearningRecommendation::class, 'quiz_attempt_id');
+    }
 }
