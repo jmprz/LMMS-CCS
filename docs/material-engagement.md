@@ -1,0 +1,31 @@
+# Material engagement collection
+
+## Audit of the original lifecycle
+
+The original material_logs schema had id, user_id, material_id, opened_at, closed_at, duration_seconds and timestamps, with no model or session uniqueness. Every classroom open inserted a row. Only the Finish Reading action sent an end request. Client Date differences supplied unvalidated wall-clock duration. There were no material visibility/idle checks, heartbeats or pagehide flushing. The close query selected all open rows for a student/material; ordering did not limit its UPDATE. One close could therefore assign the same duration to multiple open sessions. It also wrote an activity event on every retry. PPTX had no modal renderer.
+
+These are mechanisms that can explain missed closes and inflated durations, not evidence of the cause for each historical session. Tab closure, reload, switching resources, device suspension, network failure and request races can all lose an end. Never infer active time from opened_at/closed_at or fill historical NULL values. Repeated student/material open rows may represent legitimate separate visits; they are audit candidates, not proof of duplicates.
+
+At the earlier cutoff 2026-10-01 23:59:59 Asia/Manila, the enrolled-student audit contained 261 sessions, 171 with duration and 90 unclosed/NULL. At the current baseline cutoff 2026-10-02 17:16:32 it contained 270 sessions, 178 closed and 92 unclosed/NULL, matching database-wide totals. All recorded resources were PDF. There were no zero or negative durations and no values above one hour (maximum 1237 seconds). The audit found 19 pairs with multiple open rows, 38 extra open rows, and no duplicate identical-open-timestamp groups. Numeric availability does not validate legacy active time.
+
+## New classroom lifecycle: visible_v1
+
+Apply only the additive `2026_10_02_000004_add_verified_collection_to_material_logs.php` migration. It preserves all old fields and values; new metadata remains NULL for historical rows. Do not rerun the older destructive create-material-logs migration. Deploy the model/service/controller/routes and classroom script together, and refresh old classroom clients. Requests without the new session identity/counters are rejected, not silently treated as verified time.
+
+An enrolled student opens a material using a UUID client_session_key. User-row locking and a unique user/key constraint make concurrent retries idempotent. Different deliberate visits/tabs have distinct keys. The server returns the material-log session ID and a frozen measurement mode. PDF uploads and embedded YouTube use internal_visible; PPTX, external PDFs and explicitly external opens use external_open. An open measures access, not completion or comprehension. Duration initially stays NULL until a measurement is received.
+
+The classroom counter samples once per second, counting only a loaded/open viewer in a visible, focused document with parent-page interaction in the last 60 seconds. Hidden, unfocused, idle and suspended timer gaps are excluded. Cross-origin/native iframe interactions and actual playback cannot be fully observed from the parent. This is a conservative visible/recent-activity proxy; it can undercount uninterrupted reading or video watching, and does not prove cognitive attention.
+
+Every ten seconds a heartbeat sends session ID, increasing sequence and cumulative active seconds. The server locks that exact owned session, ignores duplicate/out-of-order messages and accepts at most the minimum of reported increment, server elapsed seconds and 20 seconds. Long disconnected gaps are deliberately discarded, never reconstructed. The reported counter advances even when excess is discarded so later retries cannot recover fabricated time. Visibility assertions still originate at the browser; server validation bounds plausibility, not independent proof of visibility. External sessions keep duration NULL regardless of reported time.
+
+Finish Reading closes that session and writes one bounded activity event. Duplicate closes cannot alter it or create more events. Pagehide uses CSRF-bearing sendBeacon with keepalive fetch fallback; visibility changes also flush heartbeats. Delivery is best effort, and abrupt process/network loss can still leave a session open. Such a record may have a measured partial duration, or NULL if never measured. There is no timeout backfill, inferred close or legacy fallback. BFCache restoration does not silently resume the old finalized viewer.
+
+The learning-roadmap page records separate recommendation_engagements. It already pauses while hidden and avoids timing external URLs, but uses its own client counter/end API. This change does not merge it with material_logs or change recommendation experiments. Its durations are not inputs to the current material risk predictors and are not claimed to have the new server bounds.
+
+## Interpretation and validation
+
+materials_accessed is evidence of resource opens. material_session_count describes logged opens; historical duplicate/missed-close behavior limits interpretation as independent legitimate visits. The new identity protocol strengthens future session counting. reading_total_seconds and reading_avg_seconds currently mix legacy client wall-clock values and new proxy measurements, because risk formulas are intentionally unchanged. They must not yet be described as verified active reading time for the production-derived dataset. A future explicitly versioned feature rule can select collection_version/measurement_mode after collection is reviewed; no rule is changed here.
+
+The source audit reports class-level coverage, NULL versus zero, closed/unclosed, legacy/new collection, external opens, duplicate candidates and material types. Neither completeness nor plausible magnitudes establish ML quality. Current academic grade remains nullable/pending external records; no grade entry, derived academic grade, passing threshold, risk labels or model training is added.
+
+Run Laravel material/risk/topic/attendance/audit suites and `node --test tests/js/material-engagement.test.cjs`. The JavaScript tests simulate visibility/idle/suspension and pagehide transport; they are not proof of delivery on every browser/device. Review real visible_v1 records after students use the updated client before changing risk formulas.

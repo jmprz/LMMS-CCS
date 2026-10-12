@@ -23,8 +23,22 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $firstName = fake()->firstName();
+        $lastName = fake()->lastName();
+
         return [
-            'name' => fake()->name(),
+            'first_name' => $firstName,
+            'middle_name' => null,
+            'last_name' => $lastName,
+            'name' => fn (array $attributes) => $attributes['first_name'].' '.$attributes['last_name'],
+            'school_id' => 'TEST-'.fake()->unique()->numerify('##########'),
+            'role' => 'student',
+            // Most tests exercise an existing account after activation.
+            'is_activated' => true,
+            'program' => 'BSIT',
+            'year_level' => fake()->numberBetween(1, 4),
+            'section' => fake()->randomElement(['A', 'B', 'C']),
+            'status' => 'enrolled',
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
@@ -39,6 +53,13 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function unactivated(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_activated' => false,
         ]);
     }
 }

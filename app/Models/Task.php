@@ -8,6 +8,7 @@ class Task extends Model
 {
     protected $fillable = [
         'subject_id',
+        'learning_topic_id',
         'title',
         'description',
         'deadline',
@@ -21,6 +22,11 @@ class Task extends Model
     /**
      * Get the lab session this task belongs to.
      */
+    public function learningTopic(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(LearningTopic::class);
+    }
+
     public function labSession()
     {
         return $this->belongsTo(LabSession::class, 'subject_id');

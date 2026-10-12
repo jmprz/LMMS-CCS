@@ -16,6 +16,7 @@ class SubjectGrade extends Model
         'grade',
         'recorded_at',
         'recorded_by',
+        'source',
     ];
 
     protected function casts(): array

@@ -113,6 +113,8 @@ class ClassroomController extends Controller
                 $query->orderBy('last_name', 'asc');
             },
             'tasks.submissions.user',
+            'tasks.learningTopic',
+            'quizzes.learningTopic',
             'quizzes.attempts.user',
             'materials.learningTopics',
             'faculty',
@@ -413,7 +415,7 @@ class ClassroomController extends Controller
     {
         $tasks = \App\Models\Task::where('subject_id', $id)
             ->latest()
-            ->get(['id', 'title', 'description', 'deadline', 'points']);
+            ->with('learningTopic')->get(['id', 'title', 'description', 'deadline', 'points', 'learning_topic_id']);
 
         return response()->json($tasks);
     }

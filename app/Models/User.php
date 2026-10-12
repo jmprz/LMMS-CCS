@@ -47,6 +47,11 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function attendanceSessionEntries()
+    {
+        return $this->hasMany(AttendanceSessionStudent::class);
+    }
+
     protected $fillable = [
         'first_name',
         'middle_name',

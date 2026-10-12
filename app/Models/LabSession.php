@@ -44,6 +44,11 @@ class LabSession extends Model
             ->withPivot(['is_present', 'violation_count', 'is_screen_blocked', 'screen_blocked_at']);
     }
 
+    public function attendanceSessions(): HasMany
+    {
+        return $this->hasMany(AttendanceSession::class);
+    }
+
     /**
      * Accessor for currently active/present students.
      */

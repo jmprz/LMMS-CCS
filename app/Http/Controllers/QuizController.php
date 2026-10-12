@@ -30,7 +30,7 @@ class QuizController extends Controller
         // 1. Flexible Validation
         $request->validate([
             'title' => 'required|string|max:255',
-            'learning_topic_id' => 'required|integer|exists:learning_topics,id',
+            'learning_topic_id' => 'nullable|integer|exists:learning_topics,id',
             'lab_session_id' => 'required|exists:lab_sessions,id',
             'time_limit' => 'required|integer|min:1',
             'questions' => 'required|array|min:1',
@@ -43,13 +43,13 @@ class QuizController extends Controller
 
         $session = LabSession::findOrFail($request->lab_session_id);
         abort_unless((int) $session->faculty_id === (int) auth()->id(), 403);
-        $learningTopic = LearningTopic::findOrFail($request->learning_topic_id);
+        $learningTopic = LearningTopic::find($request->learning_topic_id);
 
         return DB::transaction(function () use ($request, $learningTopic) {
             // 2. Create the Quiz
             $quiz = Quiz::create([
                 'title' => $request->title,
-                'topic' => $learningTopic->name,
+                'topic' => $learningTopic?->name,
                 'subject_id' => $request->lab_session_id,
                 'time_limit' => $request->time_limit,
                 'published_at' => $request->published_at ?? now(),
@@ -58,7 +58,7 @@ class QuizController extends Controller
 
             // Save the standardized topic while preserving the legacy topic text.
             // forceFill avoids requiring an immediate Quiz::$fillable change.
-            $quiz->forceFill(['learning_topic_id' => $learningTopic->id])->save();
+            $quiz->forceFill(['learning_topic_id' => $learningTopic?->id])->save();
 
             // 3. Single loop through questions
             foreach ($request->questions as $qData) {
@@ -281,7 +281,8 @@ class QuizController extends Controller
                     'log_type' => 'quiz',
                     'content' => "Student completed quiz assessment: \"" . $quiz->title . "\"",
                     'lab_session_id' => $quiz->subject_id,
-                    'duration_seconds' => $timeSpent,
+                    // Attempt elapsed time remains on QuizAttempt, not generic UI activity.
+                    'duration_seconds' => null,
                 ]);
 
                 try {
@@ -439,7 +440,7 @@ class QuizController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'learning_topic_id' => 'required|integer|exists:learning_topics,id',
+            'learning_topic_id' => 'nullable|integer|exists:learning_topics,id',
             'time_limit' => 'required|integer|min:1',
             'questions' => 'required|array|min:1',
             'questions.*.text' => 'required|string',
@@ -451,7 +452,7 @@ class QuizController extends Controller
 
         $quiz = Quiz::with('labSession')->findOrFail($id);
         abort_unless((int) $quiz->labSession->faculty_id === (int) auth()->id(), 403);
-        $learningTopic = LearningTopic::findOrFail($request->learning_topic_id);
+        $learningTopic = LearningTopic::find($request->learning_topic_id);
 
         if ($quiz->attempts()->exists()) {
             $message = 'This quiz already has student attempts and can no longer be edited, to keep past scores intact. Delete the quiz and create a new one if changes are needed.';
@@ -472,13 +473,13 @@ class QuizController extends Controller
                 // 1. Update general configurations
                 $quiz->update([
                     'title' => $request->title,
-                    'topic' => $learningTopic->name,
+                    'topic' => $learningTopic?->name,
                     'time_limit' => $request->time_limit,
                     'published_at' => $request->published_at ?? $quiz->published_at,
                     'expires_at' => $request->expires_at,
                 ]);
 
-                $quiz->forceFill(['learning_topic_id' => $learningTopic->id])->save();
+                $quiz->forceFill(['learning_topic_id' => $learningTopic?->id])->save();
 
                 // 2. Clear old relational records to update with new structures cleanly
                 foreach ($quiz->questions as $oldQuestion) {
@@ -553,14 +554,14 @@ class QuizController extends Controller
     public function updateLearningTopic(Request $request, $id)
     {
         $validated = $request->validate([
-            'learning_topic_id' => 'required|integer|exists:learning_topics,id',
+            'learning_topic_id' => 'nullable|integer|exists:learning_topics,id',
         ]);
 
         $quiz = Quiz::with('labSession')->findOrFail($id);
         abort_unless((int) $quiz->labSession->faculty_id === (int) auth()->id(), 403);
 
         $quiz->forceFill([
-            'learning_topic_id' => $validated['learning_topic_id'],
+            'learning_topic_id' => $validated['learning_topic_id'] ?? null,
         ])->save();
 
         $this->logProfessorActivity(

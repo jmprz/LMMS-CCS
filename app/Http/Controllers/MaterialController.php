@@ -84,49 +84,31 @@ class MaterialController extends Controller
         return back()->with('success', 'Material posted successfully!');
     }
 
-    public function logStart(\App\Models\Material $material)
+    public function logStart(Request $request, Material $material, \App\Services\MaterialEngagementService $engagement)
     {
-        // 1. Keep this: Tracks precise structural analytics session windows
-        \DB::table('material_logs')->insert([
-            'user_id' => auth()->id(),
-            'material_id' => $material->id,
-            'opened_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json(['message' => 'Log started']);
+        $data = $request->validate(['client_session_key' => 'required|uuid', 'external' => 'sometimes|boolean']);
+        $log = $engagement->start($request->user(), $material, $data['client_session_key'], (bool) ($data['external'] ?? false));
+        return response()->json(['session_id' => $log->id, 'measurement_mode' => $log->measurement_mode,
+            'collection_version' => $log->collection_version, 'closed' => $log->closed_at !== null]);
     }
 
-    public function logEnd(Request $request, \App\Models\Material $material)
+    public function logHeartbeat(Request $request, Material $material, \App\Services\MaterialEngagementService $engagement)
     {
-        $userId = auth()->id();
-        $duration = $request->duration ?? 0;
-
-        // 1. Core update to structural material session logs
-        \DB::table('material_logs')
-            ->where('user_id', $userId)
-            ->where('material_id', $material->id)
-            ->whereNull('closed_at')
-            ->latest()
-            ->update([
-                'closed_at' => now(),
-                'duration_seconds' => $duration,
-                'updated_at' => now(),
-            ]);
-
-        // 2. ALTERNATIVE: Write to timeline modal ONLY when they finish reading
-        \App\Models\ActivityLog::create([
-            'user_id' => $userId,
-            'log_type' => 'material',
-            'content' => "Student finished reading material: \"" . $material->title . "\"",
-            'lab_session_id' => $material->lab_session_id, // Match with your session foreign key column
-            'duration_seconds' => $duration,
-        ]);
-
-        return response()->json(['message' => 'Log ended', 'duration' => $duration]);
+        return $this->recordEngagement($request, $material, $engagement, false);
     }
 
+    public function logEnd(Request $request, Material $material, \App\Services\MaterialEngagementService $engagement)
+    {
+        return $this->recordEngagement($request, $material, $engagement, true);
+    }
+
+    private function recordEngagement(Request $request, Material $material, \App\Services\MaterialEngagementService $engagement, bool $close)
+    {
+        $data = $request->validate(['session_id' => 'required|integer|min:1', 'sequence' => 'required|integer|min:1|max:2147483647',
+            'active_seconds' => 'required|integer|min:0|max:2147483647']);
+        $log = $engagement->record($request->user(), $material, (int) $data['session_id'], (int) $data['sequence'], (int) $data['active_seconds'], $close);
+        return response()->json(['session_id' => $log->id, 'duration_seconds' => $log->duration_seconds, 'closed' => $log->closed_at !== null]);
+    }
     /**
      * Update the specified learning material.
      */
@@ -223,7 +205,8 @@ class MaterialController extends Controller
                 'users.name as student_name',
                 'users.school_id as student_identifier', // Swapped out safely for generic user properties
                 'material_logs.opened_at',
-                'material_logs.duration_seconds'
+                'material_logs.duration_seconds',
+                'material_logs.closed_at', 'material_logs.collection_version', 'material_logs.measurement_mode'
             )
             ->orderBy('material_logs.opened_at', 'desc')
             ->get()
@@ -233,7 +216,10 @@ class MaterialController extends Controller
                     'student_name' => $log->student_name,
                     'student_info' => $log->student_identifier,
                     'viewed_at' => \Carbon\Carbon::parse($log->opened_at)->format('M d, Y h:i A'),
-                    'seconds_spent' => $log->duration_seconds ?? 0,
+                    'seconds_spent' => $log->duration_seconds,
+                    'is_closed' => $log->closed_at !== null,
+                    'collection_version' => $log->collection_version,
+                    'measurement_mode' => $log->measurement_mode,
                 ];
             });
 

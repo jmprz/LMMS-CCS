@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Services\ViolationEnforcementService;
+use App\Services\AttendanceSessionService;
 
 class StudentClassController extends Controller
 {
@@ -41,9 +42,18 @@ class StudentClassController extends Controller
         return view('student.dashboard', compact('joinedClasses', 'activeSessions', 'pendingTasks'));
     }
 
-    public function markPresent(\App\Models\LabSession $labSession)
+    public function markPresent(\Illuminate\Http\Request $request, \App\Models\LabSession $labSession, AttendanceSessionService $attendance)
     {
         $userId = auth()->id();
+        $data = $request->validate(['attendance_session_id' => ['nullable', 'integer', 'min:1']]);
+        $verified = $attendance->checkIn($labSession, $request->user(), $data['attendance_session_id'] ?? null);
+        if ($verified !== null) {
+            auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, ['is_present' => true]);
+
+            return response()->json(['status' => 'success', 'verified_attendance' => $verified]);
+        }
+        // No active verified session: preserve the legacy daily check-in workflow.
+        abort_unless(auth()->user()->joinedClasses()->where('lab_sessions.id', $labSession->id)->exists(), 403);
         $today = now()->toDateString();
 
         \App\Models\Attendance::updateOrCreate(
@@ -65,7 +75,7 @@ class StudentClassController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    public function heartbeat(LabSession $labSession)
+    public function heartbeat(LabSession $labSession, AttendanceSessionService $attendance)
     {
         auth()->user()->joinedClasses()->updateExistingPivot($labSession->id, [
             'is_present' => true,
@@ -73,10 +83,15 @@ class StudentClassController extends Controller
         ]);
 
         $enforcement = app(ViolationEnforcementService::class)->getStatus(auth()->id(), $labSession->id);
+        $attendance->presence($labSession, auth()->user());
+        $active = \App\Models\AttendanceSession::where('lab_session_id', $labSession->id)->where('status', 'active')->first();
+        $roster = $active?->students()->where('user_id', auth()->id())->first();
 
         return response()->json(array_merge([
             'status' => 'alive',
             'is_active' => (bool) $labSession->is_active,
+            'attendance_session_id' => $active?->id,
+            'attendance_roster_status' => $roster?->status,
         ], $enforcement));
     }
 
@@ -95,8 +110,9 @@ class StudentClassController extends Controller
         return redirect()->route('student.dashboard')->with('success', 'Successfully joined ' . $session->subject_name);
     }
 
-    public function stopPresenting(Request $request, $labSessionId)
+    public function stopPresenting(Request $request, $labSessionId, AttendanceSessionService $attendance)
     {
+        $attendance->presence(LabSession::findOrFail($labSessionId), $request->user(), true);
         auth()->user()->joinedClasses()->updateExistingPivot($labSessionId, [
             'is_present' => false,
         ]);
@@ -136,11 +152,9 @@ class StudentClassController extends Controller
         'submission' => 'required|file|extensions:pdf,zip,doc,docx,png,jpg,php,py,dart,js,java,cpp,c,css,html,txt|max:25600',
         ]);
 
-        // 3. LIVE SESSION DURATION CALCULATION
+        // A submission is an event; task age is not measured engagement.
         $submittedAt = now();
-        $taskCreatedAt = \Carbon\Carbon::parse($task->created_at);
-
-        $durationSeconds = max(0, $submittedAt->getTimestamp() - $taskCreatedAt->getTimestamp());
+        $durationSeconds = null;
 
         // 4. File Handling & Folder Path Building
         if ($request->hasFile('submission')) {
@@ -290,30 +304,13 @@ class StudentClassController extends Controller
             $detail = "Google Search: " . urldecode($query['q'] ?? 'unknown');
         }
 
-        $lastLog = DB::table('activity_logs')
-            ->where('user_id', $userId)
-            ->where('lab_session_id', $labSessionId)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($lastLog) {
-            $startTime = strtotime($lastLog->created_at);
-            $endTime = time();
-            $duration = $endTime - $startTime;
-
-            if ($duration > 0) {
-                DB::table('activity_logs')
-                    ->where('id', $lastLog->id)
-                    ->update(['duration_seconds' => $duration]);
-            }
-        }
-
+        // Event gaps cannot measure engagement and must not mutate earlier logs.
         DB::table('activity_logs')->insert([
             'user_id' => $userId,
             'log_type' => $logType,
             'content' => $detail,
             'lab_session_id' => $labSessionId,
-            'duration_seconds' => 0,
+            'duration_seconds' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

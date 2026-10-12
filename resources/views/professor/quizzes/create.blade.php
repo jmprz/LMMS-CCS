@@ -40,10 +40,10 @@
                                 Learning Topic
                             </label>
 
-                            <select id="learning_topic_id" name="learning_topic_id" required
+                            <select id="learning_topic_id" name="learning_topic_id"
                                 class="w-full border-gray-200 bg-gray-50 rounded-2xl p-4 font-bold text-gray-900">
 
-                                <option value="">Select a learning topic</option>
+                                <option value="">No learning topic assigned</option>
 
                                 @foreach($learningTopics as $topic)
                                     <option value="{{ $topic->id }}" @selected(old('learning_topic_id') == $topic->id)>

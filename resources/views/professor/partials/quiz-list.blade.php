@@ -20,6 +20,7 @@
                                             <h4 class="font-bold text-gray-900 mb-1 group-hover:text-black transition">
                                                 {{ $quiz->title }}
                                             </h4>
+                                            <p class="text-xs text-gray-500">Learning topic: {{ $quiz->learningTopic?->name ?? 'Unassigned' }}</p>
 
                                             <div class="space-y-2 mt-4">
                                                 <div class="flex items-center text-gray-500 text-[11px] font-medium">

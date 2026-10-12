@@ -45,6 +45,7 @@ class TaskController extends Controller
     {
         $request->validate([
             'subject_id' => 'required|integer',
+            'learning_topic_id' => 'nullable|integer|exists:learning_topics,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'deadline' => 'required|date',
@@ -59,6 +60,7 @@ class TaskController extends Controller
         try {
             $task = Task::create([
                 'subject_id' => $request->subject_id,
+                'learning_topic_id' => $request->input('learning_topic_id'),
                 'title' => $request->title,
                 'description' => $request->description,
                 'deadline' => $request->deadline,
@@ -104,7 +106,7 @@ class TaskController extends Controller
                 ]);
             }
 
-            $task->load('rubric.criteria');
+            $task->load('rubric.criteria', 'learningTopic');
 
             $students = User::whereHas('joinedClasses', function ($query) use ($request) {
                 $query->where('lab_sessions.id', $request->subject_id);
@@ -135,6 +137,7 @@ class TaskController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
+            'learning_topic_id' => 'nullable|integer|exists:learning_topics,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'deadline' => 'required|date',
@@ -150,6 +153,7 @@ class TaskController extends Controller
             $task = Task::findOrFail($id);
 
             $task->update([
+                'learning_topic_id' => $request->has('learning_topic_id') ? $request->input('learning_topic_id') : $task->learning_topic_id,
                 'title' => $request->title,
                 'description' => $request->description,
                 'deadline' => $request->deadline,
@@ -199,7 +203,7 @@ class TaskController extends Controller
                 ]);
             }
 
-            $task->load('rubric.criteria');
+            $task->load('rubric.criteria', 'learningTopic');
 
             $this->logProfessorActivity(
                 $task->subject_id,

@@ -36,6 +36,11 @@ class LearningTopic extends Model
         return $this->hasMany(LearningRecommendation::class, 'learning_topic_id');
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -48,4 +53,3 @@ class LearningTopic extends Model
         )->withTimestamps();
     }
 }
-

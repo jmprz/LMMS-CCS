@@ -52,6 +52,7 @@ public function store(LoginRequest $request): RedirectResponse
     
     // Mark student as not present before logging out
     if ($user && $user->role === 'student') {
+        app(\App\Services\AttendanceSessionService::class)->leaveAll($user);
         \DB::table('class_student')
             ->where('user_id', auth()->id())
             ->update(['is_present' => false]);

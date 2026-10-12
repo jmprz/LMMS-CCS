@@ -551,6 +551,7 @@
                                             </td>
                                             <td class="px-5 py-3.5 text-right">
                                                 <div class="flex justify-end items-center gap-1">
+                                                    <a :href="'/official-outcomes/' + session.id" class="px-2 py-1 text-xs font-bold" title="Official final outcomes">Outcomes</a>
                                                     <button @click="openEdit(session)" title="Edit Details"
                                                         class="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
                                                         <i class="ri-edit-line text-base"></i>

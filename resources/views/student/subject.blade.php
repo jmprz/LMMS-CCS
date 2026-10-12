@@ -299,7 +299,7 @@
                     <iframe src="https://onecompiler.com" class="w-full h-full border-none bg-white"></iframe>
                 </div>
  
-                <div x-show="activeToolTab === 'browser'" class="w-full h-full flex flex-col bg-white" x-data="browserManager()">
+                <div data-engagement-exclusive x-show="activeToolTab === 'browser'" class="w-full h-full flex flex-col bg-white" x-data="browserManager()">
                     <div class="p-2 sm:p-4 border-b border-gray-100 bg-white shrink-0">
     <div class="flex items-center gap-1.5 sm:gap-2.5 bg-white p-1.5 sm:p-2 rounded-2xl border border-gray-200/80 shadow-sm">
     
@@ -635,7 +635,7 @@
     </div>
 </div>
     <div x-data="{ showQuizModal: false, quizUrl: '', isLocked: false, open(id) { this.quizUrl = `/student/quizzes/${id}/attempt`; this.showQuizModal = true; this.isLocked = false; } }"
-         x-show="showQuizModal" x-cloak @open-quiz.window="open($event.detail.id)"
+         data-engagement-exclusive x-show="showQuizModal" x-cloak @open-quiz.window="open($event.detail.id)"
          @message.window="if ($event.data === 'lock-modal') isLocked = true; if ($event.data === 'unlock-modal') isLocked = false; if ($event.data === 'close-modal') { showQuizModal = false; isLocked = false; }"
          class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
         <div class="bg-white w-full max-w-6xl h-[96vh] sm:h-[92vh] rounded-[1.25rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col relative">
@@ -651,7 +651,10 @@
         </div>
     </div>
  
-    <div x-data="materialViewer()" @open-material.window="openMaterial($event.detail)" x-show="showViewer" x-cloak @click.self="closeMaterial()" class="fixed inset-0 z-[20000] bg-black/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <script src="{{ asset('js/material-engagement.js') }}"></script>
+    <script src="{{ asset('js/activity-engagement.js') }}"></script>
+    <script>document.addEventListener('DOMContentLoaded', () => LMMSActivityEngagement.track(@json($class->id), @json(csrf_token())));</script>
+    <div data-engagement-exclusive x-data="materialViewer()" @open-material.window="openMaterial($event.detail)" x-show="showViewer" x-cloak @click.self="closeMaterial()" class="fixed inset-0 z-[20000] bg-black/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
         <div class="bg-white rounded-[1.25rem] sm:rounded-[40px] shadow-2xl max-w-5xl w-full h-[96vh] sm:h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-gray-100" @click.stop>
             <div class="border-b border-gray-50 p-3 sm:p-6 flex justify-between items-center bg-white shrink-0 gap-3">
                 <div class="min-w-0">
@@ -662,8 +665,13 @@
             </div>
             <div class="flex-grow w-full bg-gray-50 relative overflow-hidden">
                 <div class="absolute inset-0 flex items-center justify-center -z-10 bg-gray-100"><div class="flex flex-col items-center gap-4"><div class="w-8 h-8 border-2 border-[#383838] border-t-transparent rounded-full animate-spin"></div></div></div>
-                <template x-if="currentMaterial.type === 'pdf'"><iframe :src="currentMaterial.url" class="w-full h-full border-none block"></iframe></template>
-                <template x-if="currentMaterial.type === 'youtube'"><div class="w-full h-full flex items-center justify-center bg-black"><iframe :src="currentMaterial.url" class="w-full h-full border-none" allow="autoplay; encrypted-media" allowfullscreen></iframe></div></template>
+                <template x-if="session?.measurement_mode === 'internal_visible' && currentMaterial.type === 'pdf'"><iframe :src="currentMaterial.url" @load="viewerReady = true" class="w-full h-full border-none block"></iframe></template>
+                <template x-if="session?.measurement_mode === 'internal_visible' && currentMaterial.type === 'youtube'"><div class="w-full h-full flex items-center justify-center bg-black"><iframe :src="currentMaterial.url" @load="viewerReady = true" class="w-full h-full border-none" allow="autoplay; encrypted-media" allowfullscreen></iframe></div></template>
+                <template x-if="session?.measurement_mode === 'external_open'">
+                    <div class="p-8 text-center"><p class="mb-4">This resource opens outside the LMMS viewer. External viewing time is not measured.</p>
+                        <a :href="currentMaterial.url" target="_blank" rel="noopener noreferrer" @click="closeMaterial()" class="underline font-bold">Open resource</a>
+                    </div>
+                </template>
             </div>
         </div>
     </div>
@@ -673,6 +681,34 @@
     const classId = '{{ $class->id }}';
     const profPeerId = 'PROF_{{ $class->faculty_id }}';
     const csrfToken = '{{ csrf_token() }}';
+    let attendanceEntryConfirmed = false;
+    let attendanceRequestBusy = false;
+    let attendanceFailureSession = null;
+    let classroomWasActive = @js((bool) $class->is_active);
+    window.addEventListener('pagehide', () => {
+        if (!attendanceEntryConfirmed) return;
+        fetch(@js(route('student.stop-presenting', $class->id)), {
+            method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, keepalive: true
+        }).catch(() => {});
+    });
+    async function recordAttendance(sessionId = null) {
+        if (attendanceRequestBusy) return;
+        attendanceRequestBusy = true;
+        try {
+            const response = await fetch(@js(route('student.mark-present', $class->id)), {
+                method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ attendance_session_id: sessionId })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Attendance check-in failed.');
+            attendanceEntryConfirmed = true;
+            attendanceFailureSession = null;
+        } catch (error) {
+            attendanceFailureSession = sessionId;
+            console.error(error);
+            alert('Attendance was not recorded: ' + error.message + ' Please retry entering or contact your instructor.');
+        } finally { attendanceRequestBusy = false; }
+    }
     let studentPeer = null;
     let localScreenStream = null;
     let isCheckingStatus = false;
@@ -862,10 +898,7 @@ async function startStudentScreenShare(peer, professorPeerId) {
             });
 
             // Log present attendance row metrics to server storage
-            fetch("{{ route('student.mark-present', $class->id) }}", { 
-                method: 'POST', 
-                headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' } 
-            });
+            await recordAttendance();
 
             if (call) {
                 call.on('error', err => {
@@ -880,6 +913,10 @@ async function startStudentScreenShare(peer, professorPeerId) {
 
             // Track if the student manually closes screen capture using browser navigation overlays
             localScreenStream.getVideoTracks()[0].onended = function () {
+                attendanceEntryConfirmed = false;
+                fetch(@js(route('student.stop-presenting', $class->id)), {
+                    method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, keepalive: true
+                }).catch(() => {});
                 console.warn("⚠️ Screen capture tracking disconnected by user.");
                 window.dispatchEvent(new CustomEvent('screen-stopped'));
                 cleanupHardwareAndReload();
@@ -893,6 +930,24 @@ async function startStudentScreenShare(peer, professorPeerId) {
 
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Poll on desktop and mobile. Only an explicitly confirmed classroom entry can check in
+        // to an attendance session started after entry; heartbeat alone never records attendance.
+        setInterval(async () => {
+            try {
+                const response = await fetch(`/student/heartbeat/${classId}`, {
+                    method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' }
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                handleHeartbeatEnforcement(data);
+                if (attendanceEntryConfirmed && data.is_active && data.attendance_session_id && data.attendance_roster_status === 'pending'
+                    && attendanceFailureSession !== data.attendance_session_id) {
+                    await recordAttendance(data.attendance_session_id);
+                }
+                if (data.is_active === false && classroomWasActive) cleanupHardwareAndReload();
+                classroomWasActive = !!data.is_active;
+            } catch (error) { console.error('Classroom heartbeat failed', error); }
+        }, 4000);
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
         || window.innerWidth <= 1024;
 
@@ -902,15 +957,7 @@ async function startStudentScreenShare(peer, professorPeerId) {
         console.log("📱 Mobile device detected: PeerJS connection bypassed.");
         
         // Mark attendance immediately upon opening the classroom on mobile
-        fetch("{{ route('student.mark-present', $class->id) }}", { 
-            method: 'POST', 
-            headers: { 
-                'X-CSRF-TOKEN': csrfToken, 
-                'Content-Type': 'application/json' 
-            } 
-        }).then(res => res.json())
-          .then(data => console.log("✅ Mobile attendance marked successfully"))
-          .catch(err => console.error("❌ Failed to mark mobile attendance:", err));
+        if (classroomWasActive) recordAttendance();
 
         return;
     }
@@ -962,22 +1009,6 @@ async function startStudentScreenShare(peer, professorPeerId) {
             verifySessionStatus();
         });
 
-        // High-frequency active heartbeat pooling task tracker to watch for structural session state kills
-        setInterval(() => {
-            fetch(`/student/heartbeat/${classId}`, { 
-                method: 'POST', 
-                headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' } 
-            })
-            .then(res => res.json())
-            .then(data => {
-                handleHeartbeatEnforcement(data);
-                if (data && data.is_active === false) {
-                    console.log("⚡ Session has been terminated by the instructor. Refreshing UI...");
-                    cleanupHardwareAndReload();
-                }
-            })
-            .catch(err => console.error("Heartbeat communication sync error:", err));
-        }, 4000);
     });
 </script>
 <script>
@@ -1058,38 +1089,7 @@ async function startStudentScreenShare(peer, professorPeerId) {
     };
 }
 
-function materialViewer() {
-    return {
-        showViewer: false, 
-        currentMaterial: { title: '', type: '', url: '', id: null }, 
-        startTime: null,
-        openMaterial(material) {
-            this.currentMaterial = material; 
-            this.showViewer = true; 
-            this.startTime = new Date();
-            fetch(`/student/materials/${material.id}/log-start`, { 
-                method: 'POST', 
-                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } 
-            });
-        },
-        closeMaterial() {
-            let endTime = new Date(); 
-            let duration = Math.round((endTime - this.startTime) / 1000);
-            fetch(`/student/materials/${this.currentMaterial.id}/log-end`, { 
-                method: 'POST', 
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRF-TOKEN': csrfToken, 
-                    'Accept': 'application/json' 
-                }, 
-                body: JSON.stringify({ duration: duration }) 
-            }).then(() => {
-                this.showViewer = false; 
-                this.currentMaterial = { title: '', type: '', url: '', id: null };
-            });
-        }
-    };
-}
+function materialViewer() { return LMMSMaterialEngagement.createViewer(csrfToken); }
 
       function taskModal() {
     return {

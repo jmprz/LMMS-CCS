@@ -5,6 +5,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\StudentClassController;
+use App\Http\Controllers\AttendanceSessionController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\MaterialController;
@@ -55,11 +56,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('dashboard');
 
         Route::post('student/log-behavior', [StudentClassController::class, 'logBehavior']);
+        Route::get('/official-outcomes/{classId}', [\App\Http\Controllers\OfficialOutcomeController::class, 'index'])->name('outcomes.index');
+        Route::post('/official-outcomes/{classId}/preview', [\App\Http\Controllers\OfficialOutcomeController::class, 'preview'])->name('outcomes.preview');
+        Route::post('/official-outcomes/{classId}/commit/{importId}', [\App\Http\Controllers\OfficialOutcomeController::class, 'commit'])->name('outcomes.commit');
 
         // =========================================================================
         // STUDENT ROUTES
         // =========================================================================
         Route::middleware(['student'])->prefix('student')->name('student.')->group(function () {
+            Route::post('/classroom/{classId}/activity-start', [\App\Http\Controllers\ActivityDurationController::class, 'start'])->name('activity.start');
+            Route::post('/classroom/{classId}/activity-heartbeat', [\App\Http\Controllers\ActivityDurationController::class, 'heartbeat'])->name('activity.heartbeat');
+            Route::post('/classroom/{classId}/activity-end', [\App\Http\Controllers\ActivityDurationController::class, 'end'])->name('activity.end');
             Route::get('/dashboard', [StudentClassController::class, 'index'])->name('dashboard');
             Route::get('/classroom/{id}', [StudentClassController::class, 'enterClassroom'])->name('subject');
             Route::post('/join', [StudentClassController::class, 'join'])->name('join');
@@ -101,6 +108,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/browser/check-url', [App\Http\Controllers\BrowserProxyController::class, 'checkUrl'])->name('browser.check');
             Route::post('/materials/{material}/log-start', [MaterialController::class, 'logStart'])->name('materials.log-start');
             Route::post('/materials/{material}/log-end', [MaterialController::class, 'logEnd'])->name('materials.log-end');
+            Route::post('/materials/{material}/log-heartbeat', [MaterialController::class, 'logHeartbeat'])->name('materials.log-heartbeat');
             Route::get('/learning-roadmap', [LearningRoadmapController::class, 'index'])
                 ->name('roadmap.index');
 
@@ -247,6 +255,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/quizzes', [QuizController::class, 'store'])->name('quizzes.store');
             Route::get('/quizzes/{quiz}/edit', [QuizController::class, 'edit'])->name('quizzes.edit');
             Route::put('/quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
+            Route::patch('/quizzes/{quiz}/learning-topic', [QuizController::class, 'updateLearningTopic'])->name('quizzes.learning-topic.update');
             Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
             Route::get('/quizzes/{quiz}/export-scores', [QuizController::class, 'exportScores'])->name('quizzes.export-scores');
             Route::get('/sessions/{id}/quizzes-list', [QuizController::class, 'listPartial'])->name('quizzes.list-partial');
@@ -260,6 +269,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Session Controls
             Route::post('/sessions/{id}/toggle', [ClassroomController::class, 'toggleSession'])->name('sessions.toggle');
+            Route::get('/classroom/{labSession}/attendance', [AttendanceSessionController::class, 'show'])->name('attendance.show');
+            Route::post('/classroom/{labSession}/attendance', [AttendanceSessionController::class, 'start'])->name('attendance.start');
+            Route::post('/attendance/{attendanceSession}/finalize', [AttendanceSessionController::class, 'finalize'])->name('attendance.finalize');
+            Route::post('/attendance/{attendanceSession}/cancel', [AttendanceSessionController::class, 'cancel'])->name('attendance.cancel');
+            Route::patch('/attendance/{attendanceSession}/students/{userId}/excuse', [AttendanceSessionController::class, 'excuse'])->name('attendance.excuse');
             Route::post('/sessions/{id}/broadcast', [ClassroomController::class, 'broadcast'])->name('sessions.broadcast');
             Route::post('/sessions/{id}/end', [AdminController::class, 'endSession'])->name('sessions.end');
 

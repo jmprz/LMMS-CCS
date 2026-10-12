@@ -17,6 +17,7 @@
                 <nav class="mt-8 px-4 space-y-1">
                     <div class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Workspace
                     </div>
+                    <a href="{{ route('outcomes.index', $session->id) }}" class="block px-4 py-2 text-xs font-bold">Official final outcomes</a>
 
                     <a href="{{ route('professor.dashboard') }}"
                         class="flex items-center py-2.5 px-4 rounded-xl text-xs {{ request()->routeIs('professor.dashboard') ? 'bg-[#383838] text-white font-black shadow-sm' : 'text-gray-600 font-bold hover:bg-gray-100' }} transition duration-150">
@@ -213,6 +214,8 @@
                     </div>
                 </div>
 
+
+                @include('professor.classroom.partials.attendance')
 
                 <div class="mt-8" x-data="{ activeTab: @js(
                     request('tab') === 'materials' ? 'materials' : 'monitoring'
@@ -1128,7 +1131,8 @@
                                                                             <span
                                                                                 class="inline-block px-2.5 py-1 bg-gray-100 rounded-md"
                                                                                 :class="log.seconds_spent > 60 ? 'bg-green-50 text-green-700' : 'text-gray-700'"
-                                                                                x-text="formatDuration(log.seconds_spent)"></span>
+                                                                                x-text="log.seconds_spent === null ? 'Not measured' : formatDuration(log.seconds_spent)"></span>
+                                                                            <div class="text-xs text-gray-500" x-text="(log.is_closed ? 'Closed' : 'Open') + ' · ' + (log.measurement_mode === 'external_open' ? 'External time not measured' : (log.collection_version ? 'Visible activity estimate' : 'Legacy reported duration'))"></div>
                                                                         </td>
                                                                     </tr>
                                                                 </template>
@@ -1180,6 +1184,8 @@
                                     'id' => $task->id,
                                     'title' => $task->title,
                                     'description' => $task->description,
+                                    'learning_topic_id' => $task->learning_topic_id,
+                                    'learning_topic' => $task->learningTopic,
                                     'deadline' => $task->deadline,
                                     'deadline_formatted' => \Carbon\Carbon::parse($task->deadline)->format('M d, Y h:i A'),
                                     'points' => $task->points ?? 0,
@@ -1227,6 +1233,7 @@
 
                                                 <h4 class="font-black text-gray-900 text-lg mb-2 leading-tight"
                                                     x-text="task.title"></h4>
+                                                <p class="text-xs text-gray-500" x-text="'Learning topic: ' + (task.learning_topic?.name || 'Unassigned')"></p>
 
                                                 <div class="space-y-2 mt-3 mb-6">
                                                     <div
@@ -1337,8 +1344,14 @@
 
                                                             <div>
                                                                 <label
-                                                                    class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Deadline
-                                                                    *</label>
+                                                                    class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Learning Topic (optional)</label>
+                                                                <select x-model="taskForm.learning_topic_id" aria-label="Learning topic" class="w-full border-gray-200 rounded-xl p-3 text-sm mb-4">
+                                                                    <option value="">No learning topic assigned</option>
+                                                                    @foreach($learningTopics as $topic)
+                                                                        <option value="{{ $topic->id }}">{{ $topic->name }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                                <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Deadline *</label>
                                                                 <input type="datetime-local" x-model="taskForm.deadline"
                                                                     required
                                                                     class="w-full border-gray-200 bg-white rounded-xl p-3.5 text-sm font-bold focus:ring-2 focus:ring-[#383838] outline-none transition-all shadow-sm text-gray-600">
@@ -3295,6 +3308,7 @@ updateContainer('quizzes-list-container');
                 saving: false,
 
                 taskForm: {
+                    learning_topic_id: '',
                     title: '',
                     deadline: '',
                     description: ''
@@ -3419,6 +3433,7 @@ updateContainer('quizzes-list-container');
                         }
 
                         this.taskForm = {
+                            learning_topic_id: task.learning_topic_id || '',
                             title: task.title || '',
                             deadline: formattedDeadline,
                             description: task.description || ''
@@ -3448,7 +3463,7 @@ updateContainer('quizzes-list-container');
                     } else {
                         this.isEditing = false;
                         this.editingTaskId = null;
-                        this.taskForm = { title: '', deadline: '', description: '' };
+                        this.taskForm = { title: '', deadline: '', description: '', learning_topic_id: '' };
                         this.resetCriteria();
                     }
                     this.showEditorModal = true;
@@ -3514,6 +3529,7 @@ updateContainer('quizzes-list-container');
                     const payload = {
                         subject_id: this.subjectId,
                         title: this.taskForm.title,
+                        learning_topic_id: this.taskForm.learning_topic_id || null,
                         deadline: this.taskForm.deadline,
                         description: this.taskForm.description,
                         points: this.computedMaxPoints,
