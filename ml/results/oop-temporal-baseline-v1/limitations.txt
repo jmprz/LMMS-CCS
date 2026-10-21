@@ -1,0 +1,17 @@
+Of 37 at-risk observations, 36 reflect verified mapped posttest nonparticipation and only one reflects below-70 performance. Models may primarily capture later nonparticipation, not low-score performance.
+
+108 genuine students from two classes are a small, class-specific cohort; no population-wide or external-validation claim is supported.
+
+Only five at-risk students occur in the 22-student holdout. One changed risk prediction changes sensitivity by 20 percentage points.
+
+GroupShuffleSplit is seeded and group-disjoint, not explicitly stratified. Both labels are checked; holdout balance differs from training balance.
+
+OOPRG_2A is experimental and OOPRG_2B control. Assignment is never X, but intervention, class differences and opportunity differences may confound interpretation.
+
+Missingness is substantial for task and reading averages. Existing reading durations may include legacy measurements; numeric coverage does not establish verified active engagement.
+
+Activity duration and optional attendance are all missing and excluded without zero substitution. Structured topic JSON has no approved scalar encoding and is not X.
+
+No hyperparameter tuning, automatic winner selection, threshold optimization, full-data refit or deployment. Holdout metrics are descriptive and must not drive final model selection.
+
+This research-observed temporal target is not an official institutional final grade. No additional offline exemption documents were supplied.

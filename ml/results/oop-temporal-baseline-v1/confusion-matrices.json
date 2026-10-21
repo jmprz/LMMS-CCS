@@ -1,0 +1,104 @@
+{
+  "logistic_regression": {
+    "order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "axes": "actual rows, predicted columns",
+    "matrix": [
+      [
+        17,
+        0
+      ],
+      [
+        3,
+        2
+      ]
+    ]
+  },
+  "decision_tree": {
+    "order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "axes": "actual rows, predicted columns",
+    "matrix": [
+      [
+        15,
+        2
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  "random_forest": {
+    "order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "axes": "actual rows, predicted columns",
+    "matrix": [
+      [
+        14,
+        3
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  "gradient_boosting": {
+    "order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "axes": "actual rows, predicted columns",
+    "matrix": [
+      [
+        16,
+        1
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  "svm": {
+    "order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "axes": "actual rows, predicted columns",
+    "matrix": [
+      [
+        16,
+        1
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  "knn": {
+    "order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "axes": "actual rows, predicted columns",
+    "matrix": [
+      [
+        16,
+        1
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  }
+}

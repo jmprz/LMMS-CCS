@@ -1,0 +1,559 @@
+{
+  "estimator": "GradientBoostingClassifier",
+  "hyperparameters": {
+    "ccp_alpha": 0.0,
+    "criterion": "friedman_mse",
+    "init": null,
+    "learning_rate": 0.1,
+    "loss": "log_loss",
+    "max_depth": 3,
+    "max_features": null,
+    "max_leaf_nodes": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "n_estimators": 100,
+    "n_iter_no_change": null,
+    "random_state": 42,
+    "subsample": 1.0,
+    "tol": 0.0001,
+    "validation_fraction": 0.1,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "preprocessing": {
+    "imputation": "training-fold median",
+    "scaling": "none",
+    "missing_indicators": false,
+    "retained_columns": [
+      "quiz_avg",
+      "quiz_attempt_count",
+      "task_avg",
+      "submission_rate",
+      "late_submission_count",
+      "materials_accessed",
+      "material_session_count",
+      "reading_total_seconds",
+      "reading_avg_seconds",
+      "activity_count"
+    ],
+    "training_all_missing_dropped": [],
+    "training_medians": {
+      "quiz_avg": 85.0,
+      "quiz_attempt_count": 1.0,
+      "task_avg": 100.0,
+      "submission_rate": 100.0,
+      "late_submission_count": 0.0,
+      "materials_accessed": 0.0,
+      "material_session_count": 0.0,
+      "reading_total_seconds": 0.0,
+      "reading_avg_seconds": 17.0,
+      "activity_count": 2.0
+    }
+  },
+  "imbalance": {
+    "resampling_strategy": "none",
+    "real_train_rows": 86,
+    "real_train_at_risk": 32,
+    "real_train_not_at_risk": 54,
+    "original_class_counts": {
+      "not_at_risk": 54,
+      "at_risk": 32
+    },
+    "resampled_class_counts": {
+      "not_at_risk": 54,
+      "at_risk": 32
+    },
+    "effective_training_rows_after_resampling": 86,
+    "effective_training_at_risk": 32,
+    "effective_training_not_at_risk": 54,
+    "added_training_rows": 0,
+    "duplicated_training_rows": 0,
+    "interpolated_training_rows": 0,
+    "synthetic_interpolated_rows_generated": false,
+    "test_synthetic_rows": 0,
+    "evaluation_resampled_rows": 0,
+    "class_weight_supported": false,
+    "class_weight_applied": null,
+    "class_weight_status": "not requested"
+  },
+  "cv": [
+    {
+      "metrics": {
+        "positive_class": "at_risk",
+        "confusion_matrix_order": [
+          "not_at_risk",
+          "at_risk"
+        ],
+        "confusion_matrix": [
+          [
+            8,
+            1
+          ],
+          [
+            8,
+            1
+          ]
+        ],
+        "accuracy": 0.5,
+        "balanced_accuracy": 0.5,
+        "precision": 0.5,
+        "recall_sensitivity": 0.1111111111111111,
+        "specificity": 0.8888888888888888,
+        "f1": 0.18181818181818182,
+        "roc_auc": 0.5,
+        "zero_division_policy": "precision/recall/F1 = 0 when undefined; specificity/AUC/balanced accuracy = null when unavailable",
+        "roc_score_kind": "probability_of_at_risk"
+      },
+      "preprocessing": {
+        "imputation": "training-fold median",
+        "scaling": "none",
+        "missing_indicators": false,
+        "retained_columns": [
+          "quiz_avg",
+          "quiz_attempt_count",
+          "task_avg",
+          "submission_rate",
+          "late_submission_count",
+          "materials_accessed",
+          "material_session_count",
+          "reading_total_seconds",
+          "reading_avg_seconds",
+          "activity_count"
+        ],
+        "training_all_missing_dropped": [],
+        "training_medians": {
+          "quiz_avg": 85.0,
+          "quiz_attempt_count": 1.0,
+          "task_avg": 100.0,
+          "submission_rate": 100.0,
+          "late_submission_count": 0.0,
+          "materials_accessed": 0.0,
+          "material_session_count": 0.0,
+          "reading_total_seconds": 0.0,
+          "reading_avg_seconds": 14.0,
+          "activity_count": 2.0
+        }
+      },
+      "imbalance": {
+        "resampling_strategy": "none",
+        "real_train_rows": 68,
+        "real_train_at_risk": 23,
+        "real_train_not_at_risk": 45,
+        "original_class_counts": {
+          "not_at_risk": 45,
+          "at_risk": 23
+        },
+        "resampled_class_counts": {
+          "not_at_risk": 45,
+          "at_risk": 23
+        },
+        "effective_training_rows_after_resampling": 68,
+        "effective_training_at_risk": 23,
+        "effective_training_not_at_risk": 45,
+        "added_training_rows": 0,
+        "duplicated_training_rows": 0,
+        "interpolated_training_rows": 0,
+        "synthetic_interpolated_rows_generated": false,
+        "test_synthetic_rows": 0,
+        "evaluation_resampled_rows": 0,
+        "class_weight_supported": false,
+        "class_weight_applied": null,
+        "class_weight_status": "not requested"
+      },
+      "real_validation_rows": 18,
+      "validation_synthetic_rows": 0
+    },
+    {
+      "metrics": {
+        "positive_class": "at_risk",
+        "confusion_matrix_order": [
+          "not_at_risk",
+          "at_risk"
+        ],
+        "confusion_matrix": [
+          [
+            9,
+            4
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "accuracy": 0.6470588235294118,
+        "balanced_accuracy": 0.5961538461538461,
+        "precision": 0.3333333333333333,
+        "recall_sensitivity": 0.5,
+        "specificity": 0.6923076923076923,
+        "f1": 0.4,
+        "roc_auc": 0.5288461538461539,
+        "zero_division_policy": "precision/recall/F1 = 0 when undefined; specificity/AUC/balanced accuracy = null when unavailable",
+        "roc_score_kind": "probability_of_at_risk"
+      },
+      "preprocessing": {
+        "imputation": "training-fold median",
+        "scaling": "none",
+        "missing_indicators": false,
+        "retained_columns": [
+          "quiz_avg",
+          "quiz_attempt_count",
+          "task_avg",
+          "submission_rate",
+          "late_submission_count",
+          "materials_accessed",
+          "material_session_count",
+          "reading_total_seconds",
+          "reading_avg_seconds",
+          "activity_count"
+        ],
+        "training_all_missing_dropped": [],
+        "training_medians": {
+          "quiz_avg": 85.0,
+          "quiz_attempt_count": 1.0,
+          "task_avg": 100.0,
+          "submission_rate": 100.0,
+          "late_submission_count": 0.0,
+          "materials_accessed": 0.0,
+          "material_session_count": 0.0,
+          "reading_total_seconds": 0.0,
+          "reading_avg_seconds": 18.0,
+          "activity_count": 2.0
+        }
+      },
+      "imbalance": {
+        "resampling_strategy": "none",
+        "real_train_rows": 69,
+        "real_train_at_risk": 28,
+        "real_train_not_at_risk": 41,
+        "original_class_counts": {
+          "not_at_risk": 41,
+          "at_risk": 28
+        },
+        "resampled_class_counts": {
+          "not_at_risk": 41,
+          "at_risk": 28
+        },
+        "effective_training_rows_after_resampling": 69,
+        "effective_training_at_risk": 28,
+        "effective_training_not_at_risk": 41,
+        "added_training_rows": 0,
+        "duplicated_training_rows": 0,
+        "interpolated_training_rows": 0,
+        "synthetic_interpolated_rows_generated": false,
+        "test_synthetic_rows": 0,
+        "evaluation_resampled_rows": 0,
+        "class_weight_supported": false,
+        "class_weight_applied": null,
+        "class_weight_status": "not requested"
+      },
+      "real_validation_rows": 17,
+      "validation_synthetic_rows": 0
+    },
+    {
+      "metrics": {
+        "positive_class": "at_risk",
+        "confusion_matrix_order": [
+          "not_at_risk",
+          "at_risk"
+        ],
+        "confusion_matrix": [
+          [
+            3,
+            7
+          ],
+          [
+            1,
+            6
+          ]
+        ],
+        "accuracy": 0.5294117647058824,
+        "balanced_accuracy": 0.5785714285714285,
+        "precision": 0.46153846153846156,
+        "recall_sensitivity": 0.8571428571428571,
+        "specificity": 0.3,
+        "f1": 0.6,
+        "roc_auc": 0.5571428571428572,
+        "zero_division_policy": "precision/recall/F1 = 0 when undefined; specificity/AUC/balanced accuracy = null when unavailable",
+        "roc_score_kind": "probability_of_at_risk"
+      },
+      "preprocessing": {
+        "imputation": "training-fold median",
+        "scaling": "none",
+        "missing_indicators": false,
+        "retained_columns": [
+          "quiz_avg",
+          "quiz_attempt_count",
+          "task_avg",
+          "submission_rate",
+          "late_submission_count",
+          "materials_accessed",
+          "material_session_count",
+          "reading_total_seconds",
+          "reading_avg_seconds",
+          "activity_count"
+        ],
+        "training_all_missing_dropped": [],
+        "training_medians": {
+          "quiz_avg": 85.0,
+          "quiz_attempt_count": 1.0,
+          "task_avg": 100.0,
+          "submission_rate": 100.0,
+          "late_submission_count": 0.0,
+          "materials_accessed": 0.0,
+          "material_session_count": 0.0,
+          "reading_total_seconds": 0.0,
+          "reading_avg_seconds": 18.0,
+          "activity_count": 2.0
+        }
+      },
+      "imbalance": {
+        "resampling_strategy": "none",
+        "real_train_rows": 69,
+        "real_train_at_risk": 25,
+        "real_train_not_at_risk": 44,
+        "original_class_counts": {
+          "not_at_risk": 44,
+          "at_risk": 25
+        },
+        "resampled_class_counts": {
+          "not_at_risk": 44,
+          "at_risk": 25
+        },
+        "effective_training_rows_after_resampling": 69,
+        "effective_training_at_risk": 25,
+        "effective_training_not_at_risk": 44,
+        "added_training_rows": 0,
+        "duplicated_training_rows": 0,
+        "interpolated_training_rows": 0,
+        "synthetic_interpolated_rows_generated": false,
+        "test_synthetic_rows": 0,
+        "evaluation_resampled_rows": 0,
+        "class_weight_supported": false,
+        "class_weight_applied": null,
+        "class_weight_status": "not requested"
+      },
+      "real_validation_rows": 17,
+      "validation_synthetic_rows": 0
+    },
+    {
+      "metrics": {
+        "positive_class": "at_risk",
+        "confusion_matrix_order": [
+          "not_at_risk",
+          "at_risk"
+        ],
+        "confusion_matrix": [
+          [
+            6,
+            6
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "accuracy": 0.6470588235294118,
+        "balanced_accuracy": 0.75,
+        "precision": 0.45454545454545453,
+        "recall_sensitivity": 1.0,
+        "specificity": 0.5,
+        "f1": 0.625,
+        "roc_auc": 0.8250000000000001,
+        "zero_division_policy": "precision/recall/F1 = 0 when undefined; specificity/AUC/balanced accuracy = null when unavailable",
+        "roc_score_kind": "probability_of_at_risk"
+      },
+      "preprocessing": {
+        "imputation": "training-fold median",
+        "scaling": "none",
+        "missing_indicators": false,
+        "retained_columns": [
+          "quiz_avg",
+          "quiz_attempt_count",
+          "task_avg",
+          "submission_rate",
+          "late_submission_count",
+          "materials_accessed",
+          "material_session_count",
+          "reading_total_seconds",
+          "reading_avg_seconds",
+          "activity_count"
+        ],
+        "training_all_missing_dropped": [],
+        "training_medians": {
+          "quiz_avg": 85.0,
+          "quiz_attempt_count": 1.0,
+          "task_avg": 100.0,
+          "submission_rate": 100.0,
+          "late_submission_count": 0.0,
+          "materials_accessed": 0.0,
+          "material_session_count": 0.0,
+          "reading_total_seconds": 0.0,
+          "reading_avg_seconds": 17.0,
+          "activity_count": 2.0
+        }
+      },
+      "imbalance": {
+        "resampling_strategy": "none",
+        "real_train_rows": 69,
+        "real_train_at_risk": 27,
+        "real_train_not_at_risk": 42,
+        "original_class_counts": {
+          "not_at_risk": 42,
+          "at_risk": 27
+        },
+        "resampled_class_counts": {
+          "not_at_risk": 42,
+          "at_risk": 27
+        },
+        "effective_training_rows_after_resampling": 69,
+        "effective_training_at_risk": 27,
+        "effective_training_not_at_risk": 42,
+        "added_training_rows": 0,
+        "duplicated_training_rows": 0,
+        "interpolated_training_rows": 0,
+        "synthetic_interpolated_rows_generated": false,
+        "test_synthetic_rows": 0,
+        "evaluation_resampled_rows": 0,
+        "class_weight_supported": false,
+        "class_weight_applied": null,
+        "class_weight_status": "not requested"
+      },
+      "real_validation_rows": 17,
+      "validation_synthetic_rows": 0
+    },
+    {
+      "metrics": {
+        "positive_class": "at_risk",
+        "confusion_matrix_order": [
+          "not_at_risk",
+          "at_risk"
+        ],
+        "confusion_matrix": [
+          [
+            9,
+            1
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "accuracy": 0.7058823529411765,
+        "balanced_accuracy": 0.6642857142857143,
+        "precision": 0.75,
+        "recall_sensitivity": 0.42857142857142855,
+        "specificity": 0.9,
+        "f1": 0.5454545454545454,
+        "roc_auc": 0.5285714285714286,
+        "zero_division_policy": "precision/recall/F1 = 0 when undefined; specificity/AUC/balanced accuracy = null when unavailable",
+        "roc_score_kind": "probability_of_at_risk"
+      },
+      "preprocessing": {
+        "imputation": "training-fold median",
+        "scaling": "none",
+        "missing_indicators": false,
+        "retained_columns": [
+          "quiz_avg",
+          "quiz_attempt_count",
+          "task_avg",
+          "submission_rate",
+          "late_submission_count",
+          "materials_accessed",
+          "material_session_count",
+          "reading_total_seconds",
+          "reading_avg_seconds",
+          "activity_count"
+        ],
+        "training_all_missing_dropped": [],
+        "training_medians": {
+          "quiz_avg": 85.0,
+          "quiz_attempt_count": 1.0,
+          "task_avg": 100.0,
+          "submission_rate": 100.0,
+          "late_submission_count": 0.0,
+          "materials_accessed": 0.0,
+          "material_session_count": 0.0,
+          "reading_total_seconds": 0.0,
+          "reading_avg_seconds": 17.5,
+          "activity_count": 2.0
+        }
+      },
+      "imbalance": {
+        "resampling_strategy": "none",
+        "real_train_rows": 69,
+        "real_train_at_risk": 25,
+        "real_train_not_at_risk": 44,
+        "original_class_counts": {
+          "not_at_risk": 44,
+          "at_risk": 25
+        },
+        "resampled_class_counts": {
+          "not_at_risk": 44,
+          "at_risk": 25
+        },
+        "effective_training_rows_after_resampling": 69,
+        "effective_training_at_risk": 25,
+        "effective_training_not_at_risk": 44,
+        "added_training_rows": 0,
+        "duplicated_training_rows": 0,
+        "interpolated_training_rows": 0,
+        "synthetic_interpolated_rows_generated": false,
+        "test_synthetic_rows": 0,
+        "evaluation_resampled_rows": 0,
+        "class_weight_supported": false,
+        "class_weight_applied": null,
+        "class_weight_status": "not requested"
+      },
+      "real_validation_rows": 17,
+      "validation_synthetic_rows": 0
+    }
+  ],
+  "cv_mean_metrics": {
+    "accuracy": 0.6058823529411764,
+    "precision": 0.49988344988344985,
+    "recall_sensitivity": 0.5793650793650793,
+    "specificity": 0.6562393162393162,
+    "f1": 0.4704545454545454,
+    "balanced_accuracy": 0.6178021978021978,
+    "roc_auc": 0.5879120879120878
+  },
+  "cv_std_metrics": {
+    "accuracy": 0.07803823036130354,
+    "precision": 0.13698402498206655,
+    "recall_sensitivity": 0.31698376930454897,
+    "specificity": 0.23072199579896988,
+    "f1": 0.1640525011711064,
+    "balanced_accuracy": 0.08428764844407428,
+    "roc_auc": 0.11991334974844449
+  },
+  "cv_std_definition": "population standard deviation across five folds; not a confidence interval",
+  "holdout_metrics": {
+    "positive_class": "at_risk",
+    "confusion_matrix_order": [
+      "not_at_risk",
+      "at_risk"
+    ],
+    "confusion_matrix": [
+      [
+        16,
+        1
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "accuracy": 0.7727272727272727,
+    "balanced_accuracy": 0.5705882352941176,
+    "precision": 0.5,
+    "recall_sensitivity": 0.2,
+    "specificity": 0.9411764705882353,
+    "f1": 0.2857142857142857,
+    "roc_auc": 0.27647058823529413,
+    "zero_division_policy": "precision/recall/F1 = 0 when undefined; specificity/AUC/balanced accuracy = null when unavailable",
+    "roc_score_kind": "probability_of_at_risk"
+  },
+  "model_sha256": "09634c7a6502b571b22b152ccad3375d6d48a0fbd664abf71dc3236ff2dc1077"
+}

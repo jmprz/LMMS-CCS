@@ -1,0 +1,14 @@
+{
+  "feature_version": "v5",
+  "core": ["quiz_avg", "quiz_attempt_count", "task_avg", "submission_rate", "late_submission_count", "materials_accessed", "material_session_count", "reading_total_seconds", "reading_avg_seconds", "activity_count", "activity_duration_seconds"],
+  "optional": ["attendance_rate"],
+  "structured": ["topic_quiz_performance_json", "topic_task_performance_json"],
+  "metadata": ["student_group_key", "lab_session_id", "feature_cutoff_at", "feature_version", "eligible_session_count", "assigned_task_count", "tagged_quiz_count", "untagged_quiz_count", "tagged_task_count", "untagged_task_count", "class_code", "subject_name", "program", "year_level", "section"],
+  "target": "academic_risk_status",
+  "labels": ["not_at_risk", "at_risk"],
+  "ground_truth": "final_outcome",
+  "excluded": ["current_academic_grade", "violation_count"],
+  "percentages": ["quiz_avg", "task_avg", "submission_rate", "attendance_rate"],
+  "counts": ["quiz_attempt_count", "late_submission_count", "materials_accessed", "material_session_count", "activity_count", "eligible_session_count", "assigned_task_count", "tagged_quiz_count", "untagged_quiz_count", "tagged_task_count", "untagged_task_count"],
+  "durations": ["reading_total_seconds", "reading_avg_seconds", "activity_duration_seconds"]
+}

@@ -1,0 +1,291 @@
+# LMMS-CCS — Run First Genuine Temporal Baseline Training
+
+## Objective
+
+Run the first authorized machine-learning baseline experiment using only the genuine labeled temporal OOP cohort.
+
+Dataset:
+
+`storage/app/risk-datasets/oop-temporal-labeled-v1.csv`
+
+This is the first real research model run.
+
+Do NOT use:
+
+- synthetic FPROG data
+- SMOTE
+- RandomOverSampler
+- class weighting
+
+in this baseline.
+
+---
+
+## 1. Freeze and verify input
+
+Before training verify:
+
+- dataset SHA-256
+- schema SHA-256
+- provenance companion
+- Git commit
+- total rows
+- unique students
+- label distribution
+
+Expected:
+
+- rows: 108
+- unique students: 108
+- at_risk: 37
+- not_at_risk: 71
+
+Stop if materially different.
+
+Do not modify the dataset.
+
+---
+
+## 2. Predictor eligibility
+
+Use only frozen v5 scalar predictors approved by the ML contract.
+
+Exclude predictors that are entirely missing in this cohort:
+
+- `activity_duration_seconds`
+- `attendance_rate`
+
+Do not replace these with zero.
+
+Report the final predictor list actually entering X.
+
+Preserve:
+
+- legitimate zeros
+- missing values
+
+Use the existing training-only imputation behavior.
+
+---
+
+## 3. Split
+
+Use the existing seeded grouped holdout strategy.
+
+All students are unique, but preserve group-aware logic.
+
+Record:
+
+- random seed
+- train rows
+- test rows
+- train label balance
+- test label balance
+- student overlap = 0
+
+Ensure both target classes appear in train and test.
+
+If a valid stratified/grouped partition cannot be created, stop and report.
+
+---
+
+## 4. Cross-validation
+
+Use training-only grouped/stratified CV according to the existing implementation.
+
+Do not use the test partition for:
+
+- model selection
+- hyperparameter selection
+- preprocessing fitting
+
+---
+
+## 5. Baseline models
+
+Run the six currently approved candidate pipelines:
+
+- Logistic Regression
+- Decision Tree
+- Random Forest
+- Gradient Boosting
+- Support Vector Machine
+- K-Nearest Neighbors
+
+Use the currently documented baseline/default hyperparameters.
+
+Do NOT perform broad hyperparameter tuning yet.
+
+Do not silently change estimators.
+
+---
+
+## 6. Preprocessing
+
+Use existing pipelines.
+
+Numeric imputation must be fitted only on training folds.
+
+Scaling applies only where already configured:
+
+- Logistic Regression
+- SVM
+- KNN
+
+Tree-based models should retain their existing preprocessing.
+
+---
+
+## 7. Baseline only
+
+Set imbalance strategy to:
+
+`none`
+
+Do not apply:
+
+- class_weight
+- random_over
+- smote
+- synthetic augmentation
+
+This run establishes the genuine-data baseline.
+
+---
+
+## 8. Metrics
+
+For each model report:
+
+- confusion matrix
+- accuracy
+- precision for `at_risk`
+- recall/sensitivity for `at_risk`
+- specificity
+- F1-score
+- balanced accuracy
+- ROC-AUC where supported
+
+Also report:
+
+- CV mean and variability where already supported
+- train/test counts
+- label distributions
+
+Do not rank models based only on accuracy.
+
+---
+
+## 9. Feature and missingness report
+
+Record:
+
+- final predictors used
+- missingness per predictor
+- all-missing fields excluded
+- imputation strategy
+- constant predictors if any
+
+Do not alter frozen v5.
+
+---
+
+## 10. Reproducibility
+
+Generate the existing run manifest containing:
+
+- dataset filename
+- dataset SHA-256
+- schema hash
+- Git commit
+- feature version
+- target policy version
+- prediction cutoff
+- seed
+- split strategy
+- train/test indices or stable keys
+- predictor list
+- preprocessing
+- estimator parameters
+- Python/library versions
+- metrics
+
+---
+
+## 11. Interpretation warning
+
+Add an explicit research note:
+
+Of the 37 at-risk observations:
+
+- 36 originate from verified mapped posttest nonparticipation
+- 1 originates from below-70 posttest performance
+
+Therefore model behavior may primarily reflect patterns associated with later nonparticipation rather than low-score performance.
+
+Do not treat this as an error; record it as an interpretation limitation.
+
+---
+
+## 12. Output
+
+Create a baseline results directory such as:
+
+`ml/results/oop-temporal-baseline-v1/`
+
+Store:
+
+- manifest
+- per-model metrics
+- confusion matrices
+- CV results
+- comparison table
+- warnings/limitations
+
+Do not overwrite previous development artifacts.
+
+---
+
+## 13. Integrity
+
+Confirm:
+
+- real labeled dataset unchanged
+- prod_1018 unchanged
+- frozen v5 unchanged
+- baseline snapshot unchanged
+- synthetic v2 unchanged
+- no synthetic observations entered training/test
+- imbalance strategy was `none`
+
+---
+
+## Deliverable
+
+Return:
+
+### Dataset
+- rows
+- label distribution
+- train/test split
+
+### Predictors
+- actual X columns
+
+### Model results
+Comparison table for all six models.
+
+### Best candidates for review
+Identify models with strongest balance of:
+
+- at-risk recall
+- F1
+- balanced accuracy
+- ROC-AUC
+
+Do not make a final research-model selection solely from the test set.
+
+### Limitations
+Include the nonparticipation-dominant target limitation.
+
+Stop after baseline analysis.

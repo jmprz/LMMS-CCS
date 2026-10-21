@@ -1,0 +1,22 @@
+{
+  "scenario": "fprog_1a_v1",
+  "description": "Virtual FPROG_1A feature scenarios; not imputed records for enrolled students.",
+  "source_class_codes": ["FPROG_1B", "FPROG_1C"],
+  "minimum_reference_rows": 20,
+  "minimum_observed_values": 5,
+  "synthetic_class_key": "SYN-FPROG1A",
+  "class_code": "FPROG_1A",
+  "opportunities": {"quizzes": 2, "tasks": 1, "materials": 1, "max_sessions_per_material": 12, "max_activity_events": 100},
+  "verified_measurements": "disabled",
+  "structured_topics": "empty",
+  "empirical_score_weight": 0.25,
+  "empirical_correlation_weight": 0.35,
+  "profiles": {
+    "strong": {"weight": 0.15, "score_mean": 90, "score_sd": 14, "engagement": 0.85, "submission": 0.95, "late": 0.10, "missing": 0.03},
+    "average": {"weight": 0.30, "score_mean": 76, "score_sd": 17, "engagement": 0.65, "submission": 0.82, "late": 0.20, "missing": 0.08},
+    "borderline": {"weight": 0.25, "score_mean": 61, "score_sd": 19, "engagement": 0.55, "submission": 0.68, "late": 0.30, "missing": 0.12},
+    "struggling_engaged": {"weight": 0.15, "score_mean": 47, "score_sd": 22, "engagement": 0.85, "submission": 0.78, "late": 0.30, "missing": 0.08},
+    "struggling_low_engagement": {"weight": 0.10, "score_mean": 43, "score_sd": 24, "engagement": 0.22, "submission": 0.40, "late": 0.40, "missing": 0.25},
+    "irregular_missing": {"weight": 0.05, "score_mean": 69, "score_sd": 26, "engagement": 0.35, "submission": 0.45, "late": 0.35, "missing": 0.60}
+  }
+}

@@ -1,0 +1,259 @@
+{
+  "dataset_filename": "oop-temporal-labeled-v1.csv",
+  "dataset_sha256": "2968cb244e7ab89b38f35a1b54719d5f32cccec90373e254da8b0f397c549a92",
+  "feature_version": "v5",
+  "errors": [],
+  "warnings": [
+    "task_avg: at least 50% missing (inspection warning, not an academic threshold).",
+    "reading_avg_seconds: at least 50% missing (inspection warning, not an academic threshold).",
+    "activity_duration_seconds: at least 50% missing (inspection warning, not an academic threshold).",
+    "attendance_rate: at least 50% missing (inspection warning, not an academic threshold)."
+  ],
+  "missing_required_columns": [],
+  "unexpected_columns": [],
+  "duplicate_student_class_rows": 0,
+  "predictors": {
+    "quiz_avg": {
+      "non_missing": 96,
+      "missing": 12,
+      "missing_percent": 11.1111,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 45.0,
+      "max": 100.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "quiz_attempt_count": {
+      "non_missing": 108,
+      "missing": 0,
+      "missing_percent": 0.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 1.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "task_avg": {
+      "non_missing": 53,
+      "missing": 55,
+      "missing_percent": 50.9259,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 100.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "submission_rate": {
+      "non_missing": 55,
+      "missing": 53,
+      "missing_percent": 49.0741,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 100.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "late_submission_count": {
+      "non_missing": 108,
+      "missing": 0,
+      "missing_percent": 0.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 1.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "materials_accessed": {
+      "non_missing": 108,
+      "missing": 0,
+      "missing_percent": 0.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 1.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "material_session_count": {
+      "non_missing": 108,
+      "missing": 0,
+      "missing_percent": 0.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 5.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "reading_total_seconds": {
+      "non_missing": 108,
+      "missing": 0,
+      "missing_percent": 0.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 1274.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "reading_avg_seconds": {
+      "non_missing": 25,
+      "missing": 83,
+      "missing_percent": 76.8519,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 1274.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "activity_count": {
+      "non_missing": 108,
+      "missing": 0,
+      "missing_percent": 0.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": 0.0,
+      "max": 5.0,
+      "constant": false,
+      "all_missing": false
+    },
+    "activity_duration_seconds": {
+      "non_missing": 0,
+      "missing": 108,
+      "missing_percent": 100.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": null,
+      "max": null,
+      "constant": false,
+      "all_missing": true
+    },
+    "attendance_rate": {
+      "non_missing": 0,
+      "missing": 108,
+      "missing_percent": 100.0,
+      "invalid_numeric": 0,
+      "invalid_percentage": 0,
+      "negative_values": 0,
+      "fractional_counts": 0,
+      "min": null,
+      "max": null,
+      "constant": false,
+      "all_missing": true
+    }
+  },
+  "total_rows": 108,
+  "unique_students": 108,
+  "class_count": 2,
+  "feature_cutoffs": [
+    "2026-10-15 17:59:59"
+  ],
+  "structured_topics": {
+    "topic_quiz_performance_json": {
+      "rows_with_evidence": 96,
+      "encoding": "pending; never included in X"
+    },
+    "topic_task_performance_json": {
+      "rows_with_evidence": 0,
+      "encoding": "pending; never included in X"
+    }
+  },
+  "all_missing_predictors": [
+    "activity_duration_seconds",
+    "attendance_rate"
+  ],
+  "constant_predictors": [],
+  "schema_sha256": "87e402c03bb4a24934f5089ffd23c24d42375384766101283991d3d58892a95c",
+  "feature_sha256": "3c1851e70c5221277f9ce2470645b2f6b2bc8d9adc662c538f9c095cfcf40261",
+  "dataset_contract": "oop-temporal-v1",
+  "target_policy_version": "research-later-academic-v1",
+  "target_counts": {
+    "not_at_risk": 71,
+    "at_risk": 37
+  },
+  "target_percentages": {
+    "not_at_risk": 65.7407,
+    "at_risk": 34.2593
+  },
+  "risk_reason_counts": {
+    "nonparticipation": 36,
+    "below_threshold": 1,
+    "meets_threshold": 71
+  },
+  "null_nonparticipation_outcomes": 36,
+  "excluded_predictors": [
+    "current_academic_grade",
+    "violation_count"
+  ],
+  "metadata_never_x": [
+    "dataset_contract",
+    "target_policy_version",
+    "outcome_quiz_id",
+    "outcome_completion_state",
+    "outcome_score",
+    "outcome_max_score",
+    "outcome_percentage",
+    "outcome_available_at",
+    "outcome_closed_at",
+    "outcome_event_at",
+    "outcome_recorded_at",
+    "outcome_attempt_key",
+    "risk_reason",
+    "data_origin",
+    "outcome_origin",
+    "experiment_group",
+    "experiment_id",
+    "experiment_assigned_at",
+    "consented_at",
+    "posttest_mapped_at",
+    "eligibility_basis",
+    "required_opportunity_verified",
+    "exemption_status",
+    "student_group_key",
+    "lab_session_id",
+    "feature_cutoff_at",
+    "feature_version",
+    "eligible_session_count",
+    "assigned_task_count",
+    "tagged_quiz_count",
+    "untagged_quiz_count",
+    "tagged_task_count",
+    "untagged_task_count",
+    "class_code",
+    "subject_name",
+    "program",
+    "year_level",
+    "section",
+    "academic_risk_status"
+  ],
+  "training_authorized": false,
+  "validation_only": true
+}
